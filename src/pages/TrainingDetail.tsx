@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Clock, Award, CheckCircle, PlayCircle } from "lucide-react";
+import { ArrowLeft, Clock, Award, CheckCircle, PlayCircle, Download } from "lucide-react";
 import { toast } from "sonner";
 
 const TrainingDetail = () => {
@@ -23,6 +23,7 @@ const TrainingDetail = () => {
   const [userId, setUserId] = useState<string>("");
   const [evaluation, setEvaluation] = useState<any>(null);
   const [isAdminOrLeader, setIsAdminOrLeader] = useState(false);
+  const [certificates, setCertificates] = useState<any[]>([]);
 
   const loadTraining = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -113,6 +114,18 @@ const TrainingDetail = () => {
         if (newProgress) {
           setUserProgress(newProgress);
         }
+      }
+
+      // Fetch certificates
+      const { data: certsData } = await supabase
+        .from("certificates")
+        .select("*")
+        .eq("user_id", session.user.id)
+        .eq("training_id", id)
+        .order("issued_at", { ascending: false });
+
+      if (certsData) {
+        setCertificates(certsData);
       }
 
     setLoading(false);
@@ -428,6 +441,42 @@ const TrainingDetail = () => {
                   <p className="text-sm text-muted-foreground">
                     Ve a la pestaña "Configurar Evaluación" para crearla.
                   </p>
+                </CardContent>
+              </Card>
+            )}
+
+            {certificates.length > 0 && (
+              <Card style={{ boxShadow: "var(--shadow-card)" }}>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Award className="w-5 h-5" />
+                    Certificados y Constancias
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {certificates.map((cert) => (
+                    <div key={cert.id} className="space-y-2">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <p className="font-medium text-sm">
+                            {cert.certificate_type === 'certificate' ? 'Certificado' : 'Constancia'}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Emitido: {new Date(cert.issued_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => window.open(cert.file_url, '_blank')}
+                        >
+                          <Download className="w-4 h-4 mr-1" />
+                          Descargar
+                        </Button>
+                      </div>
+                      {certificates.indexOf(cert) < certificates.length - 1 && <Separator />}
+                    </div>
+                  ))}
                 </CardContent>
               </Card>
             )}
