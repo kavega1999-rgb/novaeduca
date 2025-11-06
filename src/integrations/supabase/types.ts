@@ -41,6 +41,219 @@ export type Database = {
         }
         Relationships: []
       }
+      evaluation_answers: {
+        Row: {
+          attempt_id: string
+          created_at: string
+          id: string
+          is_correct: boolean | null
+          points_earned: number | null
+          question_id: string
+          selected_option_id: string | null
+        }
+        Insert: {
+          attempt_id: string
+          created_at?: string
+          id?: string
+          is_correct?: boolean | null
+          points_earned?: number | null
+          question_id: string
+          selected_option_id?: string | null
+        }
+        Update: {
+          attempt_id?: string
+          created_at?: string
+          id?: string
+          is_correct?: boolean | null
+          points_earned?: number | null
+          question_id?: string
+          selected_option_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluation_answers_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "evaluation_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evaluation_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "evaluation_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evaluation_answers_selected_option_id_fkey"
+            columns: ["selected_option_id"]
+            isOneToOne: false
+            referencedRelation: "evaluation_question_options"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evaluation_attempts: {
+        Row: {
+          completed_at: string | null
+          evaluation_id: string
+          id: string
+          max_score: number
+          passed: boolean | null
+          score: number | null
+          started_at: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          evaluation_id: string
+          id?: string
+          max_score: number
+          passed?: boolean | null
+          score?: number | null
+          started_at?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          evaluation_id?: string
+          id?: string
+          max_score?: number
+          passed?: boolean | null
+          score?: number | null
+          started_at?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluation_attempts_evaluation_id_fkey"
+            columns: ["evaluation_id"]
+            isOneToOne: false
+            referencedRelation: "evaluations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evaluation_question_options: {
+        Row: {
+          created_at: string
+          id: string
+          is_correct: boolean
+          option_text: string
+          order_index: number
+          question_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_correct?: boolean
+          option_text: string
+          order_index?: number
+          question_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_correct?: boolean
+          option_text?: string
+          order_index?: number
+          question_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluation_question_options_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "evaluation_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evaluation_questions: {
+        Row: {
+          created_at: string
+          evaluation_id: string
+          id: string
+          order_index: number
+          points: number
+          question_text: string
+          question_type: string
+        }
+        Insert: {
+          created_at?: string
+          evaluation_id: string
+          id?: string
+          order_index?: number
+          points?: number
+          question_text: string
+          question_type?: string
+        }
+        Update: {
+          created_at?: string
+          evaluation_id?: string
+          id?: string
+          order_index?: number
+          points?: number
+          question_text?: string
+          question_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluation_questions_evaluation_id_fkey"
+            columns: ["evaluation_id"]
+            isOneToOne: false
+            referencedRelation: "evaluations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evaluations: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          max_attempts: number | null
+          passing_score: number
+          time_limit_minutes: number | null
+          title: string
+          training_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          max_attempts?: number | null
+          passing_score?: number
+          time_limit_minutes?: number | null
+          title: string
+          training_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          max_attempts?: number | null
+          passing_score?: number
+          time_limit_minutes?: number | null
+          title?: string
+          training_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluations_training_id_fkey"
+            columns: ["training_id"]
+            isOneToOne: false
+            referencedRelation: "trainings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           area: string | null

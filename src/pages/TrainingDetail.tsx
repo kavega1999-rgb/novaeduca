@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Navigation from "@/components/Navigation";
+import EvaluationTaker from "@/components/evaluations/EvaluationTaker";
+import EvaluationManager from "@/components/evaluations/EvaluationManager";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,9 +21,10 @@ const TrainingDetail = () => {
   const [userRole, setUserRole] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string>("");
+  const [evaluation, setEvaluation] = useState<any>(null);
+  const [isAdminOrLeader, setIsAdminOrLeader] = useState(false);
 
-  useEffect(() => {
-    const loadTraining = async () => {
+  const loadTraining = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         navigate("/auth");
@@ -39,6 +42,15 @@ const TrainingDetail = () => {
 
       if (profile) {
         setUserRole(profile.role);
+        
+        // Check if user is admin or leader
+        const { data: roles } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", session.user.id)
+          .in("role", ["admin", "leader"]);
+        
+        setIsAdminOrLeader((roles || []).length > 0);
       }
 
       // Fetch training details
@@ -62,6 +74,17 @@ const TrainingDetail = () => {
       }
 
       setTraining(trainingData);
+
+      // Fetch evaluation
+      const { data: evalData } = await supabase
+        .from("evaluations")
+        .select("*")
+        .eq("training_id", id)
+        .maybeSingle();
+
+      if (evalData) {
+        setEvaluation(evalData);
+      }
 
       // Fetch or create user progress
       const { data: progressData } = await supabase
@@ -92,9 +115,10 @@ const TrainingDetail = () => {
         }
       }
 
-      setLoading(false);
-    };
+    setLoading(false);
+  };
 
+  useEffect(() => {
     loadTraining();
   }, [id, navigate]);
 
@@ -208,9 +232,10 @@ const TrainingDetail = () => {
 
               <CardContent>
                 <Tabs defaultValue="content" className="w-full">
-                  <TabsList className="grid w-full grid-cols-2">
+                  <TabsList className={`grid w-full ${isAdminOrLeader ? 'grid-cols-3' : 'grid-cols-2'}`}>
                     <TabsTrigger value="content">Contenido</TabsTrigger>
                     <TabsTrigger value="details">Detalles</TabsTrigger>
+                    {isAdminOrLeader && <TabsTrigger value="evaluation-setup">Configurar Evaluación</TabsTrigger>}
                   </TabsList>
                   
                   <TabsContent value="content" className="space-y-4">
@@ -300,6 +325,12 @@ const TrainingDetail = () => {
                       )}
                     </div>
                   </TabsContent>
+                  
+                  {isAdminOrLeader && (
+                    <TabsContent value="evaluation-setup">
+                      <EvaluationManager trainingId={id!} />
+                    </TabsContent>
+                  )}
                 </Tabs>
               </CardContent>
             </Card>
@@ -362,18 +393,33 @@ const TrainingDetail = () => {
               </CardContent>
             </Card>
 
-            {training.requires_evaluation && !isCompleted && (
+            {training.requires_evaluation && evaluation && (
+              <Card style={{ boxShadow: "var(--shadow-card)" }}>
+                <CardHeader>
+                  <CardTitle className="text-lg">Evaluación</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <EvaluationTaker
+                    evaluationId={evaluation.id}
+                    trainingId={id!}
+                    onComplete={loadTraining}
+                  />
+                </CardContent>
+              </Card>
+            )}
+            
+            {training.requires_evaluation && !evaluation && isAdminOrLeader && (
               <Card style={{ boxShadow: "var(--shadow-card)" }}>
                 <CardHeader>
                   <CardTitle className="text-lg">Evaluación</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Esta capacitación requiere completar una evaluación.
+                    Esta capacitación requiere una evaluación pero aún no está configurada.
                   </p>
-                  <Button className="w-full" variant="outline" disabled>
-                    Tomar evaluación
-                  </Button>
+                  <p className="text-sm text-muted-foreground">
+                    Ve a la pestaña "Configurar Evaluación" para crearla.
+                  </p>
                 </CardContent>
               </Card>
             )}
