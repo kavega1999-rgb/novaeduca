@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import puppeteer from "https://deno.land/x/puppeteer@16.2.0/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -74,9 +75,45 @@ serve(async (req) => {
       duration: training.duration_minutes || 0
     });
 
-    // Convert HTML to base64 data URL (simplified approach)
-    const base64Html = btoa(unescape(encodeURIComponent(html)));
-    const dataUrl = `data:text/html;base64,${base64Html}`;
+    // Generate PDF using Puppeteer
+    console.log('Launching browser...');
+    const browser = await puppeteer.launch({
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
+    
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: 'networkidle0' });
+    
+    const pdfBuffer = await page.pdf({
+      format: 'Letter',
+      landscape: true,
+      printBackground: true,
+      margin: { top: 0, right: 0, bottom: 0, left: 0 }
+    });
+    
+    await browser.close();
+    console.log('PDF generated, size:', pdfBuffer.length);
+
+    // Upload PDF to Storage
+    const fileName = `${certificateType}-${userId}-${trainingId}-${Date.now()}.pdf`;
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('training-materials')
+      .upload(`certificates/${fileName}`, pdfBuffer, {
+        contentType: 'application/pdf',
+        upsert: false
+      });
+
+    if (uploadError) {
+      console.error('Error uploading PDF:', uploadError);
+      throw uploadError;
+    }
+
+    // Get public URL
+    const { data: publicUrlData } = supabase.storage
+      .from('training-materials')
+      .getPublicUrl(`certificates/${fileName}`);
+
+    console.log('PDF uploaded to:', publicUrlData.publicUrl);
 
     // Store certificate record
     const { data: certificate, error: certError } = await supabase
@@ -86,7 +123,7 @@ serve(async (req) => {
         training_id: trainingId,
         attempt_id: attemptId,
         certificate_type: certificateType,
-        file_url: dataUrl
+        file_url: publicUrlData.publicUrl
       })
       .select()
       .single();
