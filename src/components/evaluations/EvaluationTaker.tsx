@@ -184,14 +184,43 @@ const EvaluationTaker = ({ evaluationId, trainingId, onComplete }: EvaluationTak
     }
 
     setResult(updatedAttempt);
-    setSubmitting(false);
 
     if (passed) {
+      // Get current session
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session) {
+        // Call edge function to generate certificate/constancia
+        try {
+          const { data: certificateData, error: certError } = await supabase.functions.invoke(
+            'generate-certificate',
+            {
+              body: {
+                attemptId: attemptId,
+                userId: session.user.id,
+                trainingId: trainingId,
+              },
+            }
+          );
+
+          if (certError) {
+            console.error('Error generating certificate:', certError);
+            toast.error("No se pudo generar el certificado/constancia");
+          } else {
+            console.log('Certificate generated:', certificateData);
+          }
+        } catch (err) {
+          console.error('Error calling certificate function:', err);
+        }
+      }
+
       toast.success("¡Felicitaciones! Has aprobado la evaluación");
       onComplete();
     } else {
       toast.error("No has alcanzado el puntaje mínimo");
     }
+
+    setSubmitting(false);
   };
 
   if (loading) {

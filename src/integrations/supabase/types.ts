@@ -41,6 +41,54 @@ export type Database = {
         }
         Relationships: []
       }
+      certificates: {
+        Row: {
+          attempt_id: string | null
+          certificate_type: string
+          created_at: string
+          file_url: string
+          id: string
+          issued_at: string
+          training_id: string
+          user_id: string
+        }
+        Insert: {
+          attempt_id?: string | null
+          certificate_type: string
+          created_at?: string
+          file_url: string
+          id?: string
+          issued_at?: string
+          training_id: string
+          user_id: string
+        }
+        Update: {
+          attempt_id?: string | null
+          certificate_type?: string
+          created_at?: string
+          file_url?: string
+          id?: string
+          issued_at?: string
+          training_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "certificates_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "evaluation_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "certificates_training_id_fkey"
+            columns: ["training_id"]
+            isOneToOne: false
+            referencedRelation: "trainings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       evaluation_answers: {
         Row: {
           attempt_id: string

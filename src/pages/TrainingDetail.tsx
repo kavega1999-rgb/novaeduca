@@ -351,7 +351,7 @@ const TrainingDetail = () => {
                   <Progress value={progressPercentage} className="h-2" />
                 </div>
 
-                {!isCompleted && (
+                {!isCompleted && !training.requires_evaluation && (
                   <div className="space-y-2">
                     <p className="text-sm text-muted-foreground">Actualizar progreso manualmente:</p>
                     <div className="grid grid-cols-4 gap-2">
@@ -370,6 +370,14 @@ const TrainingDetail = () => {
                   </div>
                 )}
 
+                {!isCompleted && training.requires_evaluation && (
+                  <div className="text-center py-2">
+                    <p className="text-sm text-muted-foreground">
+                      Completa y aprueba la evaluación para finalizar esta capacitación
+                    </p>
+                  </div>
+                )}
+
                 <Separator />
 
                 {isCompleted ? (
@@ -380,7 +388,7 @@ const TrainingDetail = () => {
                       {new Date(userProgress.completed_at).toLocaleDateString()}
                     </p>
                   </div>
-                ) : (
+                ) : !training.requires_evaluation ? (
                   <Button
                     className="w-full"
                     onClick={completeTraining}
@@ -389,7 +397,7 @@ const TrainingDetail = () => {
                     <CheckCircle className="w-4 h-4 mr-2" />
                     Marcar como completado
                   </Button>
-                )}
+                ) : null}
               </CardContent>
             </Card>
 
