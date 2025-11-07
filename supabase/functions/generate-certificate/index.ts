@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import puppeteer from "https://deno.land/x/puppeteer@16.2.0/mod.ts";
+import { PDFDocument, rgb, StandardFonts } from "https://esm.sh/pdf-lib@1.17.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -61,37 +61,161 @@ serve(async (req) => {
     const certificateType = training.generates_certificate ? 'certificate' : 'constancia';
     
     // Generate PDF content (simple HTML that can be converted to PDF)
-    const html = generateCertificateHTML({
-      userName: profile.full_name,
-      trainingTitle: training.title,
-      areaName: training.areas?.name || 'N/A',
-      completedDate: new Date(attempt.completed_at).toLocaleDateString('es-ES', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      }),
-      score: attempt.score?.toFixed(1) || '0',
-      certificateType,
-      duration: training.duration_minutes || 0
-    });
-
-    // Generate PDF using Puppeteer
-    console.log('Launching browser...');
-    const browser = await puppeteer.launch({
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
+    // Generate PDF
+    console.log('Generating PDF certificate...');
+    const pdfDoc = await PDFDocument.create();
+    const page = pdfDoc.addPage([792, 612]); // Letter size landscape
     
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'networkidle0' });
+    const timesRomanFont = await pdfDoc.embedFont(StandardFonts.TimesRoman);
+    const timesRomanBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
+    const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
     
-    const pdfBuffer = await page.pdf({
-      format: 'Letter',
-      landscape: true,
-      printBackground: true,
-      margin: { top: 0, right: 0, bottom: 0, left: 0 }
+    const { width, height } = page.getSize();
+    
+    // Background border
+    page.drawRectangle({
+      x: 30,
+      y: 30,
+      width: width - 60,
+      height: height - 60,
+      borderColor: rgb(0.2, 0.3, 0.5),
+      borderWidth: 3,
     });
     
-    await browser.close();
+    page.drawRectangle({
+      x: 40,
+      y: 40,
+      width: width - 80,
+      height: height - 80,
+      borderColor: rgb(0.2, 0.3, 0.5),
+      borderWidth: 1,
+    });
+    
+    // Title
+    const title = certificateType === 'certificate' ? 'CERTIFICADO' : 'CONSTANCIA';
+    page.drawText(title, {
+      x: width / 2 - (title.length * 20),
+      y: height - 100,
+      size: 48,
+      font: helveticaBold,
+      color: rgb(0.2, 0.3, 0.5),
+    });
+    
+    // Subtitle
+    const subtitle = certificateType === 'certificate' ? 'DE APROBACIÓN' : 'DE PARTICIPACIÓN';
+    page.drawText(subtitle, {
+      x: width / 2 - (subtitle.length * 8),
+      y: height - 140,
+      size: 24,
+      font: timesRomanBold,
+      color: rgb(0.3, 0.3, 0.3),
+    });
+    
+    // Body text
+    const bodyText = 'Se otorga el presente certificado a:';
+    page.drawText(bodyText, {
+      x: width / 2 - (bodyText.length * 4.5),
+      y: height - 200,
+      size: 16,
+      font: timesRomanFont,
+      color: rgb(0, 0, 0),
+    });
+    
+    // User name
+    const userName = profile.full_name;
+    page.drawText(userName, {
+      x: width / 2 - (userName.length * 9),
+      y: height - 250,
+      size: 32,
+      font: timesRomanBold,
+      color: rgb(0.2, 0.3, 0.5),
+    });
+    
+    // Completion text
+    const completionText = certificateType === 'certificate' 
+      ? 'Por haber aprobado satisfactoriamente la capacitación:'
+      : 'Por haber completado la capacitación:';
+    page.drawText(completionText, {
+      x: width / 2 - (completionText.length * 4),
+      y: height - 300,
+      size: 14,
+      font: timesRomanFont,
+      color: rgb(0, 0, 0),
+    });
+    
+    // Training title (with line wrapping)
+    const trainingTitle = training.title;
+    const maxLineLength = 60;
+    const lines = [];
+    let currentLine = '';
+    
+    trainingTitle.split(' ').forEach((word: string) => {
+      if ((currentLine + word).length <= maxLineLength) {
+        currentLine += (currentLine ? ' ' : '') + word;
+      } else {
+        lines.push(currentLine);
+        currentLine = word;
+      }
+    });
+    if (currentLine) lines.push(currentLine);
+    
+    lines.forEach((line, index) => {
+      page.drawText(line, {
+        x: width / 2 - (line.length * 5),
+        y: height - 340 - (index * 20),
+        size: 18,
+        font: timesRomanBold,
+        color: rgb(0.1, 0.1, 0.1),
+      });
+    });
+    
+    // Details
+    const yOffset = height - 380 - (lines.length * 20);
+    const areaText = `Área: ${training.areas?.name || 'N/A'}`;
+    page.drawText(areaText, {
+      x: 100,
+      y: yOffset,
+      size: 12,
+      font: timesRomanFont,
+      color: rgb(0, 0, 0),
+    });
+    
+    const durationText = `Duración: ${training.duration_minutes || 0} minutos`;
+    page.drawText(durationText, {
+      x: 100,
+      y: yOffset - 25,
+      size: 12,
+      font: timesRomanFont,
+      color: rgb(0, 0, 0),
+    });
+    
+    if (certificateType === 'certificate' && attempt) {
+      const scoreText = `Calificación: ${attempt.score?.toFixed(1)}%`;
+      page.drawText(scoreText, {
+        x: 100,
+        y: yOffset - 50,
+        size: 12,
+        font: timesRomanBold,
+        color: rgb(0, 0.5, 0),
+      });
+    }
+    
+    // Date
+    const completedDate = new Date(attempt.completed_at).toLocaleDateString('es-ES', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+    const dateText = `Fecha: ${completedDate}`;
+    page.drawText(dateText, {
+      x: width / 2 - (dateText.length * 3.5),
+      y: 100,
+      size: 12,
+      font: timesRomanFont,
+      color: rgb(0, 0, 0),
+    });
+    
+    const pdfBuffer = await pdfDoc.save();
     console.log('PDF generated, size:', pdfBuffer.length);
 
     // Upload PDF to Storage
@@ -173,164 +297,3 @@ serve(async (req) => {
     );
   }
 });
-
-function generateCertificateHTML(data: {
-  userName: string;
-  trainingTitle: string;
-  areaName: string;
-  completedDate: string;
-  score: string;
-  certificateType: string;
-  duration: number;
-}): string {
-  const title = data.certificateType === 'certificate' ? 'CERTIFICADO' : 'CONSTANCIA';
-  const subtitle = data.certificateType === 'certificate' 
-    ? 'DE FINALIZACIÓN Y APROBACIÓN' 
-    : 'DE PARTICIPACIÓN';
-
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <style>
-        @page {
-          size: letter landscape;
-          margin: 0;
-        }
-        body {
-          margin: 0;
-          padding: 40px;
-          font-family: 'Georgia', serif;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          min-height: 100vh;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        .certificate {
-          background: white;
-          padding: 60px;
-          border-radius: 20px;
-          box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-          max-width: 900px;
-          text-align: center;
-          border: 8px solid #f0f0f0;
-          position: relative;
-        }
-        .certificate::before {
-          content: '';
-          position: absolute;
-          top: 20px;
-          left: 20px;
-          right: 20px;
-          bottom: 20px;
-          border: 2px solid #667eea;
-          pointer-events: none;
-        }
-        h1 {
-          color: #667eea;
-          font-size: 48px;
-          margin: 0 0 10px 0;
-          font-weight: bold;
-          letter-spacing: 4px;
-        }
-        h2 {
-          color: #764ba2;
-          font-size: 24px;
-          margin: 0 0 40px 0;
-          font-weight: normal;
-        }
-        .content {
-          margin: 40px 0;
-          line-height: 2;
-        }
-        .name {
-          font-size: 36px;
-          color: #333;
-          font-weight: bold;
-          margin: 20px 0;
-          border-bottom: 2px solid #667eea;
-          display: inline-block;
-          padding: 0 40px 10px;
-        }
-        .training-title {
-          font-size: 28px;
-          color: #764ba2;
-          font-weight: bold;
-          margin: 20px 0;
-        }
-        .details {
-          font-size: 18px;
-          color: #666;
-          margin: 30px 0;
-        }
-        .detail-item {
-          margin: 10px 0;
-        }
-        .footer {
-          margin-top: 60px;
-          display: flex;
-          justify-content: space-around;
-          align-items: center;
-        }
-        .signature {
-          text-align: center;
-          flex: 1;
-        }
-        .signature-line {
-          border-top: 2px solid #333;
-          width: 200px;
-          margin: 0 auto 10px;
-          padding-top: 10px;
-        }
-        .seal {
-          width: 100px;
-          height: 100px;
-          border: 3px solid #667eea;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 12px;
-          font-weight: bold;
-          color: #667eea;
-          margin: 0 auto;
-        }
-      </style>
-    </head>
-    <body>
-      <div class="certificate">
-        <h1>${title}</h1>
-        <h2>${subtitle}</h2>
-        
-        <div class="content">
-          <p style="font-size: 20px; color: #666;">Se otorga el presente documento a</p>
-          <div class="name">${data.userName}</div>
-          <p style="font-size: 20px; color: #666;">Por haber completado exitosamente</p>
-          <div class="training-title">${data.trainingTitle}</div>
-          
-          <div class="details">
-            <div class="detail-item"><strong>Área:</strong> ${data.areaName}</div>
-            <div class="detail-item"><strong>Duración:</strong> ${data.duration} minutos</div>
-            ${data.certificateType === 'certificate' 
-              ? `<div class="detail-item"><strong>Calificación:</strong> ${data.score}%</div>` 
-              : ''}
-            <div class="detail-item"><strong>Fecha de emisión:</strong> ${data.completedDate}</div>
-          </div>
-        </div>
-        
-        <div class="footer">
-          <div class="signature">
-            <div class="seal">SELLO OFICIAL</div>
-          </div>
-          <div class="signature">
-            <div class="signature-line">Dirección General</div>
-            <p style="font-size: 14px; color: #999; margin: 0;">Firma Autorizada</p>
-          </div>
-        </div>
-      </div>
-    </body>
-    </html>
-  `;
-}
