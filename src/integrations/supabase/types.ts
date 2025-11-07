@@ -407,6 +407,7 @@ export type Database = {
       user_progress: {
         Row: {
           completed_at: string | null
+          content_viewed_completely: boolean | null
           id: string
           last_accessed_at: string | null
           progress_percentage: number | null
@@ -417,6 +418,7 @@ export type Database = {
         }
         Insert: {
           completed_at?: string | null
+          content_viewed_completely?: boolean | null
           id?: string
           last_accessed_at?: string | null
           progress_percentage?: number | null
@@ -427,6 +429,7 @@ export type Database = {
         }
         Update: {
           completed_at?: string | null
+          content_viewed_completely?: boolean | null
           id?: string
           last_accessed_at?: string | null
           progress_percentage?: number | null

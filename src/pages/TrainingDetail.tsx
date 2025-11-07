@@ -4,14 +4,16 @@ import { supabase } from "@/integrations/supabase/client";
 import Navigation from "@/components/Navigation";
 import EvaluationTaker from "@/components/evaluations/EvaluationTaker";
 import EvaluationManager from "@/components/evaluations/EvaluationManager";
+import ContentTracker from "@/components/ContentTracker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Clock, Award, CheckCircle, PlayCircle, Download } from "lucide-react";
+import { ArrowLeft, Clock, Award, CheckCircle, PlayCircle, Download, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const TrainingDetail = () => {
   const { id } = useParams();
@@ -253,15 +255,24 @@ const TrainingDetail = () => {
                   
                   <TabsContent value="content" className="space-y-4">
                     {training.content_url ? (
-                      <div className="w-full aspect-video bg-muted rounded-lg overflow-hidden">
-                        <iframe
-                          src={training.content_url}
-                          className="w-full h-full"
-                          title={training.title}
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                          allowFullScreen
+                      training.requires_evaluation ? (
+                        <ContentTracker
+                          contentUrl={training.content_url}
+                          userProgressId={userProgress?.id}
+                          onContentViewed={loadTraining}
+                          contentViewedCompletely={userProgress?.content_viewed_completely || false}
                         />
-                      </div>
+                      ) : (
+                        <div className="w-full aspect-video bg-muted rounded-lg overflow-hidden">
+                          <iframe
+                            src={training.content_url}
+                            className="w-full h-full"
+                            title={training.title}
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                          />
+                        </div>
+                      )
                     ) : (
                       <div className="w-full aspect-video bg-muted rounded-lg flex items-center justify-center">
                         <div className="text-center">
@@ -420,11 +431,20 @@ const TrainingDetail = () => {
                   <CardTitle className="text-lg">Evaluación</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <EvaluationTaker
-                    evaluationId={evaluation.id}
-                    trainingId={id!}
-                    onComplete={loadTraining}
-                  />
+                  {!userProgress?.content_viewed_completely ? (
+                    <Alert className="mb-4">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>
+                        Debes visualizar todo el contenido de la capacitación antes de poder realizar la evaluación.
+                      </AlertDescription>
+                    </Alert>
+                  ) : (
+                    <EvaluationTaker
+                      evaluationId={evaluation.id}
+                      trainingId={id!}
+                      onComplete={loadTraining}
+                    />
+                  )}
                 </CardContent>
               </Card>
             )}

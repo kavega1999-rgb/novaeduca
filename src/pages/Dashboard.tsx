@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Navigation from "@/components/Navigation";
+import FAQ from "@/components/FAQ";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +10,8 @@ import { Progress } from "@/components/ui/progress";
 import { Shield, Heart, Leaf, Activity, Users, Monitor, ArrowRight, BookOpen, Award, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { CertificatesList } from "@/components/profile/CertificatesList";
+import heroImage from "@/assets/medical-team-hero.jpg";
+import onlineTrainingImage from "@/assets/online-training.jpg";
 
 const iconMap: Record<string, any> = {
   shield: Shield,
@@ -114,13 +117,22 @@ const Dashboard = () => {
       
       <div className="container mx-auto px-4 py-8">
         {/* Hero Section */}
-        <div className="mb-8 p-8 rounded-2xl" style={{ background: "var(--gradient-hero)" }}>
-          <h1 className="text-4xl font-bold text-foreground mb-2">
-            Bienvenido a tu Centro de Aprendizaje
-          </h1>
-          <p className="text-lg text-muted-foreground">
-            Desarrolla tus habilidades y mantente actualizado con nuestras capacitaciones
-          </p>
+        <div className="mb-8 rounded-2xl overflow-hidden relative h-[400px]">
+          <img 
+            src={heroImage} 
+            alt="Equipo médico Novasalud" 
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/90 to-primary/70 flex items-center">
+            <div className="container mx-auto px-8">
+              <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
+                Bienvenido a tu Centro de Aprendizaje
+              </h1>
+              <p className="text-xl text-white/90 max-w-2xl">
+                Desarrolla tus habilidades y mantente actualizado con nuestras capacitaciones profesionales de salud
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Stats Cards */}
@@ -174,9 +186,26 @@ const Dashboard = () => {
           </Card>
         </div>
 
-        {/* Certificates Section */}
-        <div className="mb-8">
-          <CertificatesList />
+        {/* Info Section with Image */}
+        <div className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card style={{ boxShadow: "var(--shadow-card)" }}>
+            <CardHeader>
+              <CardTitle>Capacitación Continua</CardTitle>
+              <CardDescription>
+                En Novasalud Caribe IPS nos comprometemos con la excelencia en la formación de nuestro equipo médico
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <img 
+                src={onlineTrainingImage} 
+                alt="Capacitación en línea" 
+                className="w-full rounded-lg"
+              />
+            </CardContent>
+          </Card>
+          <div>
+            <CertificatesList />
+          </div>
         </div>
 
         {/* Areas Section */}
@@ -214,6 +243,11 @@ const Dashboard = () => {
               </Card>
             );
           })}
+        </div>
+
+        {/* FAQ Section */}
+        <div className="mt-12">
+          <FAQ />
         </div>
       </div>
     </div>
