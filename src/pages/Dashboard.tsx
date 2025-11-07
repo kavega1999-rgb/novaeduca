@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Shield, Heart, Leaf, Activity, Users, Monitor, ArrowRight, BookOpen, Award, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { CertificatesList } from "@/components/profile/CertificatesList";
 
 const iconMap: Record<string, any> = {
   shield: Shield,
@@ -171,6 +172,11 @@ const Dashboard = () => {
               </div>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Certificates Section */}
+        <div className="mb-8">
+          <CertificatesList />
         </div>
 
         {/* Areas Section */}
