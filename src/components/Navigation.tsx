@@ -1,9 +1,10 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { GraduationCap, Home, BookOpen, User, LogOut, Settings } from "lucide-react";
+import { Home, BookOpen, User, LogOut, Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
+import novasaludLogo from "@/assets/novasalud-logo.jpg";
 
 interface NavigationProps {
   userRole?: string;
@@ -51,13 +52,11 @@ const Navigation = ({ userRole }: NavigationProps) => {
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-8">
             <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/dashboard")}>
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: "var(--gradient-primary)" }}>
-                <GraduationCap className="w-6 h-6 text-primary-foreground" />
-              </div>
-              <div>
-                <div className="font-bold text-sm text-foreground">Novasalud</div>
-                <div className="text-xs text-muted-foreground">Caribe IPS</div>
-              </div>
+              <img 
+                src={novasaludLogo} 
+                alt="Novasalud Caribe IPS" 
+                className="h-12 w-auto object-contain"
+              />
             </div>
 
             <div className="hidden md:flex items-center gap-2">
