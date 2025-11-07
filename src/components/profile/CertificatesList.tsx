@@ -62,17 +62,32 @@ export const CertificatesList = () => {
 
   const handleDownload = async (certificate: Certificate) => {
     try {
-      // Open the file URL in a new tab to download
-      window.open(certificate.file_url, '_blank');
+      // Fetch the PDF and download it directly to avoid CORS issues
+      const response = await fetch(certificate.file_url);
+      
+      if (!response.ok) {
+        throw new Error('No se pudo obtener el archivo');
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `certificado-${certificate.trainings?.title || 'documento'}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
       
       toast({
-        title: "Descargando certificado",
-        description: "El archivo se está descargando",
+        title: "Certificado descargado",
+        description: "El archivo se ha descargado correctamente",
       });
     } catch (error: any) {
+      console.error('Download error:', error);
       toast({
-        title: "Error",
-        description: "No se pudo descargar el certificado",
+        title: "Error al descargar",
+        description: "Si el problema persiste, intenta desde otro navegador o desactiva extensiones de bloqueo",
         variant: "destructive",
       });
     }
