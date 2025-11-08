@@ -73,6 +73,9 @@ const PagedContentViewer = ({
 
   const progressPercentage = Math.round((viewedPages.size / totalPages) * 100);
 
+  // Build PDF URL with page navigation
+  const pdfUrl = `${contentUrl}#page=${currentPage}`;
+
   return (
     <div className="space-y-4">
       {/* Progress Bar */}
@@ -94,9 +97,9 @@ const PagedContentViewer = ({
 
       {/* Content Viewer */}
       <div className="bg-card border rounded-lg overflow-hidden" style={{ boxShadow: "var(--shadow-card)" }}>
-        <div className="w-full aspect-[16/10] bg-muted">
+        <div className="w-full h-[600px] bg-muted">
           <iframe
-            src={`${contentUrl}${contentUrl.includes('?') ? '&' : '?'}page=${currentPage}`}
+            src={pdfUrl}
             className="w-full h-full"
             title="Contenido de capacitación"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -106,7 +109,7 @@ const PagedContentViewer = ({
 
         {/* Navigation Controls */}
         <div className="p-4 border-t bg-card">
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center justify-between gap-4 mb-4">
             <Button
               variant="outline"
               onClick={handlePreviousPage}
@@ -116,22 +119,10 @@ const PagedContentViewer = ({
               Anterior
             </Button>
 
-            <div className="flex items-center gap-2 flex-wrap justify-center">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                <Button
-                  key={page}
-                  variant={currentPage === page ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => goToPage(page)}
-                  className={`w-10 h-10 ${
-                    viewedPages.has(page) && currentPage !== page
-                      ? "bg-secondary/20 border-secondary"
-                      : ""
-                  }`}
-                >
-                  {page}
-                </Button>
-              ))}
+            <div className="text-center">
+              <div className="text-sm font-medium">
+                Página {currentPage} de {totalPages}
+              </div>
             </div>
 
             <Button
@@ -144,8 +135,23 @@ const PagedContentViewer = ({
             </Button>
           </div>
 
-          <div className="text-center mt-3 text-sm text-muted-foreground">
-            Página {currentPage} de {totalPages}
+          {/* Page Numbers Grid */}
+          <div className="flex items-center gap-2 flex-wrap justify-center">
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+              <Button
+                key={page}
+                variant={currentPage === page ? "default" : "outline"}
+                size="sm"
+                onClick={() => goToPage(page)}
+                className={`min-w-[40px] h-9 ${
+                  viewedPages.has(page) && currentPage !== page
+                    ? "bg-secondary/20 border-secondary"
+                    : ""
+                }`}
+              >
+                {page}
+              </Button>
+            ))}
           </div>
         </div>
       </div>
