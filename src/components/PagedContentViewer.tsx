@@ -7,18 +7,20 @@ import { toast } from "sonner";
 
 interface PagedContentViewerProps {
   contentUrl: string;
-  userProgressId: string;
-  onContentViewed: () => void;
-  contentViewedCompletely: boolean;
+  userProgressId?: string;
+  onContentViewed?: () => void;
+  contentViewedCompletely?: boolean;
   totalPages?: number;
+  requiresEvaluation?: boolean;
 }
 
 const PagedContentViewer = ({
   contentUrl,
   userProgressId,
   onContentViewed,
-  contentViewedCompletely,
+  contentViewedCompletely = false,
   totalPages = 10,
+  requiresEvaluation = false,
 }: PagedContentViewerProps) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [viewedPages, setViewedPages] = useState<Set<number>>(new Set([1]));
@@ -37,6 +39,11 @@ const PagedContentViewer = ({
   }, [viewedPages, totalPages, allPagesViewed]);
 
   const markContentAsViewed = async () => {
+    if (!userProgressId) {
+      setAllPagesViewed(true);
+      return;
+    }
+
     const { error } = await supabase
       .from("user_progress")
       .update({
@@ -47,8 +54,13 @@ const PagedContentViewer = ({
 
     if (!error) {
       setAllPagesViewed(true);
-      toast.success("¡Has completado la visualización del contenido! Ahora puedes realizar la evaluación.");
-      onContentViewed();
+      const message = requiresEvaluation 
+        ? "¡Has completado la visualización del contenido! Ahora puedes realizar la evaluación."
+        : "¡Has completado la visualización del contenido!";
+      toast.success(message);
+      if (onContentViewed) {
+        onContentViewed();
+      }
     }
   };
 

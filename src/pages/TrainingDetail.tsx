@@ -255,25 +255,14 @@ const TrainingDetail = () => {
                   
                   <TabsContent value="content" className="space-y-4">
                     {training.content_url ? (
-                      training.requires_evaluation ? (
-                        <PagedContentViewer
-                          contentUrl={training.content_url}
-                          userProgressId={userProgress?.id}
-                          onContentViewed={loadTraining}
-                          contentViewedCompletely={userProgress?.content_viewed_completely || false}
-                          totalPages={training.total_pages || 10}
-                        />
-                      ) : (
-                        <div className="w-full aspect-[16/10] bg-muted rounded-lg overflow-hidden border" style={{ boxShadow: "var(--shadow-card)" }}>
-                          <iframe
-                            src={training.content_url}
-                            className="w-full h-full"
-                            title={training.title}
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen
-                          />
-                        </div>
-                      )
+                      <PagedContentViewer
+                        contentUrl={training.content_url}
+                        userProgressId={userProgress?.id}
+                        onContentViewed={loadTraining}
+                        contentViewedCompletely={userProgress?.content_viewed_completely || false}
+                        totalPages={training.total_pages || 10}
+                        requiresEvaluation={training.requires_evaluation}
+                      />
                     ) : (
                       <div className="w-full aspect-video bg-muted rounded-lg flex items-center justify-center">
                         <div className="text-center">
