@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import Navigation from "@/components/Navigation";
 import EvaluationTaker from "@/components/evaluations/EvaluationTaker";
 import EvaluationManager from "@/components/evaluations/EvaluationManager";
-import ContentTracker from "@/components/ContentTracker";
+import PagedContentViewer from "@/components/PagedContentViewer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -256,14 +256,15 @@ const TrainingDetail = () => {
                   <TabsContent value="content" className="space-y-4">
                     {training.content_url ? (
                       training.requires_evaluation ? (
-                        <ContentTracker
+                        <PagedContentViewer
                           contentUrl={training.content_url}
                           userProgressId={userProgress?.id}
                           onContentViewed={loadTraining}
                           contentViewedCompletely={userProgress?.content_viewed_completely || false}
+                          totalPages={training.duration_minutes ? Math.max(5, Math.ceil(training.duration_minutes / 3)) : 10}
                         />
                       ) : (
-                        <div className="w-full aspect-video bg-muted rounded-lg overflow-hidden">
+                        <div className="w-full aspect-[16/10] bg-muted rounded-lg overflow-hidden border" style={{ boxShadow: "var(--shadow-card)" }}>
                           <iframe
                             src={training.content_url}
                             className="w-full h-full"
