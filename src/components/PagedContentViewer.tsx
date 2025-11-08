@@ -73,8 +73,8 @@ const PagedContentViewer = ({
 
   const progressPercentage = Math.round((viewedPages.size / totalPages) * 100);
 
-  // Build PDF URL with page navigation
-  const pdfUrl = `${contentUrl}#page=${currentPage}`;
+  // Build PDF URL with page navigation and hide toolbar
+  const pdfUrl = `${contentUrl}#page=${currentPage}&toolbar=0&navpanes=0&scrollbar=0&view=FitH`;
 
   return (
     <div className="space-y-4">

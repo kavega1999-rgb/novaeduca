@@ -18,6 +18,7 @@ const formSchema = z.object({
   type: z.enum(["capacitacion", "induccion", "entrenamiento"]),
   area_id: z.string().uuid("Selecciona un área válida"),
   duration_minutes: z.coerce.number().min(1, "La duración debe ser mayor a 0"),
+  total_pages: z.coerce.number().min(1, "El número de páginas debe ser mayor a 0").default(10),
   status: z.enum(["active", "draft", "archived"]),
   requires_evaluation: z.boolean().default(false),
   generates_certificate: z.boolean().default(false),
@@ -43,6 +44,7 @@ const TrainingForm = ({ trainingId, onSuccess }: TrainingFormProps) => {
       type: "capacitacion",
       area_id: "",
       duration_minutes: 60,
+      total_pages: 10,
       status: "active",
       requires_evaluation: false,
       generates_certificate: false,
@@ -78,6 +80,7 @@ const TrainingForm = ({ trainingId, onSuccess }: TrainingFormProps) => {
         type: data.type as any,
         area_id: data.area_id,
         duration_minutes: data.duration_minutes || 60,
+        total_pages: data.total_pages || 10,
         status: data.status as any,
         requires_evaluation: data.requires_evaluation || false,
         generates_certificate: data.generates_certificate || false,
@@ -102,6 +105,7 @@ const TrainingForm = ({ trainingId, onSuccess }: TrainingFormProps) => {
           type: values.type,
           area_id: values.area_id,
           duration_minutes: values.duration_minutes,
+          total_pages: values.total_pages,
           status: values.status,
           requires_evaluation: values.requires_evaluation,
           generates_certificate: values.generates_certificate,
@@ -120,6 +124,7 @@ const TrainingForm = ({ trainingId, onSuccess }: TrainingFormProps) => {
           type: values.type,
           area_id: values.area_id,
           duration_minutes: values.duration_minutes,
+          total_pages: values.total_pages,
           status: values.status,
           requires_evaluation: values.requires_evaluation,
           generates_certificate: values.generates_certificate,
@@ -260,27 +265,41 @@ const TrainingForm = ({ trainingId, onSuccess }: TrainingFormProps) => {
 
           <FormField
             control={form.control}
-            name="status"
+            name="total_pages"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Estado</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona el estado" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="active">Activo</SelectItem>
-                    <SelectItem value="draft">Borrador</SelectItem>
-                    <SelectItem value="archived">Archivado</SelectItem>
-                  </SelectContent>
-                </Select>
+                <FormLabel>Total de páginas</FormLabel>
+                <FormControl>
+                  <Input type="number" min="1" {...field} />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
         </div>
+
+        <FormField
+          control={form.control}
+          name="status"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Estado</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona el estado" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="active">Activo</SelectItem>
+                  <SelectItem value="draft">Borrador</SelectItem>
+                  <SelectItem value="archived">Archivado</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <div className="space-y-4">
           <FormField

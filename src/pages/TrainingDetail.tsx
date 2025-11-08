@@ -261,7 +261,7 @@ const TrainingDetail = () => {
                           userProgressId={userProgress?.id}
                           onContentViewed={loadTraining}
                           contentViewedCompletely={userProgress?.content_viewed_completely || false}
-                          totalPages={training.duration_minutes ? Math.max(5, Math.ceil(training.duration_minutes / 3)) : 10}
+                          totalPages={training.total_pages || 10}
                         />
                       ) : (
                         <div className="w-full aspect-[16/10] bg-muted rounded-lg overflow-hidden border" style={{ boxShadow: "var(--shadow-card)" }}>

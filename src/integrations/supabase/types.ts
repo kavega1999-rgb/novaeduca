@@ -350,6 +350,7 @@ export type Database = {
           requires_evaluation: boolean | null
           status: string
           title: string
+          total_pages: number | null
           type: string
           updated_at: string
         }
@@ -367,6 +368,7 @@ export type Database = {
           requires_evaluation?: boolean | null
           status?: string
           title: string
+          total_pages?: number | null
           type: string
           updated_at?: string
         }
@@ -384,6 +386,7 @@ export type Database = {
           requires_evaluation?: boolean | null
           status?: string
           title?: string
+          total_pages?: number | null
           type?: string
           updated_at?: string
         }
