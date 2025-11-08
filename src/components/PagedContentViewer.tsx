@@ -85,8 +85,8 @@ const PagedContentViewer = ({
 
   const progressPercentage = Math.round((viewedPages.size / totalPages) * 100);
 
-  // Build PDF URL to show single page - using page parameter with zoom to fit page width
-  const pdfUrl = `${contentUrl}#page=${currentPage}&zoom=page-fit&toolbar=0&navpanes=0&scrollbar=0&statusbar=0&messages=0&view=Fit`;
+  // Build PDF URL to show single page only - force single page mode
+  const pdfUrl = `${contentUrl}#page=${currentPage}&pagemode=none&toolbar=0&navpanes=0&scrollbar=0&view=Fit`;
 
   return (
     <div className="space-y-4">
@@ -107,37 +107,41 @@ const PagedContentViewer = ({
         )}
       </div>
 
-      {/* Content Viewer */}
+      {/* Content Viewer - Single Page Mode */}
       <div className="bg-card border rounded-lg overflow-hidden" style={{ boxShadow: "var(--shadow-card)" }}>
-        <div className="w-full h-[700px] bg-muted flex items-center justify-center">
+        <div className="w-full h-[750px] bg-muted relative">
           <iframe
+            key={currentPage}
             src={pdfUrl}
             className="w-full h-full border-0"
-            title="Contenido de capacitación"
-            style={{ overflow: 'hidden' }}
+            title={`Contenido de capacitación - Página ${currentPage}`}
+            style={{ 
+              overflow: 'hidden',
+              display: 'block'
+            }}
           />
         </div>
 
         {/* Navigation Controls */}
-        <div className="p-4 border-t bg-card">
-          <div className="flex items-center justify-between gap-4 mb-4">
+        <div className="p-5 border-t bg-gradient-to-br from-card to-muted/20">
+          <div className="flex items-center justify-between gap-4 mb-5">
             <Button
               variant="outline"
               size="lg"
               onClick={handlePreviousPage}
               disabled={currentPage === 1}
-              className="min-w-[120px]"
+              className="min-w-[140px] font-semibold"
             >
               <ChevronLeft className="w-5 h-5 mr-2" />
               Anterior
             </Button>
 
-            <div className="text-center px-4">
-              <div className="text-lg font-semibold text-primary">
-                Página {currentPage} de {totalPages}
+            <div className="text-center px-6 py-2 bg-primary/5 rounded-lg border border-primary/20">
+              <div className="text-xl font-bold text-primary">
+                {currentPage} / {totalPages}
               </div>
-              <div className="text-xs text-muted-foreground mt-1">
-                {viewedPages.has(currentPage) ? "Vista" : "Nueva"}
+              <div className="text-xs text-muted-foreground mt-1 font-medium">
+                {viewedPages.has(currentPage) ? "✓ Página vista" : "Página nueva"}
               </div>
             </div>
 
@@ -146,7 +150,7 @@ const PagedContentViewer = ({
               size="lg"
               onClick={handleNextPage}
               disabled={currentPage === totalPages}
-              className="min-w-[120px]"
+              className="min-w-[140px] font-semibold"
             >
               Siguiente
               <ChevronRight className="w-5 h-5 ml-2" />
@@ -155,23 +159,30 @@ const PagedContentViewer = ({
 
           {/* Page Numbers Grid */}
           <div className="border-t pt-4">
-            <p className="text-sm text-muted-foreground mb-3 text-center">Ir a página:</p>
-            <div className="flex items-center gap-2 flex-wrap justify-center">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                <Button
-                  key={page}
-                  variant={currentPage === page ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => goToPage(page)}
-                  className={`min-w-[44px] h-10 font-semibold ${
-                    viewedPages.has(page) && currentPage !== page
-                      ? "bg-success/10 border-success/50 text-success hover:bg-success/20"
-                      : ""
-                  }`}
-                >
-                  {page}
-                </Button>
-              ))}
+            <p className="text-sm font-medium text-muted-foreground mb-3 text-center">
+              Selecciona una página:
+            </p>
+            <div className="flex items-center gap-2 flex-wrap justify-center max-w-4xl mx-auto">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                const isViewed = viewedPages.has(page);
+                const isCurrent = currentPage === page;
+                
+                return (
+                  <Button
+                    key={page}
+                    variant={isCurrent ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => goToPage(page)}
+                    className={`min-w-[48px] h-11 font-bold text-base ${
+                      isViewed && !isCurrent
+                        ? "bg-success/10 border-success/50 text-success hover:bg-success/20 hover:border-success"
+                        : ""
+                    } ${isCurrent ? "shadow-lg" : ""}`}
+                  >
+                    {page}
+                  </Button>
+                );
+              })}
             </div>
           </div>
         </div>
