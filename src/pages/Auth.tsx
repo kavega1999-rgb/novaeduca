@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { GraduationCap, Loader2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import heroImage from "@/assets/medical-team-hero.jpg";
 
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -102,24 +103,38 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: "var(--gradient-hero)" }}>
-      <div className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Background Image with Blur */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center"
+        style={{ 
+          backgroundImage: `url(${heroImage})`,
+          filter: 'blur(8px)',
+          transform: 'scale(1.1)',
+        }}
+      />
+      
+      {/* Overlay */}
+      <div className="absolute inset-0 bg-primary/60" />
+      
+      {/* Content */}
+      <div className="w-full max-w-md relative z-10">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4" style={{ background: "var(--gradient-primary)" }}>
-            <GraduationCap className="w-8 h-8 text-primary-foreground" />
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 bg-white/90 backdrop-blur-sm shadow-xl">
+            <GraduationCap className="w-8 h-8 text-primary" />
           </div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">Novasalud Caribe IPS</h1>
-          <p className="text-muted-foreground">Plataforma de Capacitación</p>
+          <h1 className="text-3xl font-bold text-white mb-2 drop-shadow-lg">Novasalud Caribe IPS</h1>
+          <p className="text-white/90 drop-shadow">Plataforma de Capacitación</p>
         </div>
 
         <Tabs defaultValue="signin" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-4">
+          <TabsList className="grid w-full grid-cols-2 mb-4 bg-white/90 backdrop-blur-sm">
             <TabsTrigger value="signin">Iniciar Sesión</TabsTrigger>
             <TabsTrigger value="signup">Registro</TabsTrigger>
           </TabsList>
 
           <TabsContent value="signin">
-            <Card style={{ boxShadow: "var(--shadow-card)" }}>
+            <Card className="bg-white/95 backdrop-blur-md border-white/20" style={{ boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
               <CardHeader>
                 <CardTitle>Inicia sesión</CardTitle>
                 <CardDescription>Ingresa tus credenciales para acceder</CardDescription>
@@ -163,7 +178,7 @@ const Auth = () => {
           </TabsContent>
 
           <TabsContent value="signup">
-            <Card style={{ boxShadow: "var(--shadow-card)" }}>
+            <Card className="bg-white/95 backdrop-blur-md border-white/20" style={{ boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
               <CardHeader>
                 <CardTitle>Crear cuenta</CardTitle>
                 <CardDescription>Regístrate para acceder a las capacitaciones</CardDescription>
