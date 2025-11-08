@@ -109,22 +109,9 @@ const PagedContentViewer = ({
 
       {/* Content Viewer - Single Page Mode */}
       <div className="bg-card border rounded-lg overflow-hidden" style={{ boxShadow: "var(--shadow-card)" }}>
-        <div className="w-full h-[750px] bg-muted relative">
-          <iframe
-            key={currentPage}
-            src={pdfUrl}
-            className="w-full h-full border-0"
-            title={`Contenido de capacitación - Página ${currentPage}`}
-            style={{ 
-              overflow: 'hidden',
-              display: 'block'
-            }}
-          />
-        </div>
-
-        {/* Navigation Controls */}
-        <div className="p-5 border-t bg-gradient-to-br from-card to-muted/20">
-          <div className="flex items-center justify-between gap-4 mb-5">
+        {/* Navigation Controls - Top */}
+        <div className="p-5 border-b bg-gradient-to-br from-card to-muted/20">
+          <div className="flex items-center justify-between gap-4">
             <Button
               variant="outline"
               size="lg"
@@ -156,34 +143,48 @@ const PagedContentViewer = ({
               <ChevronRight className="w-5 h-5 ml-2" />
             </Button>
           </div>
+        </div>
 
-          {/* Page Numbers Grid */}
-          <div className="border-t pt-4">
-            <p className="text-sm font-medium text-muted-foreground mb-3 text-center">
-              Selecciona una página:
-            </p>
-            <div className="flex items-center gap-2 flex-wrap justify-center max-w-4xl mx-auto">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-                const isViewed = viewedPages.has(page);
-                const isCurrent = currentPage === page;
-                
-                return (
-                  <Button
-                    key={page}
-                    variant={isCurrent ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => goToPage(page)}
-                    className={`min-w-[48px] h-11 font-bold text-base ${
-                      isViewed && !isCurrent
-                        ? "bg-success/10 border-success/50 text-success hover:bg-success/20 hover:border-success"
-                        : ""
-                    } ${isCurrent ? "shadow-lg" : ""}`}
-                  >
-                    {page}
-                  </Button>
-                );
-              })}
-            </div>
+        {/* PDF Viewer */}
+        <div className="w-full h-[750px] bg-muted relative">
+          <iframe
+            key={currentPage}
+            src={pdfUrl}
+            className="w-full h-full border-0"
+            title={`Contenido de capacitación - Página ${currentPage}`}
+            style={{ 
+              overflow: 'hidden',
+              display: 'block'
+            }}
+          />
+        </div>
+
+        {/* Page Numbers Grid - Bottom */}
+        <div className="p-5 border-t bg-card">
+          <p className="text-sm font-medium text-muted-foreground mb-3 text-center">
+            Selecciona una página:
+          </p>
+          <div className="flex items-center gap-2 flex-wrap justify-center max-w-4xl mx-auto">
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+              const isViewed = viewedPages.has(page);
+              const isCurrent = currentPage === page;
+              
+              return (
+                <Button
+                  key={page}
+                  variant={isCurrent ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => goToPage(page)}
+                  className={`min-w-[48px] h-11 font-bold text-base ${
+                    isViewed && !isCurrent
+                      ? "bg-success/10 border-success/50 text-success hover:bg-success/20 hover:border-success"
+                      : ""
+                  } ${isCurrent ? "shadow-lg" : ""}`}
+                >
+                  {page}
+                </Button>
+              );
+            })}
           </div>
         </div>
       </div>
