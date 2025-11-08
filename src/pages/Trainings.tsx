@@ -18,6 +18,7 @@ const Trainings = () => {
   const [areas, setAreas] = useState<any[]>([]);
   const [selectedArea, setSelectedArea] = useState<string>(areaId || "all");
   const [userRole, setUserRole] = useState<string>("");
+  const [userArea, setUserArea] = useState<string>("");
   const [userProgress, setUserProgress] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
 
@@ -29,15 +30,16 @@ const Trainings = () => {
         return;
       }
 
-      // Fetch user role
+      // Fetch user role and area
       const { data: profile } = await supabase
         .from("profiles")
-        .select("role")
+        .select("role, area")
         .eq("id", session.user.id)
         .single();
 
       if (profile) {
         setUserRole(profile.role);
+        setUserArea(profile.area || "");
       }
 
       // Fetch areas
@@ -71,6 +73,18 @@ const Trainings = () => {
   }, [navigate, selectedArea]);
 
   const fetchTrainings = async (areaFilter: string) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("area, role")
+      .eq("id", session.user.id)
+      .single();
+    
+    const userArea = profile?.area;
+    const userRole = profile?.role;
+    
     let query = supabase
       .from("trainings")
       .select(`
@@ -88,10 +102,38 @@ const Trainings = () => {
       query = query.eq("area_id", areaFilter);
     }
 
-    const { data } = await query;
-
-    if (data) {
-      setTrainings(data);
+    const { data: allTrainings } = await query;
+    
+    if (allTrainings) {
+      // If user is admin or leader, show all trainings
+      if (userRole === 'admin' || userRole === 'leader') {
+        setTrainings(allTrainings);
+      } else {
+        // Filter trainings based on user area
+        const visibleTrainings = await Promise.all(
+          allTrainings.map(async (training) => {
+            // If training is visible to all, include it
+            if (training.visible_to_all) {
+              return training;
+            }
+            
+            // Check if user's area is in the target areas
+            const { data: targetAreas } = await supabase
+              .from("training_target_areas")
+              .select("target_area")
+              .eq("training_id", training.id);
+            
+            if (targetAreas && targetAreas.some(ta => ta.target_area === userArea)) {
+              return training;
+            }
+            
+            return null;
+          })
+        );
+        
+        // Filter out null values (trainings not visible to user)
+        setTrainings(visibleTrainings.filter(t => t !== null));
+      }
     }
     setLoading(false);
   };

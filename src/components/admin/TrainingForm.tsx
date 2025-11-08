@@ -23,6 +23,8 @@ const formSchema = z.object({
   requires_evaluation: z.boolean().default(false),
   generates_certificate: z.boolean().default(false),
   generates_constancia: z.boolean().default(false),
+  visible_to_all: z.boolean().default(false),
+  target_areas: z.array(z.enum(["medicos", "asistencial", "administrativos"])).default([]),
 });
 
 interface TrainingFormProps {
@@ -49,6 +51,8 @@ const TrainingForm = ({ trainingId, onSuccess }: TrainingFormProps) => {
       requires_evaluation: false,
       generates_certificate: false,
       generates_constancia: false,
+      visible_to_all: false,
+      target_areas: [],
     },
   });
 
@@ -72,6 +76,12 @@ const TrainingForm = ({ trainingId, onSuccess }: TrainingFormProps) => {
       .select("*")
       .eq("id", trainingId)
       .single();
+    
+    // Fetch target areas for this training
+    const { data: targetAreasData } = await supabase
+      .from("training_target_areas")
+      .select("target_area")
+      .eq("training_id", trainingId);
 
     if (data) {
       form.reset({
@@ -85,6 +95,8 @@ const TrainingForm = ({ trainingId, onSuccess }: TrainingFormProps) => {
         requires_evaluation: data.requires_evaluation || false,
         generates_certificate: data.generates_certificate || false,
         generates_constancia: data.generates_constancia || false,
+        visible_to_all: data.visible_to_all || false,
+        target_areas: targetAreasData?.map(ta => ta.target_area) || [],
       });
       if (data.content_url) {
         setUploadedFileUrl(data.content_url);
@@ -97,7 +109,9 @@ const TrainingForm = ({ trainingId, onSuccess }: TrainingFormProps) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
-      let error;
+      let trainingError;
+      let savedTrainingId = trainingId;
+      
       if (trainingId) {
         const updateData: any = {
           title: values.title,
@@ -110,10 +124,11 @@ const TrainingForm = ({ trainingId, onSuccess }: TrainingFormProps) => {
           requires_evaluation: values.requires_evaluation,
           generates_certificate: values.generates_certificate,
           generates_constancia: values.generates_constancia,
+          visible_to_all: values.visible_to_all,
           content_url: uploadedFileUrl || null,
         };
         
-        ({ error } = await supabase
+        ({ error: trainingError } = await supabase
           .from("trainings")
           .update(updateData)
           .eq("id", trainingId));
@@ -129,16 +144,51 @@ const TrainingForm = ({ trainingId, onSuccess }: TrainingFormProps) => {
           requires_evaluation: values.requires_evaluation,
           generates_certificate: values.generates_certificate,
           generates_constancia: values.generates_constancia,
+          visible_to_all: values.visible_to_all,
           content_url: uploadedFileUrl || null,
           created_by: user?.id,
         };
         
-        ({ error } = await supabase
+        const { data: newTraining, error } = await supabase
           .from("trainings")
-          .insert([insertData]));
+          .insert([insertData])
+          .select()
+          .single();
+        
+        trainingError = error;
+        if (newTraining) savedTrainingId = newTraining.id;
       }
 
-      if (error) throw error;
+      if (trainingError) throw trainingError;
+      
+      // Update target areas if not visible to all
+      if (savedTrainingId && !values.visible_to_all) {
+        // Delete existing target areas
+        await supabase
+          .from("training_target_areas")
+          .delete()
+          .eq("training_id", savedTrainingId);
+        
+        // Insert new target areas
+        if (values.target_areas.length > 0) {
+          const targetAreasData = values.target_areas.map(area => ({
+            training_id: savedTrainingId,
+            target_area: area,
+          }));
+          
+          const { error: targetAreasError } = await supabase
+            .from("training_target_areas")
+            .insert(targetAreasData);
+          
+          if (targetAreasError) throw targetAreasError;
+        }
+      } else if (savedTrainingId && values.visible_to_all) {
+        // If visible to all, delete any target areas
+        await supabase
+          .from("training_target_areas")
+          .delete()
+          .eq("training_id", savedTrainingId);
+      }
 
       toast({
         title: trainingId ? "Capacitación actualizada" : "Capacitación creada",
@@ -355,7 +405,58 @@ const TrainingForm = ({ trainingId, onSuccess }: TrainingFormProps) => {
               </FormItem>
             )}
           />
+          
+          <FormField
+            control={form.control}
+            name="visible_to_all"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                <FormControl>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <FormLabel>Visible para todos los usuarios</FormLabel>
+                </div>
+              </FormItem>
+            )}
+          />
         </div>
+
+        {!form.watch("visible_to_all") && (
+          <FormField
+            control={form.control}
+            name="target_areas"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Dirigida a las siguientes áreas</FormLabel>
+                <div className="space-y-2">
+                  {["medicos", "asistencial", "administrativos"].map((area) => (
+                    <FormItem key={area} className="flex flex-row items-start space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value?.includes(area as any)}
+                          onCheckedChange={(checked) => {
+                            const newValue = checked
+                              ? [...(field.value || []), area]
+                              : (field.value || []).filter((value: string) => value !== area);
+                            field.onChange(newValue);
+                          }}
+                        />
+                      </FormControl>
+                      <FormLabel className="font-normal">
+                        {area === "medicos" ? "Médicos" : area === "asistencial" ? "Asistencial" : "Administrativos"}
+                      </FormLabel>
+                    </FormItem>
+                  ))}
+                </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
 
         <div>
           <FormLabel>Material de Apoyo</FormLabel>

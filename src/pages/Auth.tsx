@@ -8,12 +8,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { GraduationCap, Loader2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [area, setArea] = useState<"medicos" | "asistencial" | "administrativos" | "">("");
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -48,10 +50,20 @@ const Auth = () => {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!area) {
+      toast({
+        title: "Área requerida",
+        description: "Por favor selecciona tu área de trabajo.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setIsLoading(true);
 
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -62,7 +74,17 @@ const Auth = () => {
         },
       });
 
-      if (error) throw error;
+      if (authError) throw authError;
+
+      // Update profile with area
+      if (authData.user && area) {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({ area: area as "medicos" | "asistencial" | "administrativos" })
+          .eq('id', authData.user.id);
+        
+        if (profileError) throw profileError;
+      }
 
       toast({
         title: "¡Cuenta creada!",
@@ -180,6 +202,19 @@ const Auth = () => {
                       required
                       minLength={6}
                     />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="area">Área de trabajo</Label>
+                    <Select value={area} onValueChange={(value) => setArea(value as "medicos" | "asistencial" | "administrativos")} required>
+                      <SelectTrigger id="area">
+                        <SelectValue placeholder="Selecciona tu área" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="medicos">Médicos</SelectItem>
+                        <SelectItem value="asistencial">Asistencial</SelectItem>
+                        <SelectItem value="administrativos">Administrativos</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? (

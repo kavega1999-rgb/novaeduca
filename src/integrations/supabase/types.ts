@@ -304,7 +304,7 @@ export type Database = {
       }
       profiles: {
         Row: {
-          area: string | null
+          area: Database["public"]["Enums"]["user_area"] | null
           created_at: string
           full_name: string
           id: string
@@ -314,7 +314,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          area?: string | null
+          area?: Database["public"]["Enums"]["user_area"] | null
           created_at?: string
           full_name: string
           id: string
@@ -324,7 +324,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          area?: string | null
+          area?: Database["public"]["Enums"]["user_area"] | null
           created_at?: string
           full_name?: string
           id?: string
@@ -334,6 +334,35 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      training_target_areas: {
+        Row: {
+          created_at: string
+          id: string
+          target_area: Database["public"]["Enums"]["user_area"]
+          training_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          target_area: Database["public"]["Enums"]["user_area"]
+          training_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          target_area?: Database["public"]["Enums"]["user_area"]
+          training_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_target_areas_training_id_fkey"
+            columns: ["training_id"]
+            isOneToOne: false
+            referencedRelation: "trainings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       trainings: {
         Row: {
@@ -353,6 +382,7 @@ export type Database = {
           total_pages: number | null
           type: string
           updated_at: string
+          visible_to_all: boolean | null
         }
         Insert: {
           area_id: string
@@ -371,6 +401,7 @@ export type Database = {
           total_pages?: number | null
           type: string
           updated_at?: string
+          visible_to_all?: boolean | null
         }
         Update: {
           area_id?: string
@@ -389,6 +420,7 @@ export type Database = {
           total_pages?: number | null
           type?: string
           updated_at?: string
+          visible_to_all?: boolean | null
         }
         Relationships: [
           {
@@ -499,6 +531,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "leader" | "user"
+      user_area: "medicos" | "asistencial" | "administrativos"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -627,6 +660,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "leader", "user"],
+      user_area: ["medicos", "asistencial", "administrativos"],
     },
   },
 } as const

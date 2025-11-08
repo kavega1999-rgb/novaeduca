@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { User, Mail, Briefcase, Building2, Save, Award, BookOpen } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -16,7 +17,12 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [userRole, setUserRole] = useState<string>("");
-  const [profile, setProfile] = useState({
+  const [profile, setProfile] = useState<{
+    full_name: string;
+    position: string;
+    area: "medicos" | "asistencial" | "administrativos" | "";
+    email: string;
+  }>({
     full_name: "",
     position: "",
     area: "",
@@ -87,7 +93,7 @@ const Profile = () => {
         .update({
           full_name: profile.full_name,
           position: profile.position,
-          area: profile.area,
+          area: profile.area || null,
         })
         .eq("id", session.user.id);
 
@@ -184,12 +190,19 @@ const Profile = () => {
                   <Building2 className="w-4 h-4 inline mr-2" />
                   Área
                 </Label>
-                <Input
-                  id="area"
-                  value={profile.area}
-                  onChange={(e) => setProfile({ ...profile, area: e.target.value })}
-                  placeholder="Urgencias"
-                />
+                <Select 
+                  value={profile.area} 
+                  onValueChange={(value) => setProfile({ ...profile, area: value as "medicos" | "asistencial" | "administrativos" })}
+                >
+                  <SelectTrigger id="area">
+                    <SelectValue placeholder="Selecciona tu área" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="medicos">Médicos</SelectItem>
+                    <SelectItem value="asistencial">Asistencial</SelectItem>
+                    <SelectItem value="administrativos">Administrativos</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <Button 
