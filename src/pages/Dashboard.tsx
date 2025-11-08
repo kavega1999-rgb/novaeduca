@@ -11,7 +11,6 @@ import { Shield, Heart, Leaf, Activity, Users, Monitor, ArrowRight, BookOpen, Aw
 import { useToast } from "@/hooks/use-toast";
 import { CertificatesList } from "@/components/profile/CertificatesList";
 import heroImage from "@/assets/medical-team-hero.jpg";
-import onlineTrainingImage from "@/assets/online-training.jpg";
 
 const iconMap: Record<string, any> = {
   shield: Shield,
@@ -186,26 +185,9 @@ const Dashboard = () => {
           </Card>
         </div>
 
-        {/* Info Section with Image */}
-        <div className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card style={{ boxShadow: "var(--shadow-card)" }}>
-            <CardHeader>
-              <CardTitle>Capacitación Continua</CardTitle>
-              <CardDescription>
-                En Novasalud Caribe IPS nos comprometemos con la excelencia en la formación de nuestro equipo médico
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <img 
-                src={onlineTrainingImage} 
-                alt="Capacitación en línea" 
-                className="w-full rounded-lg"
-              />
-            </CardContent>
-          </Card>
-          <div>
-            <CertificatesList />
-          </div>
+        {/* Certificates Section */}
+        <div className="mb-8">
+          <CertificatesList />
         </div>
 
         {/* Areas Section */}
