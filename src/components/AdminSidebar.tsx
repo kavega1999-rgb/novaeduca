@@ -28,10 +28,10 @@ export function AdminSidebar() {
   const isActive = (path: string) => currentPath === path;
 
   return (
-    <Sidebar className={open ? "w-64" : "w-16"} collapsible="icon">
+    <Sidebar collapsible="icon">
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className={!open ? "sr-only" : ""}>
+          <SidebarGroupLabel>
             Administración
           </SidebarGroupLabel>
 
@@ -39,15 +39,15 @@ export function AdminSidebar() {
             <SidebarMenu>
               {adminItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
+                  <SidebarMenuButton asChild tooltip={item.title}>
                     <NavLink
                       to={item.url}
                       end
-                      className="flex items-center gap-2 hover:bg-muted/50 rounded-md px-3 py-2 transition-colors"
-                      activeClassName="bg-muted text-primary font-medium"
+                      className="flex items-center gap-3 px-3 py-2 rounded-lg transition-all"
+                      activeClassName="bg-sidebar-accent text-sidebar-primary font-semibold shadow-sm"
                     >
-                      <item.icon className="h-4 w-4 shrink-0" />
-                      {open && <span>{item.title}</span>}
+                      <item.icon className="h-5 w-5 shrink-0" />
+                      <span>{item.title}</span>
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

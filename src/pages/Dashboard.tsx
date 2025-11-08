@@ -124,13 +124,15 @@ const Dashboard = () => {
     return (
       <div className="min-h-screen bg-background">
         <Navigation userRole={userRole} />
-        <SidebarProvider>
+        <SidebarProvider defaultOpen={true}>
           <div className="flex min-h-[calc(100vh-64px)] w-full">
             <AdminSidebar />
             <main className="flex-1 overflow-auto">
-              <div className="container mx-auto px-4 py-8">
-                <div className="mb-4">
-                  <SidebarTrigger />
+              <div className="container mx-auto px-6 py-8">
+                <div className="mb-6 flex items-center gap-2">
+                  <SidebarTrigger className="h-8 w-8" />
+                  <div className="h-6 w-px bg-border" />
+                  <h1 className="text-2xl font-bold">Panel de Administración</h1>
                 </div>
                 <Outlet />
               </div>
@@ -147,28 +149,30 @@ const Dashboard = () => {
       <Navigation userRole={userRole} />
       
       {isAdminOrLeader && (
-        <SidebarProvider>
+        <SidebarProvider defaultOpen={true}>
           <div className="flex min-h-[calc(100vh-64px)] w-full">
             <AdminSidebar />
             <main className="flex-1 overflow-auto">
-              <div className="container mx-auto px-4 py-8">
-                <div className="mb-4">
-                  <SidebarTrigger />
+              <div className="container mx-auto px-6 py-8">
+                <div className="mb-6 flex items-center gap-2">
+                  <SidebarTrigger className="h-8 w-8" />
+                  <div className="h-6 w-px bg-border" />
+                  <h1 className="text-2xl font-bold">Panel Principal</h1>
                 </div>
                 
                 {/* Hero Section */}
-                <div className="mb-8 rounded-2xl overflow-hidden relative h-[400px]">
+                <div className="mb-8 rounded-2xl overflow-hidden relative h-[400px] shadow-lg">
                   <img 
                     src={heroImage} 
                     alt="Equipo médico Novasalud" 
                     className="w-full h-full object-cover"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-r from-primary/90 to-primary/70 flex items-center">
+                  <div className="absolute inset-0 bg-gradient-to-r from-primary/95 via-primary/85 to-secondary/80 flex items-center">
                     <div className="container mx-auto px-8">
-                      <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
+                      <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
                         Bienvenido a tu Centro de Aprendizaje
-                      </h1>
-                      <p className="text-xl text-white/90 max-w-2xl">
+                      </h2>
+                      <p className="text-xl text-white/95 max-w-2xl">
                         Desarrolla tus habilidades y mantente actualizado con nuestras capacitaciones profesionales de salud
                       </p>
                     </div>
@@ -176,50 +180,56 @@ const Dashboard = () => {
                 </div>
 
                 {/* Stats Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-                  <Card style={{ boxShadow: "var(--shadow-card)" }}>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                  <Card className="bg-gradient-to-br from-card to-primary/5 border-primary/20" style={{ boxShadow: "var(--shadow-card)" }}>
                     <CardHeader className="pb-3">
                       <CardDescription>Total Capacitaciones</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="flex items-center gap-2">
-                        <BookOpen className="w-5 h-5 text-primary" />
-                        <span className="text-3xl font-bold">{stats.totalTrainings}</span>
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-primary/10">
+                          <BookOpen className="w-5 h-5 text-primary" />
+                        </div>
+                        <span className="text-3xl font-bold text-primary">{stats.totalTrainings}</span>
                       </div>
                     </CardContent>
                   </Card>
 
-                  <Card style={{ boxShadow: "var(--shadow-card)" }}>
+                  <Card className="bg-gradient-to-br from-card to-secondary/5 border-secondary/20" style={{ boxShadow: "var(--shadow-card)" }}>
                     <CardHeader className="pb-3">
                       <CardDescription>Completadas</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="flex items-center gap-2">
-                        <Award className="w-5 h-5 text-secondary" />
-                        <span className="text-3xl font-bold">{stats.completedTrainings}</span>
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-secondary/10">
+                          <Award className="w-5 h-5 text-secondary" />
+                        </div>
+                        <span className="text-3xl font-bold text-secondary">{stats.completedTrainings}</span>
                       </div>
                     </CardContent>
                   </Card>
 
-                  <Card style={{ boxShadow: "var(--shadow-card)" }}>
+                  <Card className="bg-gradient-to-br from-card to-accent/5 border-accent/20" style={{ boxShadow: "var(--shadow-card)" }}>
                     <CardHeader className="pb-3">
                       <CardDescription>En Progreso</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="flex items-center gap-2">
-                        <Clock className="w-5 h-5 text-accent" />
-                        <span className="text-3xl font-bold">{stats.inProgress}</span>
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-accent/10">
+                          <Clock className="w-5 h-5 text-accent" />
+                        </div>
+                        <span className="text-3xl font-bold text-accent">{stats.inProgress}</span>
                       </div>
                     </CardContent>
                   </Card>
 
-                  <Card style={{ boxShadow: "var(--shadow-card)" }}>
+                  <Card className="bg-gradient-to-br from-card to-success/5 border-success/20" style={{ boxShadow: "var(--shadow-card)" }}>
                     <CardHeader className="pb-3">
                       <CardDescription>Progreso Promedio</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-2">
-                        <div className="text-3xl font-bold">{stats.averageProgress}%</div>
+                        <div className="text-3xl font-bold text-success">{stats.averageProgress}%</div>
                         <Progress value={stats.averageProgress} className="h-2" />
                       </div>
                     </CardContent>
@@ -232,7 +242,7 @@ const Dashboard = () => {
                 </div>
 
                 {/* Areas Section */}
-                <div className="mb-4">
+                <div className="mb-6">
                   <h2 className="text-2xl font-bold text-foreground mb-6">Áreas de Capacitación</h2>
                 </div>
 
@@ -243,13 +253,13 @@ const Dashboard = () => {
                     return (
                       <Card 
                         key={area.id} 
-                        className="group cursor-pointer transition-all hover:scale-105"
+                        className="group cursor-pointer transition-all hover:scale-105 hover:shadow-hover bg-gradient-to-br from-card to-muted/20"
                         style={{ boxShadow: "var(--shadow-card)" }}
                         onClick={() => navigate(`/trainings?area=${area.id}`)}
                       >
                         <CardHeader>
-                          <div className={`w-12 h-12 rounded-xl bg-${area.color}-100 dark:bg-${area.color}-900/20 flex items-center justify-center mb-3`}>
-                            <Icon className={`w-6 h-6 text-${area.color}-600 dark:text-${area.color}-400`} />
+                          <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center mb-3 shadow-lg">
+                            <Icon className="w-7 h-7 text-white" />
                           </div>
                           <CardTitle className="text-xl">{area.name}</CardTitle>
                           <CardDescription>{area.description}</CardDescription>
@@ -257,10 +267,10 @@ const Dashboard = () => {
                         <CardContent>
                           <Button 
                             variant="ghost" 
-                            className="w-full justify-between group-hover:bg-primary/10 transition-colors"
+                            className="w-full justify-between group-hover:bg-primary/10 group-hover:text-primary transition-colors"
                           >
                             Ver capacitaciones
-                            <ArrowRight className="w-4 h-4" />
+                            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                           </Button>
                         </CardContent>
                       </Card>
