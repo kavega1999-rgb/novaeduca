@@ -81,7 +81,8 @@ const TrainingReports = () => {
   const fetchUserProgress = async () => {
     if (!selectedTraining) return;
 
-    const { data, error } = await supabase
+    // 1) Obtener progreso con perfil (relación por user_id)
+    const { data: progress, error } = await supabase
       .from("user_progress")
       .select(`
         id,
@@ -89,15 +90,10 @@ const TrainingReports = () => {
         status,
         progress_percentage,
         completed_at,
-        profiles!inner (
+        profiles:user_id (
           full_name,
           area,
           position
-        ),
-        certificates (
-          id,
-          certificate_type,
-          file_url
         )
       `)
       .eq("training_id", selectedTraining)
@@ -111,9 +107,34 @@ const TrainingReports = () => {
         variant: "destructive",
       });
       setUserProgress([]);
-    } else {
-      setUserProgress(data as any || []);
+      return;
     }
+
+    // 2) Obtener certificados por usuario para esta capacitación (no hay FK directa)
+    let result = (progress || []).map((p: any) => ({ ...p, certificates: [] as any[] }));
+    const userIds = (progress || []).map((p: any) => p.user_id);
+
+    if (userIds.length > 0) {
+      const { data: certs, error: certErr } = await supabase
+        .from("certificates")
+        .select("id,user_id,training_id,certificate_type,file_url")
+        .eq("training_id", selectedTraining)
+        .in("user_id", userIds);
+
+      if (certErr) {
+        console.error("Error fetching certificates:", certErr);
+      } else if (certs) {
+        const byUser = new Map<string, any[]>();
+        certs.forEach((c: any) => {
+          const list = byUser.get(c.user_id) || [];
+          list.push(c);
+          byUser.set(c.user_id, list);
+        });
+        result = result.map((p: any) => ({ ...p, certificates: byUser.get(p.user_id) || [] }));
+      }
+    }
+
+    setUserProgress(result as any);
   };
 
   const downloadAttendance = () => {
