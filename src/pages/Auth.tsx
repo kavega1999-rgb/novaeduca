@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { GraduationCap, Loader2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import heroImage from "@/assets/medical-team-hero.jpg";
+import heroImage from "@/assets/team-celebration.jpg";
 
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
