@@ -1,8 +1,12 @@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { HelpCircle } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { HelpCircle, ChevronDown } from "lucide-react";
+import { useState } from "react";
 
 const FAQ = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  
   const faqs = [
     {
       question: "¿Cómo accedo a mis capacitaciones asignadas?",
@@ -39,31 +43,40 @@ const FAQ = () => {
   ];
 
   return (
-    <Card style={{ boxShadow: "var(--shadow-card)" }}>
-      <CardHeader>
-        <div className="flex items-center gap-2 mb-2">
-          <HelpCircle className="w-6 h-6 text-primary" />
-          <CardTitle className="text-2xl">Preguntas Frecuentes</CardTitle>
-        </div>
-        <CardDescription>
-          Encuentra respuestas a las preguntas más comunes sobre la plataforma
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Accordion type="single" collapsible className="w-full">
-          {faqs.map((faq, index) => (
-            <AccordionItem key={index} value={`item-${index}`}>
-              <AccordionTrigger className="text-left">
-                {faq.question}
-              </AccordionTrigger>
-              <AccordionContent className="text-muted-foreground">
-                {faq.answer}
-              </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
-      </CardContent>
-    </Card>
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <Card style={{ boxShadow: "var(--shadow-card)" }}>
+        <CollapsibleTrigger className="w-full">
+          <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors rounded-t-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <HelpCircle className="w-6 h-6 text-primary" />
+                <CardTitle className="text-2xl">Preguntas Frecuentes</CardTitle>
+              </div>
+              <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+            </div>
+            <CardDescription className="text-left">
+              Encuentra respuestas a las preguntas más comunes sobre la plataforma
+            </CardDescription>
+          </CardHeader>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <CardContent>
+            <Accordion type="single" collapsible className="w-full">
+              {faqs.map((faq, index) => (
+                <AccordionItem key={index} value={`item-${index}`}>
+                  <AccordionTrigger className="text-left">
+                    {faq.question}
+                  </AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground">
+                    {faq.answer}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </CardContent>
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
   );
 };
 
