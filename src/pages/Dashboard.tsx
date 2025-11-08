@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Outlet, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Navigation from "@/components/Navigation";
 import FAQ from "@/components/FAQ";
+import { AdminSidebar } from "@/components/AdminSidebar";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,9 +25,11 @@ const iconMap: Record<string, any> = {
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const [areas, setAreas] = useState<any[]>([]);
   const [userRole, setUserRole] = useState<string>("");
+  const [isAdminOrLeader, setIsAdminOrLeader] = useState(false);
   const [stats, setStats] = useState({
     totalTrainings: 0,
     completedTrainings: 0,
@@ -33,6 +37,8 @@ const Dashboard = () => {
     averageProgress: 0,
   });
   const [loading, setLoading] = useState(true);
+
+  const isReportsRoute = location.pathname === "/dashboard/reports";
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -42,15 +48,18 @@ const Dashboard = () => {
         return;
       }
 
-      // Fetch user profile and role
-      const { data: profile } = await supabase
-        .from("profiles")
+      // Fetch user roles
+      const { data: roles } = await supabase
+        .from("user_roles")
         .select("role")
-        .eq("id", session.user.id)
-        .single();
+        .eq("user_id", session.user.id);
 
-      if (profile) {
-        setUserRole(profile.role);
+      const hasAdminAccess = roles?.some(r => r.role === "admin" || r.role === "leader");
+      setIsAdminOrLeader(hasAdminAccess || false);
+      
+      if (roles && roles.length > 0) {
+        const role = roles.find(r => r.role === "admin")?.role || roles[0].role;
+        setUserRole(role);
       }
 
       // Fetch areas
@@ -110,128 +119,285 @@ const Dashboard = () => {
     );
   }
 
+  // If admin/leader and on a sub-route, show with sidebar
+  if (isAdminOrLeader && isReportsRoute) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation userRole={userRole} />
+        <SidebarProvider>
+          <div className="flex min-h-[calc(100vh-64px)] w-full">
+            <AdminSidebar />
+            <main className="flex-1 overflow-auto">
+              <div className="container mx-auto px-4 py-8">
+                <div className="mb-4">
+                  <SidebarTrigger />
+                </div>
+                <Outlet />
+              </div>
+            </main>
+          </div>
+        </SidebarProvider>
+      </div>
+    );
+  }
+
+  // Default dashboard view
   return (
     <div className="min-h-screen bg-background">
       <Navigation userRole={userRole} />
       
-      <div className="container mx-auto px-4 py-8">
-        {/* Hero Section */}
-        <div className="mb-8 rounded-2xl overflow-hidden relative h-[400px]">
-          <img 
-            src={heroImage} 
-            alt="Equipo médico Novasalud" 
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-primary/90 to-primary/70 flex items-center">
-            <div className="container mx-auto px-8">
-              <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
-                Bienvenido a tu Centro de Aprendizaje
-              </h1>
-              <p className="text-xl text-white/90 max-w-2xl">
-                Desarrolla tus habilidades y mantente actualizado con nuestras capacitaciones profesionales de salud
-              </p>
+      {isAdminOrLeader && (
+        <SidebarProvider>
+          <div className="flex min-h-[calc(100vh-64px)] w-full">
+            <AdminSidebar />
+            <main className="flex-1 overflow-auto">
+              <div className="container mx-auto px-4 py-8">
+                <div className="mb-4">
+                  <SidebarTrigger />
+                </div>
+                
+                {/* Hero Section */}
+                <div className="mb-8 rounded-2xl overflow-hidden relative h-[400px]">
+                  <img 
+                    src={heroImage} 
+                    alt="Equipo médico Novasalud" 
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-r from-primary/90 to-primary/70 flex items-center">
+                    <div className="container mx-auto px-8">
+                      <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
+                        Bienvenido a tu Centro de Aprendizaje
+                      </h1>
+                      <p className="text-xl text-white/90 max-w-2xl">
+                        Desarrolla tus habilidades y mantente actualizado con nuestras capacitaciones profesionales de salud
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Stats Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                  <Card style={{ boxShadow: "var(--shadow-card)" }}>
+                    <CardHeader className="pb-3">
+                      <CardDescription>Total Capacitaciones</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center gap-2">
+                        <BookOpen className="w-5 h-5 text-primary" />
+                        <span className="text-3xl font-bold">{stats.totalTrainings}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card style={{ boxShadow: "var(--shadow-card)" }}>
+                    <CardHeader className="pb-3">
+                      <CardDescription>Completadas</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center gap-2">
+                        <Award className="w-5 h-5 text-secondary" />
+                        <span className="text-3xl font-bold">{stats.completedTrainings}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card style={{ boxShadow: "var(--shadow-card)" }}>
+                    <CardHeader className="pb-3">
+                      <CardDescription>En Progreso</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-5 h-5 text-accent" />
+                        <span className="text-3xl font-bold">{stats.inProgress}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card style={{ boxShadow: "var(--shadow-card)" }}>
+                    <CardHeader className="pb-3">
+                      <CardDescription>Progreso Promedio</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <div className="text-3xl font-bold">{stats.averageProgress}%</div>
+                        <Progress value={stats.averageProgress} className="h-2" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Certificates Section */}
+                <div className="mb-8">
+                  <CertificatesList />
+                </div>
+
+                {/* Areas Section */}
+                <div className="mb-4">
+                  <h2 className="text-2xl font-bold text-foreground mb-6">Áreas de Capacitación</h2>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {areas.map((area) => {
+                    const Icon = iconMap[area.icon] || BookOpen;
+                    
+                    return (
+                      <Card 
+                        key={area.id} 
+                        className="group cursor-pointer transition-all hover:scale-105"
+                        style={{ boxShadow: "var(--shadow-card)" }}
+                        onClick={() => navigate(`/trainings?area=${area.id}`)}
+                      >
+                        <CardHeader>
+                          <div className={`w-12 h-12 rounded-xl bg-${area.color}-100 dark:bg-${area.color}-900/20 flex items-center justify-center mb-3`}>
+                            <Icon className={`w-6 h-6 text-${area.color}-600 dark:text-${area.color}-400`} />
+                          </div>
+                          <CardTitle className="text-xl">{area.name}</CardTitle>
+                          <CardDescription>{area.description}</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <Button 
+                            variant="ghost" 
+                            className="w-full justify-between group-hover:bg-primary/10 transition-colors"
+                          >
+                            Ver capacitaciones
+                            <ArrowRight className="w-4 h-4" />
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+
+                {/* FAQ Section */}
+                <div className="mt-12">
+                  <FAQ />
+                </div>
+              </div>
+            </main>
+          </div>
+        </SidebarProvider>
+      )}
+
+      {!isAdminOrLeader && (
+        <div className="container mx-auto px-4 py-8">
+          {/* Hero Section */}
+          <div className="mb-8 rounded-2xl overflow-hidden relative h-[400px]">
+            <img 
+              src={heroImage} 
+              alt="Equipo médico Novasalud" 
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-primary/90 to-primary/70 flex items-center">
+              <div className="container mx-auto px-8">
+                <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
+                  Bienvenido a tu Centro de Aprendizaje
+                </h1>
+                <p className="text-xl text-white/90 max-w-2xl">
+                  Desarrolla tus habilidades y mantente actualizado con nuestras capacitaciones profesionales de salud
+                </p>
+              </div>
             </div>
           </div>
+
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <Card style={{ boxShadow: "var(--shadow-card)" }}>
+              <CardHeader className="pb-3">
+                <CardDescription>Total Capacitaciones</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-2">
+                  <BookOpen className="w-5 h-5 text-primary" />
+                  <span className="text-3xl font-bold">{stats.totalTrainings}</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card style={{ boxShadow: "var(--shadow-card)" }}>
+              <CardHeader className="pb-3">
+                <CardDescription>Completadas</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-2">
+                  <Award className="w-5 h-5 text-secondary" />
+                  <span className="text-3xl font-bold">{stats.completedTrainings}</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card style={{ boxShadow: "var(--shadow-card)" }}>
+              <CardHeader className="pb-3">
+                <CardDescription>En Progreso</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-accent" />
+                  <span className="text-3xl font-bold">{stats.inProgress}</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card style={{ boxShadow: "var(--shadow-card)" }}>
+              <CardHeader className="pb-3">
+                <CardDescription>Progreso Promedio</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="text-3xl font-bold">{stats.averageProgress}%</div>
+                  <Progress value={stats.averageProgress} className="h-2" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Certificates Section */}
+          <div className="mb-8">
+            <CertificatesList />
+          </div>
+
+          {/* Areas Section */}
+          <div className="mb-4">
+            <h2 className="text-2xl font-bold text-foreground mb-6">Áreas de Capacitación</h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {areas.map((area) => {
+              const Icon = iconMap[area.icon] || BookOpen;
+              
+              return (
+                <Card 
+                  key={area.id} 
+                  className="group cursor-pointer transition-all hover:scale-105"
+                  style={{ boxShadow: "var(--shadow-card)" }}
+                  onClick={() => navigate(`/trainings?area=${area.id}`)}
+                >
+                  <CardHeader>
+                    <div className={`w-12 h-12 rounded-xl bg-${area.color}-100 dark:bg-${area.color}-900/20 flex items-center justify-center mb-3`}>
+                      <Icon className={`w-6 h-6 text-${area.color}-600 dark:text-${area.color}-400`} />
+                    </div>
+                    <CardTitle className="text-xl">{area.name}</CardTitle>
+                    <CardDescription>{area.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button 
+                      variant="ghost" 
+                      className="w-full justify-between group-hover:bg-primary/10 transition-colors"
+                    >
+                      Ver capacitaciones
+                      <ArrowRight className="w-4 h-4" />
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+
+          {/* FAQ Section */}
+          <div className="mt-12">
+            <FAQ />
+          </div>
         </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <Card style={{ boxShadow: "var(--shadow-card)" }}>
-            <CardHeader className="pb-3">
-              <CardDescription>Total Capacitaciones</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2">
-                <BookOpen className="w-5 h-5 text-primary" />
-                <span className="text-3xl font-bold">{stats.totalTrainings}</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card style={{ boxShadow: "var(--shadow-card)" }}>
-            <CardHeader className="pb-3">
-              <CardDescription>Completadas</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2">
-                <Award className="w-5 h-5 text-secondary" />
-                <span className="text-3xl font-bold">{stats.completedTrainings}</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card style={{ boxShadow: "var(--shadow-card)" }}>
-            <CardHeader className="pb-3">
-              <CardDescription>En Progreso</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2">
-                <Clock className="w-5 h-5 text-accent" />
-                <span className="text-3xl font-bold">{stats.inProgress}</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card style={{ boxShadow: "var(--shadow-card)" }}>
-            <CardHeader className="pb-3">
-              <CardDescription>Progreso Promedio</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="text-3xl font-bold">{stats.averageProgress}%</div>
-                <Progress value={stats.averageProgress} className="h-2" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Certificates Section */}
-        <div className="mb-8">
-          <CertificatesList />
-        </div>
-
-        {/* Areas Section */}
-        <div className="mb-4">
-          <h2 className="text-2xl font-bold text-foreground mb-6">Áreas de Capacitación</h2>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {areas.map((area) => {
-            const Icon = iconMap[area.icon] || BookOpen;
-            
-            return (
-              <Card 
-                key={area.id} 
-                className="group cursor-pointer transition-all hover:scale-105"
-                style={{ boxShadow: "var(--shadow-card)" }}
-                onClick={() => navigate(`/trainings?area=${area.id}`)}
-              >
-                <CardHeader>
-                  <div className={`w-12 h-12 rounded-xl bg-${area.color}-100 dark:bg-${area.color}-900/20 flex items-center justify-center mb-3`}>
-                    <Icon className={`w-6 h-6 text-${area.color}-600 dark:text-${area.color}-400`} />
-                  </div>
-                  <CardTitle className="text-xl">{area.name}</CardTitle>
-                  <CardDescription>{area.description}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button 
-                    variant="ghost" 
-                    className="w-full justify-between group-hover:bg-primary/10 transition-colors"
-                  >
-                    Ver capacitaciones
-                    <ArrowRight className="w-4 h-4" />
-                  </Button>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-
-        {/* FAQ Section */}
-        <div className="mt-12">
-          <FAQ />
-        </div>
-      </div>
+      )}
     </div>
   );
 };

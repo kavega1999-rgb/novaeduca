@@ -89,7 +89,7 @@ const TrainingReports = () => {
         status,
         progress_percentage,
         completed_at,
-        profiles:user_id (
+        profiles!inner (
           full_name,
           area,
           position
@@ -104,11 +104,13 @@ const TrainingReports = () => {
       .order("completed_at", { ascending: false, nullsFirst: false });
 
     if (error) {
+      console.error("Error fetching user progress:", error);
       toast({
         title: "Error",
         description: "No se pudo cargar el progreso de usuarios",
         variant: "destructive",
       });
+      setUserProgress([]);
     } else {
       setUserProgress(data as any || []);
     }
