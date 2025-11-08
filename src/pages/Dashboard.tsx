@@ -195,41 +195,41 @@ const Dashboard = () => {
                     </CardContent>
                   </Card>
 
-                  <Card className="bg-gradient-to-br from-card to-secondary/5 border-secondary/20" style={{ boxShadow: "var(--shadow-card)" }}>
+                  <Card className="bg-gradient-to-br from-card to-primary/5 border-primary/20" style={{ boxShadow: "var(--shadow-card)" }}>
                     <CardHeader className="pb-3">
                       <CardDescription>Completadas</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-secondary/10">
-                          <Award className="w-5 h-5 text-secondary" />
+                        <div className="p-2 rounded-lg bg-primary/10">
+                          <Award className="w-5 h-5 text-primary" />
                         </div>
-                        <span className="text-3xl font-bold text-secondary">{stats.completedTrainings}</span>
+                        <span className="text-3xl font-bold text-primary">{stats.completedTrainings}</span>
                       </div>
                     </CardContent>
                   </Card>
 
-                  <Card className="bg-gradient-to-br from-card to-accent/5 border-accent/20" style={{ boxShadow: "var(--shadow-card)" }}>
+                  <Card className="bg-gradient-to-br from-card to-primary/5 border-primary/20" style={{ boxShadow: "var(--shadow-card)" }}>
                     <CardHeader className="pb-3">
                       <CardDescription>En Progreso</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-accent/10">
-                          <Clock className="w-5 h-5 text-accent" />
+                        <div className="p-2 rounded-lg bg-primary/10">
+                          <Clock className="w-5 h-5 text-primary" />
                         </div>
-                        <span className="text-3xl font-bold text-accent">{stats.inProgress}</span>
+                        <span className="text-3xl font-bold text-primary">{stats.inProgress}</span>
                       </div>
                     </CardContent>
                   </Card>
 
-                  <Card className="bg-gradient-to-br from-card to-success/5 border-success/20" style={{ boxShadow: "var(--shadow-card)" }}>
+                  <Card className="bg-gradient-to-br from-card to-primary/5 border-primary/20" style={{ boxShadow: "var(--shadow-card)" }}>
                     <CardHeader className="pb-3">
                       <CardDescription>Progreso Promedio</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-2">
-                        <div className="text-3xl font-bold text-success">{stats.averageProgress}%</div>
+                        <div className="text-3xl font-bold text-primary">{stats.averageProgress}%</div>
                         <Progress value={stats.averageProgress} className="h-2" />
                       </div>
                     </CardContent>
@@ -311,49 +311,49 @@ const Dashboard = () => {
 
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <Card style={{ boxShadow: "var(--shadow-card)" }}>
+            <Card className="bg-gradient-to-br from-card to-primary/5 border-primary/20" style={{ boxShadow: "var(--shadow-card)" }}>
               <CardHeader className="pb-3">
                 <CardDescription>Total Capacitaciones</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center gap-2">
                   <BookOpen className="w-5 h-5 text-primary" />
-                  <span className="text-3xl font-bold">{stats.totalTrainings}</span>
+                  <span className="text-3xl font-bold text-primary">{stats.totalTrainings}</span>
                 </div>
               </CardContent>
             </Card>
 
-            <Card style={{ boxShadow: "var(--shadow-card)" }}>
+            <Card className="bg-gradient-to-br from-card to-primary/5 border-primary/20" style={{ boxShadow: "var(--shadow-card)" }}>
               <CardHeader className="pb-3">
                 <CardDescription>Completadas</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center gap-2">
-                  <Award className="w-5 h-5 text-secondary" />
-                  <span className="text-3xl font-bold">{stats.completedTrainings}</span>
+                  <Award className="w-5 h-5 text-primary" />
+                  <span className="text-3xl font-bold text-primary">{stats.completedTrainings}</span>
                 </div>
               </CardContent>
             </Card>
 
-            <Card style={{ boxShadow: "var(--shadow-card)" }}>
+            <Card className="bg-gradient-to-br from-card to-primary/5 border-primary/20" style={{ boxShadow: "var(--shadow-card)" }}>
               <CardHeader className="pb-3">
                 <CardDescription>En Progreso</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-accent" />
-                  <span className="text-3xl font-bold">{stats.inProgress}</span>
+                  <Clock className="w-5 h-5 text-primary" />
+                  <span className="text-3xl font-bold text-primary">{stats.inProgress}</span>
                 </div>
               </CardContent>
             </Card>
 
-            <Card style={{ boxShadow: "var(--shadow-card)" }}>
+            <Card className="bg-gradient-to-br from-card to-primary/5 border-primary/20" style={{ boxShadow: "var(--shadow-card)" }}>
               <CardHeader className="pb-3">
                 <CardDescription>Progreso Promedio</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  <div className="text-3xl font-bold">{stats.averageProgress}%</div>
+                  <div className="text-3xl font-bold text-primary">{stats.averageProgress}%</div>
                   <Progress value={stats.averageProgress} className="h-2" />
                 </div>
               </CardContent>
