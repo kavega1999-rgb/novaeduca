@@ -167,7 +167,7 @@ const Dashboard = () => {
                     alt="Equipo médico Novasalud" 
                     className="w-full h-full object-cover"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-r from-primary/95 via-primary/85 to-secondary/80 flex items-center">
+                  <div className="absolute inset-0 bg-gradient-to-r from-primary/95 via-primary/75 to-primary-glow/60 flex items-center">
                     <div className="container mx-auto px-8">
                       <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
                         Bienvenido a tu Centro de Aprendizaje
