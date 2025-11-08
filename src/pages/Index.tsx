@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookOpen, Award, Users, TrendingUp, ArrowRight } from "lucide-react";
-import novasaludLogo from "@/assets/novasalud-logo.jpg";
+import novasaludLogo from "@/assets/novasalud-logo-white.png";
 import heroImage from "@/assets/medical-team-hero.jpg";
 
 const Index = () => {

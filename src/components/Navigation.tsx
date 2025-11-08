@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Home, BookOpen, User, LogOut, Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
-import novasaludLogo from "@/assets/novasalud-logo.jpg";
+import novasaludLogo from "@/assets/novasalud-logo-white.png";
 
 interface NavigationProps {
   userRole?: string;
