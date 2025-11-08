@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import Navigation from "@/components/Navigation";
 import TrainingForm from "@/components/admin/TrainingForm";
 import TrainingsTable from "@/components/admin/TrainingsTable";
+import TrainingReports from "@/components/admin/TrainingReports";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -76,13 +77,18 @@ const Admin = () => {
 
         <Card className="p-6">
           <Tabs defaultValue="list" className="w-full">
-            <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsList className="grid w-full max-w-2xl grid-cols-3">
               <TabsTrigger value="list">Ver Capacitaciones</TabsTrigger>
+              <TabsTrigger value="reports">Reportes y Asistencia</TabsTrigger>
               <TabsTrigger value="create">Crear Nueva</TabsTrigger>
             </TabsList>
             
             <TabsContent value="list" className="mt-6">
               <TrainingsTable key={refreshKey} onRefresh={handleRefresh} />
+            </TabsContent>
+            
+            <TabsContent value="reports" className="mt-6">
+              <TrainingReports />
             </TabsContent>
             
             <TabsContent value="create" className="mt-6">
