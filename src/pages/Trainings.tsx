@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Clock, BookOpen, Award, PlayCircle } from "lucide-react";
-import certificationImage from "@/assets/certification-concept.jpg";
 
 const Trainings = () => {
   const navigate = useNavigate();
@@ -153,40 +152,6 @@ const Trainings = () => {
             </Select>
           </div>
         </div>
-
-        {/* Info Banner */}
-        <Card className="mb-8 overflow-hidden" style={{ boxShadow: "var(--shadow-card)" }}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
-            <CardContent className="p-8 flex flex-col justify-center">
-              <Award className="w-10 h-10 text-primary mb-4" />
-              <h3 className="text-2xl font-bold mb-3">Obtén Certificaciones Profesionales</h3>
-              <p className="text-muted-foreground mb-4">
-                Completa las capacitaciones y evaluaciones para obtener certificados oficiales que respaldan tu desarrollo profesional en el ámbito de la salud.
-              </p>
-              <div className="flex flex-col gap-2 text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-primary"></div>
-                  <span>Certificados validados por Novasalud Caribe IPS</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-secondary"></div>
-                  <span>Descargables en formato PDF</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-accent"></div>
-                  <span>Reconocimiento profesional</span>
-                </div>
-              </div>
-            </CardContent>
-            <div className="relative h-64 md:h-auto">
-              <img 
-                src={certificationImage} 
-                alt="Certificaciones médicas" 
-                className="w-full h-full object-cover"
-              />
-            </div>
-          </div>
-        </Card>
 
         {trainings.length === 0 ? (
           <Card style={{ boxShadow: "var(--shadow-card)" }}>
