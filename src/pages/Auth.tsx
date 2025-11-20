@@ -7,10 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { GraduationCap, Loader2 } from "lucide-react";
+import { Loader2, Power } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import heroImage from "@/assets/team-celebration.jpg";
-
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
@@ -18,101 +17,92 @@ const Auth = () => {
   const [fullName, setFullName] = useState("");
   const [area, setArea] = useState<"medicos" | "asistencial" | "administrativos" | "">("");
   const navigate = useNavigate();
-  const { toast } = useToast();
-
+  const {
+    toast
+  } = useToast();
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const {
+        error
+      } = await supabase.auth.signInWithPassword({
         email,
-        password,
+        password
       });
-
       if (error) throw error;
-
       toast({
         title: "¡Bienvenido!",
-        description: "Has iniciado sesión correctamente.",
+        description: "Has iniciado sesión correctamente."
       });
-      
       navigate("/dashboard");
     } catch (error: any) {
       toast({
         title: "Error al iniciar sesión",
         description: error.message,
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setIsLoading(false);
     }
   };
-
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!area) {
       toast({
         title: "Área requerida",
         description: "Por favor selecciona tu área de trabajo.",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
-    
     setIsLoading(true);
-
     try {
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      const {
+        data: authData,
+        error: authError
+      } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
-            full_name: fullName,
+            full_name: fullName
           },
-          emailRedirectTo: `${window.location.origin}/dashboard`,
-        },
+          emailRedirectTo: `${window.location.origin}/dashboard`
+        }
       });
-
       if (authError) throw authError;
 
       // Update profile with area
       if (authData.user && area) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update({ area: area as "medicos" | "asistencial" | "administrativos" })
-          .eq('id', authData.user.id);
-        
+        const {
+          error: profileError
+        } = await supabase.from('profiles').update({
+          area: area as "medicos" | "asistencial" | "administrativos"
+        }).eq('id', authData.user.id);
         if (profileError) throw profileError;
       }
-
       toast({
         title: "¡Cuenta creada!",
-        description: "Tu cuenta ha sido creada exitosamente. Ya puedes iniciar sesión.",
+        description: "Tu cuenta ha sido creada exitosamente. Ya puedes iniciar sesión."
       });
     } catch (error: any) {
       toast({
         title: "Error al crear cuenta",
         description: error.message,
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setIsLoading(false);
     }
   };
-
-  return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+  return <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
       {/* Background Image with Blur */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center"
-        style={{ 
-          backgroundImage: `url(${heroImage})`,
-          filter: 'blur(8px)',
-          transform: 'scale(1.1)',
-        }}
-      />
+      <div className="absolute inset-0 bg-cover bg-center" style={{
+      backgroundImage: `url(${heroImage})`,
+      filter: 'blur(8px)',
+      transform: 'scale(1.1)'
+    }} />
       
       {/* Overlay */}
       <div className="absolute inset-0 bg-primary/60" />
@@ -121,7 +111,7 @@ const Auth = () => {
       <div className="w-full max-w-md relative z-10">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 bg-white/90 backdrop-blur-sm shadow-xl">
-            <GraduationCap className="w-8 h-8 text-primary" />
+            <Power className="w-8 h-8 text-primary" />
           </div>
           <h1 className="text-3xl font-bold text-white mb-2 drop-shadow-lg">Novasalud Caribe IPS</h1>
           <p className="text-white/90 drop-shadow">Plataforma de Capacitación</p>
@@ -134,7 +124,9 @@ const Auth = () => {
           </TabsList>
 
           <TabsContent value="signin">
-            <Card className="bg-white/95 backdrop-blur-md border-white/20" style={{ boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
+            <Card className="bg-white/95 backdrop-blur-md border-white/20" style={{
+            boxShadow: "0 8px 32px rgba(0,0,0,0.2)"
+          }}>
               <CardHeader>
                 <CardTitle>Inicia sesión</CardTitle>
                 <CardDescription>Ingresa tus credenciales para acceder</CardDescription>
@@ -143,34 +135,17 @@ const Auth = () => {
                 <form onSubmit={handleSignIn} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="email">Correo electrónico</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="tu@correo.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                    />
+                    <Input id="email" type="email" placeholder="tu@correo.com" value={email} onChange={e => setEmail(e.target.value)} required />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="password">Contraseña</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                    />
+                    <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
                   </div>
                   <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? (
-                      <>
+                    {isLoading ? <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Iniciando...
-                      </>
-                    ) : (
-                      "Iniciar Sesión"
-                    )}
+                      </> : "Iniciar Sesión"}
                   </Button>
                 </form>
               </CardContent>
@@ -178,7 +153,9 @@ const Auth = () => {
           </TabsContent>
 
           <TabsContent value="signup">
-            <Card className="bg-white/95 backdrop-blur-md border-white/20" style={{ boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
+            <Card className="bg-white/95 backdrop-blur-md border-white/20" style={{
+            boxShadow: "0 8px 32px rgba(0,0,0,0.2)"
+          }}>
               <CardHeader>
                 <CardTitle>Crear cuenta</CardTitle>
                 <CardDescription>Regístrate para acceder a las capacitaciones</CardDescription>
@@ -187,40 +164,19 @@ const Auth = () => {
                 <form onSubmit={handleSignUp} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="fullname">Nombre completo</Label>
-                    <Input
-                      id="fullname"
-                      type="text"
-                      placeholder="Juan Pérez"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      required
-                    />
+                    <Input id="fullname" type="text" placeholder="Juan Pérez" value={fullName} onChange={e => setFullName(e.target.value)} required />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-email">Correo electrónico</Label>
-                    <Input
-                      id="signup-email"
-                      type="email"
-                      placeholder="tu@correo.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                    />
+                    <Input id="signup-email" type="email" placeholder="tu@correo.com" value={email} onChange={e => setEmail(e.target.value)} required />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-password">Contraseña</Label>
-                    <Input
-                      id="signup-password"
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      minLength={6}
-                    />
+                    <Input id="signup-password" type="password" value={password} onChange={e => setPassword(e.target.value)} required minLength={6} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="area">Área de trabajo</Label>
-                    <Select value={area} onValueChange={(value) => setArea(value as "medicos" | "asistencial" | "administrativos")} required>
+                    <Select value={area} onValueChange={value => setArea(value as "medicos" | "asistencial" | "administrativos")} required>
                       <SelectTrigger id="area">
                         <SelectValue placeholder="Selecciona tu área" />
                       </SelectTrigger>
@@ -232,14 +188,10 @@ const Auth = () => {
                     </Select>
                   </div>
                   <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? (
-                      <>
+                    {isLoading ? <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Creando cuenta...
-                      </>
-                    ) : (
-                      "Crear Cuenta"
-                    )}
+                      </> : "Crear Cuenta"}
                   </Button>
                 </form>
               </CardContent>
@@ -247,8 +199,6 @@ const Auth = () => {
           </TabsContent>
         </Tabs>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default Auth;
