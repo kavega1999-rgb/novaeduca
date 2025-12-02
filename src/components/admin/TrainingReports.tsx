@@ -3,15 +3,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
-import { Download, FileText, Award } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Download, FileText, Award, BookOpen, CheckCircle, Clock, AlertCircle, TrendingUp, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 
 interface Training {
   id: string;
   title: string;
   type: string;
+  area_id: string;
   areas: { name: string } | null;
 }
 
@@ -21,6 +24,7 @@ interface UserProgress {
   status: string;
   progress_percentage: number;
   completed_at: string | null;
+  started_at: string | null;
   profiles: {
     full_name: string;
     area: string | null;
@@ -33,15 +37,37 @@ interface UserProgress {
   }>;
 }
 
+interface GlobalStats {
+  totalTrainings: number;
+  completedUsers: number;
+  inProgressUsers: number;
+  notStartedUsers: number;
+  averageProgress: number;
+}
+
+const COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))"];
+
 const TrainingReports = () => {
   const { toast } = useToast();
   const [trainings, setTrainings] = useState<Training[]>([]);
+  const [areas, setAreas] = useState<{ id: string; name: string }[]>([]);
   const [selectedTraining, setSelectedTraining] = useState<string | null>(null);
   const [userProgress, setUserProgress] = useState<UserProgress[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [globalStats, setGlobalStats] = useState<GlobalStats>({
+    totalTrainings: 0,
+    completedUsers: 0,
+    inProgressUsers: 0,
+    notStartedUsers: 0,
+    averageProgress: 0,
+  });
+  
+  // Filters
+  const [dateFilter, setDateFilter] = useState("");
+  const [areaFilter, setAreaFilter] = useState("all");
 
   useEffect(() => {
-    fetchTrainings();
+    fetchData();
   }, []);
 
   useEffect(() => {
@@ -50,39 +76,61 @@ const TrainingReports = () => {
     }
   }, [selectedTraining]);
 
-  const fetchTrainings = async () => {
+  const fetchData = async () => {
     setIsLoading(true);
-    const { data, error } = await supabase
+    
+    // Fetch trainings
+    const { data: trainingsData } = await supabase
       .from("trainings")
-      .select(`
-        id,
-        title,
-        type,
-        areas:area_id (name)
-      `)
+      .select(`id, title, type, area_id, areas:area_id (name)`)
       .eq("status", "active")
       .order("created_at", { ascending: false });
 
-    if (error) {
-      toast({
-        title: "Error",
-        description: "No se pudieron cargar las capacitaciones",
-        variant: "destructive",
-      });
-    } else {
-      setTrainings(data as any || []);
-      if (data && data.length > 0) {
-        setSelectedTraining(data[0].id);
+    // Fetch areas
+    const { data: areasData } = await supabase
+      .from("areas")
+      .select("id, name");
+
+    // Fetch global progress stats
+    const { data: allProgress } = await supabase
+      .from("user_progress")
+      .select("status, progress_percentage");
+
+    if (trainingsData) {
+      setTrainings(trainingsData as any);
+      if (trainingsData.length > 0) {
+        setSelectedTraining(trainingsData[0].id);
       }
     }
+
+    if (areasData) {
+      setAreas(areasData);
+    }
+
+    if (allProgress) {
+      const completed = allProgress.filter(p => p.status === "completed").length;
+      const inProgress = allProgress.filter(p => p.status === "in_progress").length;
+      const notStarted = allProgress.filter(p => p.status === "pending").length;
+      const avgProgress = allProgress.length > 0 
+        ? Math.round(allProgress.reduce((acc, p) => acc + (p.progress_percentage || 0), 0) / allProgress.length)
+        : 0;
+
+      setGlobalStats({
+        totalTrainings: trainingsData?.length || 0,
+        completedUsers: completed,
+        inProgressUsers: inProgress,
+        notStartedUsers: notStarted,
+        averageProgress: avgProgress,
+      });
+    }
+
     setIsLoading(false);
   };
 
   const fetchUserProgress = async () => {
     if (!selectedTraining) return;
 
-    // 1) Obtener progreso con perfil (relación por user_id)
-    const { data: progress, error } = await supabase
+    let query = supabase
       .from("user_progress")
       .select(`
         id,
@@ -90,6 +138,7 @@ const TrainingReports = () => {
         status,
         progress_percentage,
         completed_at,
+        started_at,
         profiles:user_id (
           full_name,
           area,
@@ -98,6 +147,8 @@ const TrainingReports = () => {
       `)
       .eq("training_id", selectedTraining)
       .order("completed_at", { ascending: false, nullsFirst: false });
+
+    const { data: progress, error } = await query;
 
     if (error) {
       console.error("Error fetching user progress:", error);
@@ -110,20 +161,17 @@ const TrainingReports = () => {
       return;
     }
 
-    // 2) Obtener certificados por usuario para esta capacitación (no hay FK directa)
     let result = (progress || []).map((p: any) => ({ ...p, certificates: [] as any[] }));
     const userIds = (progress || []).map((p: any) => p.user_id);
 
     if (userIds.length > 0) {
-      const { data: certs, error: certErr } = await supabase
+      const { data: certs } = await supabase
         .from("certificates")
         .select("id,user_id,training_id,certificate_type,file_url")
         .eq("training_id", selectedTraining)
         .in("user_id", userIds);
 
-      if (certErr) {
-        console.error("Error fetching certificates:", certErr);
-      } else if (certs) {
+      if (certs) {
         const byUser = new Map<string, any[]>();
         certs.forEach((c: any) => {
           const list = byUser.get(c.user_id) || [];
@@ -137,13 +185,40 @@ const TrainingReports = () => {
     setUserProgress(result as any);
   };
 
+  // Filter user progress
+  const filteredProgress = userProgress.filter(up => {
+    const matchesArea = areaFilter === "all" || up.profiles.area === areaFilter;
+    const matchesDate = !dateFilter || (up.completed_at && up.completed_at.startsWith(dateFilter));
+    return matchesArea && (!dateFilter || matchesDate);
+  });
+
+  // Stats for selected training
+  const trainingStats = {
+    completed: filteredProgress.filter(p => p.status === "completed").length,
+    inProgress: filteredProgress.filter(p => p.status === "in_progress").length,
+    notStarted: filteredProgress.filter(p => p.status === "pending").length,
+  };
+
+  // Chart data
+  const barChartData = [
+    { name: "No Iniciadas", value: globalStats.notStartedUsers, fill: "hsl(var(--chart-3))" },
+    { name: "En Progreso", value: globalStats.inProgressUsers, fill: "hsl(var(--chart-2))" },
+    { name: "Completadas", value: globalStats.completedUsers, fill: "hsl(var(--primary))" },
+  ];
+
+  const pieChartData = [
+    { name: "Completadas", value: globalStats.completedUsers },
+    { name: "En Progreso", value: globalStats.inProgressUsers },
+    { name: "No Iniciadas", value: globalStats.notStartedUsers },
+  ];
+
   const downloadAttendance = () => {
-    if (!selectedTraining || userProgress.length === 0) return;
+    if (!selectedTraining || filteredProgress.length === 0) return;
 
     const training = trainings.find(t => t.id === selectedTraining);
     const csvContent = [
       ["Nombre", "Área", "Posición", "Estado", "Progreso", "Fecha Completado"].join(","),
-      ...userProgress.map(up => [
+      ...filteredProgress.map(up => [
         up.profiles.full_name,
         up.profiles.area || "N/A",
         up.profiles.position || "N/A",
@@ -200,48 +275,212 @@ const TrainingReports = () => {
     return <div className="text-center py-8 text-muted-foreground">Cargando reportes...</div>;
   }
 
-  if (trainings.length === 0) {
-    return (
-      <Card className="p-8 text-center">
-        <p className="text-muted-foreground">No hay capacitaciones activas para mostrar reportes</p>
-      </Card>
-    );
-  }
-
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex-1">
-          <Select value={selectedTraining || ""} onValueChange={setSelectedTraining}>
-            <SelectTrigger>
-              <SelectValue placeholder="Seleccionar capacitación" />
-            </SelectTrigger>
-            <SelectContent>
-              {trainings.map((training) => (
-                <SelectItem key={training.id} value={training.id}>
-                  {training.title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <Button onClick={downloadAttendance} disabled={userProgress.length === 0}>
-          <Download className="w-4 h-4 mr-2" />
-          Descargar Asistencia
-        </Button>
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <Card className="bg-gradient-to-br from-card to-primary/5 border-primary/20">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Total Capacitaciones</p>
+                <p className="text-3xl font-bold text-primary">{globalStats.totalTrainings}</p>
+              </div>
+              <BookOpen className="h-10 w-10 text-primary/50" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-card to-primary/5 border-primary/20">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Completadas</p>
+                <p className="text-3xl font-bold text-primary">{globalStats.completedUsers}</p>
+              </div>
+              <CheckCircle className="h-10 w-10 text-primary/50" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-card to-primary/5 border-primary/20">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">En Progreso</p>
+                <p className="text-3xl font-bold text-primary">{globalStats.inProgressUsers}</p>
+              </div>
+              <Clock className="h-10 w-10 text-primary/50" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-card to-primary/5 border-primary/20">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">No Iniciadas</p>
+                <p className="text-3xl font-bold text-primary">{globalStats.notStartedUsers}</p>
+              </div>
+              <AlertCircle className="h-10 w-10 text-primary/50" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-card to-primary/5 border-primary/20">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Progreso Promedio</p>
+                <p className="text-3xl font-bold text-primary">{globalStats.averageProgress}%</p>
+              </div>
+              <TrendingUp className="h-10 w-10 text-primary/50" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
+      {/* Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Estado de Capacitaciones
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={barChartData}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis dataKey="name" className="text-xs" />
+                <YAxis className="text-xs" />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: "hsl(var(--card))", 
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: "8px"
+                  }} 
+                />
+                <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                  {barChartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
+              Distribución de Avance
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={pieChartData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={100}
+                  paddingAngle={5}
+                  dataKey="value"
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                >
+                  {pieChartData.map((_, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: "hsl(var(--card))", 
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: "8px"
+                  }} 
+                />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters */}
       <Card>
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold">
-              Participantes ({userProgress.length})
-            </h3>
-            <div className="text-sm text-muted-foreground">
-              Completados: {userProgress.filter(up => up.status === "completed").length}
+        <CardHeader>
+          <CardTitle>Filtros de Reporte</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Select value={selectedTraining || ""} onValueChange={setSelectedTraining}>
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar capacitación" />
+              </SelectTrigger>
+              <SelectContent>
+                {trainings.map((training) => (
+                  <SelectItem key={training.id} value={training.id}>
+                    {training.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={areaFilter} onValueChange={setAreaFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filtrar por área" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas las áreas</SelectItem>
+                <SelectItem value="medicos">Médicos</SelectItem>
+                <SelectItem value="asistencial">Asistencial</SelectItem>
+                <SelectItem value="administrativos">Administrativos</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Input
+              type="month"
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+              placeholder="Filtrar por fecha"
+            />
+
+            <Button onClick={downloadAttendance} disabled={filteredProgress.length === 0}>
+              <Download className="w-4 h-4 mr-2" />
+              Descargar CSV
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Table */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>
+              Participantes ({filteredProgress.length})
+            </CardTitle>
+            <div className="flex gap-4 text-sm text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <CheckCircle className="h-4 w-4 text-primary" />
+                {trainingStats.completed} completados
+              </span>
+              <span className="flex items-center gap-1">
+                <Clock className="h-4 w-4 text-chart-2" />
+                {trainingStats.inProgress} en progreso
+              </span>
+              <span className="flex items-center gap-1">
+                <AlertCircle className="h-4 w-4 text-chart-3" />
+                {trainingStats.notStarted} pendientes
+              </span>
             </div>
           </div>
-
+        </CardHeader>
+        <CardContent>
           <div className="rounded-md border">
             <Table>
               <TableHeader>
@@ -256,14 +495,14 @@ const TrainingReports = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {userProgress.length === 0 ? (
+                {filteredProgress.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                      No hay usuarios inscritos en esta capacitación
+                      No hay usuarios que coincidan con los filtros
                     </TableCell>
                   </TableRow>
                 ) : (
-                  userProgress.map((up) => (
+                  filteredProgress.map((up) => (
                     <TableRow key={up.id}>
                       <TableCell className="font-medium">{up.profiles.full_name}</TableCell>
                       <TableCell>{getAreaLabel(up.profiles.area)}</TableCell>
@@ -315,7 +554,7 @@ const TrainingReports = () => {
               </TableBody>
             </Table>
           </div>
-        </div>
+        </CardContent>
       </Card>
     </div>
   );
