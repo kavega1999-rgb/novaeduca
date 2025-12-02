@@ -302,6 +302,45 @@ export type Database = {
           },
         ]
       }
+      institutional_documents: {
+        Row: {
+          category: Database["public"]["Enums"]["document_category"]
+          created_at: string
+          created_by: string | null
+          file_url: string
+          id: string
+          published_at: string
+          summary: string | null
+          title: string
+          updated_at: string
+          visible_to: Database["public"]["Enums"]["visibility_target"][]
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["document_category"]
+          created_at?: string
+          created_by?: string | null
+          file_url: string
+          id?: string
+          published_at?: string
+          summary?: string | null
+          title: string
+          updated_at?: string
+          visible_to?: Database["public"]["Enums"]["visibility_target"][]
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["document_category"]
+          created_at?: string
+          created_by?: string | null
+          file_url?: string
+          id?: string
+          published_at?: string
+          summary?: string | null
+          title?: string
+          updated_at?: string
+          visible_to?: Database["public"]["Enums"]["visibility_target"][]
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           area: Database["public"]["Enums"]["user_area"] | null
@@ -531,7 +570,9 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "leader" | "user"
+      document_category: "Norma" | "Circular" | "Resolución" | "Manual" | "Otro"
       user_area: "medicos" | "asistencial" | "administrativos"
+      visibility_target: "Administrativos" | "Médicos" | "Operativos" | "Todos"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -660,7 +701,9 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "leader", "user"],
+      document_category: ["Norma", "Circular", "Resolución", "Manual", "Otro"],
       user_area: ["medicos", "asistencial", "administrativos"],
+      visibility_target: ["Administrativos", "Médicos", "Operativos", "Todos"],
     },
   },
 } as const
