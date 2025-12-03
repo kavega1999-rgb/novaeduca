@@ -237,14 +237,15 @@ serve(async (req) => {
       borderWidth: 2,
     });
     
-    // Embed Novasalud logo - try PNG first, then JPG
+    // Embed Novasalud logo - try multiple filename variations
     let logoEmbedded = false;
-    const logoFormats = ['novasalud-logo.png', 'novasalud-logo.jpg'];
+    const logoFormats = ['novasalud-logo.png', 'novasalud-logo.jpg', 'NOVA .png', 'NOVA.png', 'logo.png', 'logo.jpg'];
     
     for (const logoFileName of logoFormats) {
       if (logoEmbedded) break;
       try {
-        const logoUrl = `${supabaseUrl}/storage/v1/object/public/certificates/${logoFileName}`;
+        const encodedFileName = encodeURIComponent(logoFileName);
+        const logoUrl = `${supabaseUrl}/storage/v1/object/public/certificates/${encodedFileName}`;
         console.log('Trying to load logo from:', logoUrl);
         const logoResponse = await fetch(logoUrl);
         if (logoResponse.ok) {
