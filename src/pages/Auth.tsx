@@ -549,68 +549,37 @@ const Auth = () => {
               <Card className="bg-white/95 backdrop-blur-md border-white/20" style={{ boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
                 <CardHeader>
                   <CardTitle>Inicia sesión</CardTitle>
-                  <CardDescription>Ingresa tus credenciales para acceder</CardDescription>
+                  <CardDescription>Te enviaremos un código de verificación a tu correo</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <form onSubmit={handleSignIn} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Correo electrónico</Label>
-                      <Input 
-                        id="email" 
-                        type="email" 
-                        placeholder="tu@correo.com" 
-                        value={email} 
-                        onChange={e => setEmail(e.target.value)} 
-                        required 
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="password">Contraseña</Label>
-                      <Input 
-                        id="password" 
-                        type="password" 
-                        value={password} 
-                        onChange={e => setPassword(e.target.value)} 
-                        required 
-                      />
-                    </div>
-                    <Button type="submit" className="w-full" disabled={isLoading}>
-                      {isLoading ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Iniciando...
-                        </>
-                      ) : "Iniciar Sesión"}
-                    </Button>
-                  </form>
-                  
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t" />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-white px-2 text-muted-foreground">O</span>
-                    </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Correo electrónico</Label>
+                    <Input 
+                      id="email" 
+                      type="email" 
+                      placeholder="tu@correo.com" 
+                      value={email} 
+                      onChange={e => setEmail(e.target.value)} 
+                      required 
+                    />
                   </div>
-                  
                   <Button 
                     type="button" 
-                    variant="outline" 
                     className="w-full"
                     onClick={() => handleSendOTP("login")}
                     disabled={isLoading || !email}
                   >
-                    <Mail className="mr-2 h-4 w-4" />
-                    Iniciar con código por email
-                  </Button>
-                  
-                  <Button 
-                    type="button" 
-                    variant="link" 
-                    className="w-full text-sm"
-                    onClick={() => setView("forgot-password")}
-                  >
-                    ¿Olvidaste tu contraseña?
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Enviando código...
+                      </>
+                    ) : (
+                      <>
+                        <Mail className="mr-2 h-4 w-4" />
+                        Enviar código de acceso
+                      </>
+                    )}
                   </Button>
                 </CardContent>
               </Card>
@@ -620,88 +589,65 @@ const Auth = () => {
               <Card className="bg-white/95 backdrop-blur-md border-white/20" style={{ boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
                 <CardHeader>
                   <CardTitle>Crear cuenta</CardTitle>
-                  <CardDescription>Regístrate para acceder a las capacitaciones</CardDescription>
+                  <CardDescription>Te enviaremos un código de verificación a tu correo</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <form onSubmit={handleSignUp} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="fullname">Nombre completo</Label>
-                      <Input 
-                        id="fullname" 
-                        type="text" 
-                        placeholder="Juan Pérez" 
-                        value={fullName} 
-                        onChange={e => setFullName(e.target.value)} 
-                        required 
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-email">Correo electrónico</Label>
-                      <Input 
-                        id="signup-email" 
-                        type="email" 
-                        placeholder="tu@correo.com" 
-                        value={email} 
-                        onChange={e => setEmail(e.target.value)} 
-                        required 
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-password">Contraseña</Label>
-                      <Input 
-                        id="signup-password" 
-                        type="password" 
-                        value={password} 
-                        onChange={e => setPassword(e.target.value)} 
-                        required 
-                        minLength={6} 
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="area">Área de trabajo</Label>
-                      <Select 
-                        value={area} 
-                        onValueChange={value => setArea(value as "medicos" | "asistencial" | "administrativos")} 
-                        required
-                      >
-                        <SelectTrigger id="area">
-                          <SelectValue placeholder="Selecciona tu área" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="medicos">Médicos</SelectItem>
-                          <SelectItem value="asistencial">Asistencial</SelectItem>
-                          <SelectItem value="administrativos">Administrativos</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <Button type="submit" className="w-full" disabled={isLoading}>
-                      {isLoading ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Creando cuenta...
-                        </>
-                      ) : "Crear Cuenta"}
-                    </Button>
-                  </form>
-                  
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t" />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-white px-2 text-muted-foreground">O</span>
-                    </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="fullname">Nombre completo</Label>
+                    <Input 
+                      id="fullname" 
+                      type="text" 
+                      placeholder="Juan Pérez" 
+                      value={fullName} 
+                      onChange={e => setFullName(e.target.value)} 
+                      required 
+                    />
                   </div>
-                  
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-email">Correo electrónico</Label>
+                    <Input 
+                      id="signup-email" 
+                      type="email" 
+                      placeholder="tu@correo.com" 
+                      value={email} 
+                      onChange={e => setEmail(e.target.value)} 
+                      required 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="area">Área de trabajo</Label>
+                    <Select 
+                      value={area} 
+                      onValueChange={value => setArea(value as "medicos" | "asistencial" | "administrativos")} 
+                      required
+                    >
+                      <SelectTrigger id="area">
+                        <SelectValue placeholder="Selecciona tu área" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="medicos">Médicos</SelectItem>
+                        <SelectItem value="asistencial">Asistencial</SelectItem>
+                        <SelectItem value="administrativos">Administrativos</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <Button 
                     type="button" 
-                    variant="outline" 
                     className="w-full"
                     onClick={() => handleSendOTP("signup")}
                     disabled={isLoading || !email || !fullName || !area}
                   >
-                    <Mail className="mr-2 h-4 w-4" />
-                    Registrarse con código por email
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Enviando código...
+                      </>
+                    ) : (
+                      <>
+                        <Mail className="mr-2 h-4 w-4" />
+                        Enviar código de registro
+                      </>
+                    )}
                   </Button>
                 </CardContent>
               </Card>
