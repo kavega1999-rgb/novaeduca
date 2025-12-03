@@ -1,11 +1,18 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { PDFDocument, rgb, StandardFonts } from "https://esm.sh/pdf-lib@1.17.1";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Input validation schema
+const requestSchema = z.object({
+  attemptId: z.string().uuid("Invalid attempt ID format"),
+  trainingId: z.string().uuid("Invalid training ID format"),
+});
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -15,52 +22,165 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    
+    // Extract and validate the JWT token
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      );
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    
+    // Create a client with the user's token to get their identity
+    const supabaseAuth = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
+      global: { headers: { Authorization: `Bearer ${token}` } }
+    });
+    
+    // Get the authenticated user
+    const { data: { user }, error: userError } = await supabaseAuth.auth.getUser();
+    
+    if (userError || !user) {
+      console.error('Auth error:', userError?.message);
+      return new Response(
+        JSON.stringify({ error: 'Invalid authentication token' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      );
+    }
+
+    const authenticatedUserId = user.id;
+    console.log('Authenticated user:', authenticatedUserId);
+
+    // Parse and validate request body
+    const body = await req.json();
+    const parseResult = requestSchema.safeParse(body);
+    
+    if (!parseResult.success) {
+      console.error('Validation error:', parseResult.error.errors);
+      return new Response(
+        JSON.stringify({ error: 'Invalid request data' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+
+    const { attemptId, trainingId } = parseResult.data;
+
+    // Use service role client for database operations
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { attemptId, userId, trainingId } = await req.json();
+    // Fetch evaluation attempt and verify ownership AND passing status
+    const { data: attempt, error: attemptError } = await supabase
+      .from('evaluation_attempts')
+      .select('id, user_id, score, max_score, passed, status, completed_at, evaluation_id')
+      .eq('id', attemptId)
+      .single();
 
-    console.log('Generating certificate for:', { attemptId, userId, trainingId });
+    if (attemptError || !attempt) {
+      console.error('Attempt not found:', attemptId);
+      return new Response(
+        JSON.stringify({ error: 'Evaluation attempt not found' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
+      );
+    }
+
+    // CRITICAL: Verify the attempt belongs to the authenticated user
+    if (attempt.user_id !== authenticatedUserId) {
+      console.error('Authorization failed: attempt user_id mismatch', { 
+        attemptUserId: attempt.user_id, 
+        authenticatedUserId 
+      });
+      return new Response(
+        JSON.stringify({ error: 'You are not authorized to generate this certificate' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 }
+      );
+    }
+
+    // CRITICAL: Verify the attempt was completed and passed
+    if (attempt.status !== 'completed') {
+      console.error('Attempt not completed:', attempt.status);
+      return new Response(
+        JSON.stringify({ error: 'Cannot generate certificate for incomplete evaluation' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+
+    if (!attempt.passed) {
+      console.error('Attempt not passed:', { score: attempt.score, passed: attempt.passed });
+      return new Response(
+        JSON.stringify({ error: 'Cannot generate certificate for failed evaluation' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+
+    // Verify the evaluation belongs to the specified training
+    const { data: evaluation, error: evalError } = await supabase
+      .from('evaluations')
+      .select('training_id')
+      .eq('id', attempt.evaluation_id)
+      .single();
+
+    if (evalError || !evaluation || evaluation.training_id !== trainingId) {
+      console.error('Training/evaluation mismatch');
+      return new Response(
+        JSON.stringify({ error: 'Invalid training/evaluation combination' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+
+    // Check if certificate already exists for this attempt
+    const { data: existingCert } = await supabase
+      .from('certificates')
+      .select('id, file_url')
+      .eq('attempt_id', attemptId)
+      .eq('user_id', authenticatedUserId)
+      .single();
+
+    if (existingCert) {
+      console.log('Certificate already exists:', existingCert.id);
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          certificateId: existingCert.id,
+          fileUrl: existingCert.file_url,
+          message: 'Certificate already exists'
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    }
 
     // Fetch training details
     const { data: training, error: trainingError } = await supabase
       .from('trainings')
-      .select(`
-        *,
-        areas (name)
-      `)
+      .select(`*, areas (name)`)
       .eq('id', trainingId)
       .single();
 
     if (trainingError || !training) {
-      throw new Error('Training not found');
+      return new Response(
+        JSON.stringify({ error: 'Training not found' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
+      );
     }
 
     // Fetch user profile
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('full_name')
-      .eq('id', userId)
+      .eq('id', authenticatedUserId)
       .single();
 
     if (profileError || !profile) {
-      throw new Error('User profile not found');
-    }
-
-    // Fetch evaluation attempt
-    const { data: attempt, error: attemptError } = await supabase
-      .from('evaluation_attempts')
-      .select('score, completed_at')
-      .eq('id', attemptId)
-      .single();
-
-    if (attemptError || !attempt) {
-      throw new Error('Attempt not found');
+      return new Response(
+        JSON.stringify({ error: 'User profile not found' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
+      );
     }
 
     // Determine certificate type
     const certificateType = training.generates_certificate ? 'certificate' : 'constancia';
     
-    // Generate PDF content (simple HTML that can be converted to PDF)
     // Generate PDF
     console.log('Generating PDF certificate...');
     const pdfDoc = await PDFDocument.create();
@@ -146,7 +266,7 @@ serve(async (req) => {
     // Training title (with line wrapping)
     const trainingTitle = training.title;
     const maxLineLength = 60;
-    const lines = [];
+    const lines: string[] = [];
     let currentLine = '';
     
     trainingTitle.split(' ').forEach((word: string) => {
@@ -190,7 +310,7 @@ serve(async (req) => {
     });
     
     if (certificateType === 'certificate' && attempt) {
-      const scoreText = `Calificación: ${attempt.score?.toFixed(1)}%`;
+      const scoreText = `Calificación: ${Number(attempt.score).toFixed(1)}%`;
       page.drawText(scoreText, {
         x: 100,
         y: yOffset - 50,
@@ -201,7 +321,7 @@ serve(async (req) => {
     }
     
     // Date
-    const completedDate = new Date(attempt.completed_at).toLocaleDateString('es-ES', { 
+    const completedDate = new Date(attempt.completed_at!).toLocaleDateString('es-ES', { 
       year: 'numeric', 
       month: 'long', 
       day: 'numeric' 
@@ -219,8 +339,8 @@ serve(async (req) => {
     console.log('PDF generated, size:', pdfBuffer.length);
 
     // Upload PDF to Storage
-    const fileName = `${certificateType}-${userId}-${trainingId}-${Date.now()}.pdf`;
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const fileName = `${certificateType}-${authenticatedUserId}-${trainingId}-${Date.now()}.pdf`;
+    const { error: uploadError } = await supabase.storage
       .from('training-materials')
       .upload(`certificates/${fileName}`, pdfBuffer, {
         contentType: 'application/pdf',
@@ -229,7 +349,10 @@ serve(async (req) => {
 
     if (uploadError) {
       console.error('Error uploading PDF:', uploadError);
-      throw uploadError;
+      return new Response(
+        JSON.stringify({ error: 'Failed to save certificate' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
     }
 
     // Get public URL
@@ -237,13 +360,11 @@ serve(async (req) => {
       .from('training-materials')
       .getPublicUrl(`certificates/${fileName}`);
 
-    console.log('PDF uploaded to:', publicUrlData.publicUrl);
-
     // Store certificate record
     const { data: certificate, error: certError } = await supabase
       .from('certificates')
       .insert({
-        user_id: userId,
+        user_id: authenticatedUserId,
         training_id: trainingId,
         attempt_id: attemptId,
         certificate_type: certificateType,
@@ -254,25 +375,24 @@ serve(async (req) => {
 
     if (certError) {
       console.error('Error storing certificate:', certError);
-      throw certError;
+      return new Response(
+        JSON.stringify({ error: 'Failed to record certificate' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
     }
 
     // Update user progress to completed
-    const { error: progressError } = await supabase
+    await supabase
       .from('user_progress')
       .update({
         status: 'completed',
         progress_percentage: 100,
         completed_at: new Date().toISOString()
       })
-      .eq('user_id', userId)
+      .eq('user_id', authenticatedUserId)
       .eq('training_id', trainingId);
 
-    if (progressError) {
-      console.error('Error updating progress:', progressError);
-    }
-
-    console.log('Certificate generated successfully:', certificate.id);
+    console.log('Certificate generated successfully for user:', authenticatedUserId);
 
     return new Response(
       JSON.stringify({ 
@@ -287,12 +407,11 @@ serve(async (req) => {
     );
   } catch (error) {
     console.error('Error generating certificate:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: 'An error occurred while generating the certificate' }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
+        status: 500,
       }
     );
   }
