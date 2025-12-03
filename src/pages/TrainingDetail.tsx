@@ -342,7 +342,11 @@ const TrainingDetail = () => {
                   
                   {isAdminOrLeader && (
                     <TabsContent value="evaluation-setup">
-                      <EvaluationManager trainingId={id!} />
+                      <EvaluationManager 
+                        trainingId={id!} 
+                        trainingTitle={training?.title}
+                        contentUrl={training?.content_url}
+                      />
                     </TabsContent>
                   )}
                 </Tabs>
