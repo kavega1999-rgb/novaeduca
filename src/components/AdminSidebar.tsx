@@ -1,4 +1,4 @@
-import { LayoutDashboard, FileText, BarChart3, Settings, Users, BookOpen, FolderOpen, Shield, UserCog } from "lucide-react";
+import { LayoutDashboard, FileText, BarChart3, Users, BookOpen, FolderOpen, Shield, UserCog } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 
@@ -16,10 +16,10 @@ import {
 
 const adminItems = [
   { title: "Panel Principal", url: "/dashboard", icon: LayoutDashboard },
+  { title: "Gestionar Capacitaciones", url: "/dashboard/trainings", icon: BookOpen },
   { title: "Reportes y Asistencia", url: "/dashboard/reports", icon: BarChart3 },
   { title: "Gestión de Usuarios", url: "/dashboard/users", icon: UserCog },
   { title: "Documentos Institucionales", url: "/documents", icon: FolderOpen },
-  { title: "Gestionar Capacitaciones", url: "/admin", icon: Settings },
   { title: "Registro de Accesos", url: "/access-logs", icon: Shield },
 ];
 
