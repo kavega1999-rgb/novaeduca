@@ -237,9 +237,9 @@ serve(async (req) => {
       borderWidth: 2,
     });
     
-    // Embed Novasalud logo - try multiple filename variations
+    // Embed Novasalud logo - try colored logo first, then other variations
     let logoEmbedded = false;
-    const logoFormats = ['novasalud-logo.png', 'novasalud-logo.jpg', 'NOVA .png', 'NOVA.png', 'logo.png', 'logo.jpg'];
+    const logoFormats = ['novasalud-logo-color.png', 'NOVA.png', 'NOVA .png', 'novasalud-logo.png', 'novasalud-logo.jpg', 'logo.png', 'logo.jpg'];
     
     for (const logoFileName of logoFormats) {
       if (logoEmbedded) break;
