@@ -5,17 +5,29 @@ import Navigation from "@/components/Navigation";
 import FAQ from "@/components/FAQ";
 import { AdminSidebar } from "@/components/AdminSidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { WelcomeHero } from "@/components/dashboard/WelcomeHero";
-import { QuickStats } from "@/components/dashboard/QuickStats";
-import { TrainingsFolders } from "@/components/dashboard/TrainingsFolders";
-import { CertificatesList } from "@/components/profile/CertificatesList";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { GraduationCap, ArrowRight, Sparkles } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Shield, Heart, Leaf, Activity, Users, Monitor, ArrowRight, BookOpen, Award, Clock } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { CertificatesList } from "@/components/profile/CertificatesList";
+import heroImage from "@/assets/team-celebration.jpg";
+
+const iconMap: Record<string, any> = {
+  shield: Shield,
+  heart: Heart,
+  leaf: Leaf,
+  activity: Activity,
+  users: Users,
+  monitor: Monitor,
+};
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { toast } = useToast();
+  const [areas, setAreas] = useState<any[]>([]);
   const [userRole, setUserRole] = useState<string>("");
   const [isAdminOrLeader, setIsAdminOrLeader] = useState(false);
   const [stats, setStats] = useState({
@@ -50,6 +62,16 @@ const Dashboard = () => {
         setUserRole(role);
       }
 
+      // Fetch areas
+      const { data: areasData } = await supabase
+        .from("areas")
+        .select("*")
+        .order("name");
+
+      if (areasData) {
+        setAreas(areasData);
+      }
+
       // Fetch user stats
       const { data: progressData } = await supabase
         .from("user_progress")
@@ -60,7 +82,7 @@ const Dashboard = () => {
         const completed = progressData.filter(p => p.status === "completed").length;
         const inProgress = progressData.filter(p => p.status === "in_progress").length;
         const avgProgress = progressData.length > 0
-          ? progressData.reduce((acc, p) => acc + (p.progress_percentage || 0), 0) / progressData.length
+          ? progressData.reduce((acc, p) => acc + p.progress_percentage, 0) / progressData.length
           : 0;
 
         setStats({
@@ -76,6 +98,7 @@ const Dashboard = () => {
 
     checkAuth();
 
+    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_OUT") {
         navigate("/auth");
@@ -87,102 +110,14 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen">
         <Navigation userRole={userRole} />
         <div className="container mx-auto px-4 py-8">
-          <div className="flex items-center justify-center min-h-[400px]">
-            <div className="text-muted-foreground">Cargando...</div>
-          </div>
+          <div className="text-center">Cargando...</div>
         </div>
       </div>
     );
   }
-
-  // Dashboard content component to avoid duplication
-  const DashboardContent = () => (
-    <div className="space-y-8">
-      {/* Welcome Hero */}
-      <WelcomeHero />
-
-      {/* Quick Stats */}
-      <QuickStats {...stats} />
-
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Trainings Section - Takes 2 columns */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <GraduationCap className="w-5 h-5 text-primary" />
-              </div>
-              <h2 className="text-xl font-semibold text-foreground">Mis Capacitaciones</h2>
-            </div>
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={() => navigate("/trainings")}
-              className="text-primary hover:text-primary hover:bg-primary/10"
-            >
-              Ver todas
-              <ArrowRight className="w-4 h-4 ml-1" />
-            </Button>
-          </div>
-          
-          <TrainingsFolders />
-        </div>
-
-        {/* Sidebar Content - Takes 1 column */}
-        <div className="space-y-6">
-          {/* Quick Actions Card */}
-          <Card className="bg-gradient-to-br from-primary/5 to-secondary/5 border-primary/10">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-primary" />
-                Acceso Rápido
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button 
-                variant="outline" 
-                className="w-full justify-start hover:bg-primary/10 hover:text-primary hover:border-primary/30"
-                onClick={() => navigate("/trainings")}
-              >
-                <GraduationCap className="w-4 h-4 mr-2" />
-                Explorar Capacitaciones
-              </Button>
-              <Button 
-                variant="outline" 
-                className="w-full justify-start hover:bg-primary/10 hover:text-primary hover:border-primary/30"
-                onClick={() => navigate("/documents")}
-              >
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Documentos Institucionales
-              </Button>
-              <Button 
-                variant="outline" 
-                className="w-full justify-start hover:bg-primary/10 hover:text-primary hover:border-primary/30"
-                onClick={() => navigate("/profile")}
-              >
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-                Mi Perfil
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Certificates */}
-          <CertificatesList />
-        </div>
-      </div>
-
-      {/* FAQ Section */}
-      <FAQ />
-    </div>
-  );
 
   // If admin/leader and on a sub-route, show with sidebar
   if (isAdminOrLeader && isSubRoute) {
@@ -208,11 +143,12 @@ const Dashboard = () => {
     );
   }
 
-  // Admin/Leader dashboard with sidebar
-  if (isAdminOrLeader) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navigation userRole={userRole} />
+  // Default dashboard view
+  return (
+    <div className="min-h-screen bg-background">
+      <Navigation userRole={userRole} />
+      
+      {isAdminOrLeader && (
         <SidebarProvider defaultOpen={true}>
           <div className="flex min-h-[calc(100vh-64px)] w-full">
             <AdminSidebar />
@@ -223,22 +159,255 @@ const Dashboard = () => {
                   <div className="h-6 w-px bg-border" />
                   <h1 className="text-2xl font-bold">Panel Principal</h1>
                 </div>
-                <DashboardContent />
+                
+                {/* Hero Section */}
+                <div className="mb-8 rounded-2xl overflow-hidden relative h-[400px] shadow-lg">
+                  <img 
+                    src={heroImage} 
+                    alt="Equipo médico Novasalud" 
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-r from-primary/95 via-primary/75 to-primary-glow/60 flex items-center">
+                    <div className="container mx-auto px-8">
+                      <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
+                        Bienvenido a tu Centro de Aprendizaje
+                      </h2>
+                      <p className="text-xl text-white/95 max-w-2xl">
+                        Desarrolla tus habilidades y mantente actualizado con nuestras capacitaciones profesionales de salud
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Stats Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                  <Card className="bg-gradient-to-br from-card to-primary/5 border-primary/20" style={{ boxShadow: "var(--shadow-card)" }}>
+                    <CardHeader className="pb-3">
+                      <CardDescription>Total Capacitaciones</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-primary/10">
+                          <BookOpen className="w-5 h-5 text-primary" />
+                        </div>
+                        <span className="text-3xl font-bold text-primary">{stats.totalTrainings}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-gradient-to-br from-card to-primary/5 border-primary/20" style={{ boxShadow: "var(--shadow-card)" }}>
+                    <CardHeader className="pb-3">
+                      <CardDescription>Completadas</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-primary/10">
+                          <Award className="w-5 h-5 text-primary" />
+                        </div>
+                        <span className="text-3xl font-bold text-primary">{stats.completedTrainings}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-gradient-to-br from-card to-primary/5 border-primary/20" style={{ boxShadow: "var(--shadow-card)" }}>
+                    <CardHeader className="pb-3">
+                      <CardDescription>En Progreso</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-primary/10">
+                          <Clock className="w-5 h-5 text-primary" />
+                        </div>
+                        <span className="text-3xl font-bold text-primary">{stats.inProgress}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-gradient-to-br from-card to-primary/5 border-primary/20" style={{ boxShadow: "var(--shadow-card)" }}>
+                    <CardHeader className="pb-3">
+                      <CardDescription>Progreso Promedio</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <div className="text-3xl font-bold text-primary">{stats.averageProgress}%</div>
+                        <Progress value={stats.averageProgress} className="h-2" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Certificates Section */}
+                <div className="mb-8">
+                  <CertificatesList />
+                </div>
+
+                {/* Areas Section */}
+                <div className="mb-6">
+                  <h2 className="text-2xl font-bold text-foreground mb-6">Áreas de Capacitación</h2>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {areas.map((area) => {
+                    const Icon = iconMap[area.icon] || BookOpen;
+                    
+                    return (
+                      <Card 
+                        key={area.id} 
+                        className="group cursor-pointer transition-all hover:scale-105 hover:shadow-hover bg-gradient-to-br from-card to-muted/20"
+                        style={{ boxShadow: "var(--shadow-card)" }}
+                        onClick={() => navigate(`/trainings?area=${area.id}`)}
+                      >
+                        <CardHeader>
+                          <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center mb-3 shadow-lg">
+                            <Icon className="w-7 h-7 text-white" />
+                          </div>
+                          <CardTitle className="text-xl">{area.name}</CardTitle>
+                          <CardDescription>{area.description}</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <Button 
+                            variant="ghost" 
+                            className="w-full justify-between group-hover:bg-primary/10 group-hover:text-primary transition-colors"
+                          >
+                            Ver capacitaciones
+                            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+
+                {/* FAQ Section */}
+                <div className="mt-12">
+                  <FAQ />
+                </div>
               </div>
             </main>
           </div>
         </SidebarProvider>
-      </div>
-    );
-  }
+      )}
 
-  // Regular user dashboard
-  return (
-    <div className="min-h-screen bg-background">
-      <Navigation userRole={userRole} />
-      <div className="container mx-auto px-4 py-8">
-        <DashboardContent />
-      </div>
+      {!isAdminOrLeader && (
+        <div className="container mx-auto px-4 py-8">
+          {/* Hero Section */}
+          <div className="mb-8 rounded-2xl overflow-hidden relative h-[400px]">
+            <img 
+              src={heroImage} 
+              alt="Equipo médico Novasalud" 
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-primary/90 to-primary/70 flex items-center">
+              <div className="container mx-auto px-8">
+                <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
+                  Bienvenido a tu Centro de Aprendizaje
+                </h1>
+                <p className="text-xl text-white/90 max-w-2xl">
+                  Desarrolla tus habilidades y mantente actualizado con nuestras capacitaciones profesionales de salud
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <Card className="bg-gradient-to-br from-card to-primary/5 border-primary/20" style={{ boxShadow: "var(--shadow-card)" }}>
+              <CardHeader className="pb-3">
+                <CardDescription>Total Capacitaciones</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-2">
+                  <BookOpen className="w-5 h-5 text-primary" />
+                  <span className="text-3xl font-bold text-primary">{stats.totalTrainings}</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-card to-primary/5 border-primary/20" style={{ boxShadow: "var(--shadow-card)" }}>
+              <CardHeader className="pb-3">
+                <CardDescription>Completadas</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-2">
+                  <Award className="w-5 h-5 text-primary" />
+                  <span className="text-3xl font-bold text-primary">{stats.completedTrainings}</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-card to-primary/5 border-primary/20" style={{ boxShadow: "var(--shadow-card)" }}>
+              <CardHeader className="pb-3">
+                <CardDescription>En Progreso</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-primary" />
+                  <span className="text-3xl font-bold text-primary">{stats.inProgress}</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-card to-primary/5 border-primary/20" style={{ boxShadow: "var(--shadow-card)" }}>
+              <CardHeader className="pb-3">
+                <CardDescription>Progreso Promedio</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="text-3xl font-bold text-primary">{stats.averageProgress}%</div>
+                  <Progress value={stats.averageProgress} className="h-2" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Certificates Section */}
+          <div className="mb-8">
+            <CertificatesList />
+          </div>
+
+          {/* Areas Section */}
+          <div className="mb-4">
+            <h2 className="text-2xl font-bold text-foreground mb-6">Áreas de Capacitación</h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {areas.map((area) => {
+              const Icon = iconMap[area.icon] || BookOpen;
+              
+              return (
+                <Card 
+                  key={area.id} 
+                  className="group cursor-pointer transition-all hover:scale-105"
+                  style={{ boxShadow: "var(--shadow-card)" }}
+                  onClick={() => navigate(`/trainings?area=${area.id}`)}
+                >
+                  <CardHeader>
+                    <div className={`w-12 h-12 rounded-xl bg-${area.color}-100 dark:bg-${area.color}-900/20 flex items-center justify-center mb-3`}>
+                      <Icon className={`w-6 h-6 text-${area.color}-600 dark:text-${area.color}-400`} />
+                    </div>
+                    <CardTitle className="text-xl">{area.name}</CardTitle>
+                    <CardDescription>{area.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button 
+                      variant="ghost" 
+                      className="w-full justify-between group-hover:bg-primary/10 transition-colors"
+                    >
+                      Ver capacitaciones
+                      <ArrowRight className="w-4 h-4" />
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+
+          {/* FAQ Section */}
+          <div className="mt-12">
+            <FAQ />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
