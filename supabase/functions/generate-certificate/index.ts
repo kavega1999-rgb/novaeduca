@@ -339,11 +339,11 @@ serve(async (req) => {
     const pdfBuffer = await pdfDoc.save();
     console.log('PDF generated, size:', pdfBuffer.length);
 
-    // Upload PDF to Storage
+    // Upload PDF to Storage - using the public certificates bucket
     const fileName = `${certificateType}-${authenticatedUserId}-${trainingId}-${Date.now()}.pdf`;
     const { error: uploadError } = await supabase.storage
-      .from('training-materials')
-      .upload(`certificates/${fileName}`, pdfBuffer, {
+      .from('certificates')
+      .upload(fileName, pdfBuffer, {
         contentType: 'application/pdf',
         upsert: false
       });
@@ -358,8 +358,8 @@ serve(async (req) => {
 
     // Get public URL
     const { data: publicUrlData } = supabase.storage
-      .from('training-materials')
-      .getPublicUrl(`certificates/${fileName}`);
+      .from('certificates')
+      .getPublicUrl(fileName);
 
     // Store certificate record
     const { data: certificate, error: certError } = await supabase
