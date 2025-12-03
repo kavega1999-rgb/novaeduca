@@ -186,31 +186,40 @@ const EvaluationTaker = ({ evaluationId, trainingId, onComplete }: EvaluationTak
     setResult(updatedAttempt);
 
     if (passed) {
-      // Get current session
+      // Get current session with fresh token
       const { data: { session } } = await supabase.auth.getSession();
       
-      if (session) {
-        // Call edge function to generate certificate/constancia
+      if (session?.access_token) {
+        // Call edge function to generate certificate/constancia with explicit auth
         try {
-          const { data: certificateData, error: certError } = await supabase.functions.invoke(
-            'generate-certificate',
+          const response = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-certificate`,
             {
-              body: {
-                attemptId: attemptId,
-                userId: session.user.id,
-                trainingId: trainingId,
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.access_token}`,
+                'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
               },
+              body: JSON.stringify({
+                attemptId: attemptId,
+                trainingId: trainingId,
+              }),
             }
           );
 
-          if (certError) {
-            console.error('Error generating certificate:', certError);
+          const certificateData = await response.json();
+
+          if (!response.ok) {
+            console.error('Error generating certificate:', certificateData);
             toast.error("No se pudo generar el certificado/constancia");
           } else {
             console.log('Certificate generated:', certificateData);
+            toast.success("Certificado generado exitosamente");
           }
         } catch (err) {
           console.error('Error calling certificate function:', err);
+          toast.error("Error al generar el certificado");
         }
       }
 
