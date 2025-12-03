@@ -6,12 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Trash2, Save } from "lucide-react";
+import { Plus, Trash2, Save, Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
 interface EvaluationManagerProps {
   trainingId: string;
+  trainingTitle?: string;
+  contentUrl?: string;
 }
 
 const questionSchema = z.object({
@@ -31,11 +33,12 @@ const evaluationSchema = z.object({
   time_limit_minutes: z.number().int().min(1, "Mínimo 1 minuto").max(180, "Máximo 180 minutos").optional().nullable(),
 });
 
-const EvaluationManager = ({ trainingId }: EvaluationManagerProps) => {
+const EvaluationManager = ({ trainingId, trainingTitle, contentUrl }: EvaluationManagerProps) => {
   const [evaluation, setEvaluation] = useState<any>(null);
   const [questions, setQuestions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [generatingAI, setGeneratingAI] = useState(false);
 
   useEffect(() => {
     loadEvaluation();
@@ -96,6 +99,53 @@ const EvaluationManager = ({ trainingId }: EvaluationManagerProps) => {
         ],
       },
     ]);
+  };
+
+  const generateQuestionsWithAI = async () => {
+    if (!contentUrl) {
+      toast.error("Debes subir el contenido PDF primero para generar preguntas automáticamente");
+      return;
+    }
+
+    setGeneratingAI(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-evaluation-questions', {
+        body: { 
+          pdfUrl: contentUrl,
+          trainingTitle: trainingTitle || "Capacitación"
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      if (data.questions && Array.isArray(data.questions)) {
+        const newQuestions = data.questions.map((q: any, index: number) => ({
+          id: `temp-ai-${Date.now()}-${index}`,
+          question_text: q.question_text,
+          points: 1,
+          order_index: questions.length + index,
+          evaluation_question_options: q.options.map((opt: any, optIndex: number) => ({
+            id: `temp-opt-ai-${Date.now()}-${index}-${optIndex}`,
+            option_text: opt.option_text,
+            is_correct: opt.is_correct,
+            order_index: optIndex,
+          })),
+        }));
+
+        setQuestions([...questions, ...newQuestions]);
+        toast.success(`Se generaron ${newQuestions.length} preguntas con IA`);
+      }
+    } catch (error) {
+      console.error("Error generating questions with AI:", error);
+      toast.error("Error al generar preguntas con IA");
+    } finally {
+      setGeneratingAI(false);
+    }
   };
 
   const removeQuestion = (index: number) => {
@@ -338,12 +388,28 @@ const EvaluationManager = ({ trainingId }: EvaluationManagerProps) => {
         </CardContent>
       </Card>
 
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h3 className="text-lg font-semibold">Preguntas</h3>
-        <Button onClick={addQuestion} size="sm">
-          <Plus className="w-4 h-4 mr-2" />
-          Agregar Pregunta
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            onClick={generateQuestionsWithAI} 
+            size="sm" 
+            variant="outline"
+            disabled={generatingAI || !contentUrl}
+            title={!contentUrl ? "Sube el PDF de la capacitación primero" : "Generar preguntas automáticamente"}
+          >
+            {generatingAI ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Sparkles className="w-4 h-4 mr-2" />
+            )}
+            {generatingAI ? "Generando..." : "Generar con IA"}
+          </Button>
+          <Button onClick={addQuestion} size="sm">
+            <Plus className="w-4 h-4 mr-2" />
+            Agregar Pregunta
+          </Button>
+        </div>
       </div>
 
       {questions.map((question, qIndex) => (
