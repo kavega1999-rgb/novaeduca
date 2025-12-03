@@ -122,9 +122,11 @@ const AdherenceEvaluations = () => {
 
   useEffect(() => {
     const checkAccess = async () => {
+      console.log("AdherenceEvaluations: checking access...");
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
+        console.log("AdherenceEvaluations: no user, redirecting to auth");
         navigate("/auth");
         return;
       }
@@ -134,6 +136,7 @@ const AdherenceEvaluations = () => {
         .select("role")
         .eq("user_id", user.id);
 
+      console.log("AdherenceEvaluations: user roles:", roles);
       const hasAccess = roles?.some(r => r.role === "admin" || r.role === "leader");
 
       if (!hasAccess) {
@@ -146,6 +149,7 @@ const AdherenceEvaluations = () => {
         return;
       }
 
+      console.log("AdherenceEvaluations: access granted, fetching data...");
       fetchData();
     };
 
@@ -153,23 +157,36 @@ const AdherenceEvaluations = () => {
   }, [navigate, toast]);
 
   const fetchData = async () => {
+    console.log("AdherenceEvaluations: fetchData started");
     setIsLoading(true);
     try {
-      const [
-        { data: attemptsData },
-        { data: progressData },
-        { data: trainingsData },
-        { data: profilesData },
-        { data: logsData },
-        { data: evaluationsData },
-      ] = await Promise.all([
-        supabase.from("evaluation_attempts").select("*"),
-        supabase.from("user_progress").select("*"),
-        supabase.from("trainings").select("id, title, requires_evaluation"),
-        supabase.from("profiles").select("id, full_name, area"),
-        supabase.from("access_logs").select("id, user_id, user_name, user_email, event_type, event_timestamp").order("event_timestamp", { ascending: false }).limit(500),
-        supabase.from("evaluations").select("id, training_id, title, trainings(title)"),
-      ]);
+      // Fetch data individually to handle errors better
+      const { data: attemptsData, error: attemptsError } = await supabase
+        .from("evaluation_attempts").select("*");
+      if (attemptsError) console.error("Error fetching attempts:", attemptsError);
+
+      const { data: progressData, error: progressError } = await supabase
+        .from("user_progress").select("*");
+      if (progressError) console.error("Error fetching progress:", progressError);
+
+      const { data: trainingsData, error: trainingsError } = await supabase
+        .from("trainings").select("id, title, requires_evaluation");
+      if (trainingsError) console.error("Error fetching trainings:", trainingsError);
+
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles").select("id, full_name, area");
+      if (profilesError) console.error("Error fetching profiles:", profilesError);
+
+      const { data: logsData, error: logsError } = await supabase
+        .from("access_logs")
+        .select("id, user_id, user_name, user_email, event_type, event_timestamp")
+        .order("event_timestamp", { ascending: false })
+        .limit(500);
+      if (logsError) console.error("Error fetching logs:", logsError);
+
+      const { data: evaluationsData, error: evaluationsError } = await supabase
+        .from("evaluations").select("id, training_id, title, trainings(title)");
+      if (evaluationsError) console.error("Error fetching evaluations:", evaluationsError);
 
       setAttempts(attemptsData || []);
       setUserProgress(progressData || []);
