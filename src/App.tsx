@@ -15,6 +15,7 @@ import TrainingDetail from "./pages/TrainingDetail";
 import Profile from "./pages/Profile";
 import Documents from "./pages/Documents";
 import AccessLogs from "./pages/AccessLogs";
+import AdherenceEvaluations from "./pages/AdherenceEvaluations";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -40,6 +41,9 @@ const App = () => (
           </Route>
           <Route path="/dashboard/users" element={<Dashboard />}>
             <Route index element={<UserManagement />} />
+          </Route>
+          <Route path="/dashboard/adherence" element={<Dashboard />}>
+            <Route index element={<AdherenceEvaluations />} />
           </Route>
           <Route path="/trainings" element={<Trainings />} />
           <Route path="/training/:id" element={<TrainingDetail />} />
