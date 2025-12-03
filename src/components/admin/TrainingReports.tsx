@@ -45,7 +45,8 @@ interface GlobalStats {
   averageProgress: number;
 }
 
-const COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))"];
+// Institutional colors: Primary (navy blue), Secondary (orange/gold), Accent (yellow)
+const COLORS = ["hsl(var(--success))", "hsl(var(--secondary))", "hsl(var(--muted))", "hsl(var(--accent))"];
 
 const TrainingReports = () => {
   const { toast } = useToast();
@@ -199,11 +200,11 @@ const TrainingReports = () => {
     notStarted: filteredProgress.filter(p => p.status === "pending").length,
   };
 
-  // Chart data
+  // Chart data with institutional colors
   const barChartData = [
-    { name: "No Iniciadas", value: globalStats.notStartedUsers, fill: "hsl(var(--chart-3))" },
-    { name: "En Progreso", value: globalStats.inProgressUsers, fill: "hsl(var(--chart-2))" },
-    { name: "Completadas", value: globalStats.completedUsers, fill: "hsl(var(--primary))" },
+    { name: "No Iniciadas", value: globalStats.notStartedUsers, fill: "hsl(var(--muted-foreground))" },
+    { name: "En Progreso", value: globalStats.inProgressUsers, fill: "hsl(var(--secondary))" },
+    { name: "Completadas", value: globalStats.completedUsers, fill: "hsl(var(--success))" },
   ];
 
   const pieChartData = [
@@ -277,64 +278,64 @@ const TrainingReports = () => {
 
   return (
     <div className="space-y-6">
-      {/* KPI Cards */}
+      {/* KPI Cards - Institutional Colors */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        <Card className="bg-gradient-to-br from-card to-primary/5 border-primary/20">
+        <Card className="bg-gradient-to-br from-primary to-primary/80 border-none shadow-lg">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Total Capacitaciones</p>
-                <p className="text-3xl font-bold text-primary">{globalStats.totalTrainings}</p>
+                <p className="text-sm text-primary-foreground/80">Total Capacitaciones</p>
+                <p className="text-3xl font-bold text-primary-foreground">{globalStats.totalTrainings}</p>
               </div>
-              <BookOpen className="h-10 w-10 text-primary/50" />
+              <BookOpen className="h-10 w-10 text-primary-foreground/60" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-card to-primary/5 border-primary/20">
+        <Card className="bg-gradient-to-br from-success to-success/80 border-none shadow-lg">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Completadas</p>
-                <p className="text-3xl font-bold text-primary">{globalStats.completedUsers}</p>
+                <p className="text-sm text-success-foreground/80">Completadas</p>
+                <p className="text-3xl font-bold text-success-foreground">{globalStats.completedUsers}</p>
               </div>
-              <CheckCircle className="h-10 w-10 text-primary/50" />
+              <CheckCircle className="h-10 w-10 text-success-foreground/60" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-card to-primary/5 border-primary/20">
+        <Card className="bg-gradient-to-br from-secondary to-secondary/80 border-none shadow-lg">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">En Progreso</p>
-                <p className="text-3xl font-bold text-primary">{globalStats.inProgressUsers}</p>
+                <p className="text-sm text-secondary-foreground/80">En Progreso</p>
+                <p className="text-3xl font-bold text-secondary-foreground">{globalStats.inProgressUsers}</p>
               </div>
-              <Clock className="h-10 w-10 text-primary/50" />
+              <Clock className="h-10 w-10 text-secondary-foreground/60" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-card to-primary/5 border-primary/20">
+        <Card className="bg-gradient-to-br from-muted to-muted/80 border-none shadow-lg">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">No Iniciadas</p>
-                <p className="text-3xl font-bold text-primary">{globalStats.notStartedUsers}</p>
+                <p className="text-3xl font-bold text-foreground">{globalStats.notStartedUsers}</p>
               </div>
-              <AlertCircle className="h-10 w-10 text-primary/50" />
+              <AlertCircle className="h-10 w-10 text-muted-foreground/60" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-card to-primary/5 border-primary/20">
+        <Card className="bg-gradient-to-br from-accent to-accent/80 border-none shadow-lg">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Progreso Promedio</p>
-                <p className="text-3xl font-bold text-primary">{globalStats.averageProgress}%</p>
+                <p className="text-sm text-accent-foreground/80">Progreso Promedio</p>
+                <p className="text-3xl font-bold text-accent-foreground">{globalStats.averageProgress}%</p>
               </div>
-              <TrendingUp className="h-10 w-10 text-primary/50" />
+              <TrendingUp className="h-10 w-10 text-accent-foreground/60" />
             </div>
           </CardContent>
         </Card>
@@ -466,15 +467,15 @@ const TrainingReports = () => {
             </CardTitle>
             <div className="flex gap-4 text-sm text-muted-foreground">
               <span className="flex items-center gap-1">
-                <CheckCircle className="h-4 w-4 text-primary" />
+                <CheckCircle className="h-4 w-4 text-success" />
                 {trainingStats.completed} completados
               </span>
               <span className="flex items-center gap-1">
-                <Clock className="h-4 w-4 text-chart-2" />
+                <Clock className="h-4 w-4 text-secondary" />
                 {trainingStats.inProgress} en progreso
               </span>
               <span className="flex items-center gap-1">
-                <AlertCircle className="h-4 w-4 text-chart-3" />
+                <AlertCircle className="h-4 w-4 text-muted-foreground" />
                 {trainingStats.notStarted} pendientes
               </span>
             </div>
