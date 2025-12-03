@@ -237,14 +237,47 @@ serve(async (req) => {
       borderWidth: 2,
     });
     
-    // Draw NOVASALUD text (logo placeholder)
-    const logoY = height - 90;
-    page.drawText('N', { x: 335, y: logoY, size: 28, font: timesRomanBold, color: DARK_BLUE });
-    page.drawText('O', { x: 355, y: logoY, size: 28, font: timesRomanBold, color: ORANGE });
-    page.drawText('VASALUD', { x: 375, y: logoY, size: 28, font: timesRomanBold, color: DARK_BLUE });
+    // Embed Novasalud logo - try PNG first, then JPG
+    let logoEmbedded = false;
+    const logoFormats = ['novasalud-logo.png', 'novasalud-logo.jpg'];
     
-    // CARIBE I.P.S. subtitle
-    drawCenteredText(page, 'CARIBE I.P.S.', height - 115, 14, timesRomanBold, ORANGE);
+    for (const logoFileName of logoFormats) {
+      if (logoEmbedded) break;
+      try {
+        const logoUrl = `${supabaseUrl}/storage/v1/object/public/certificates/${logoFileName}`;
+        console.log('Trying to load logo from:', logoUrl);
+        const logoResponse = await fetch(logoUrl);
+        if (logoResponse.ok) {
+          const logoBytes = await logoResponse.arrayBuffer();
+          const logoImage = logoFileName.endsWith('.png') 
+            ? await pdfDoc.embedPng(new Uint8Array(logoBytes))
+            : await pdfDoc.embedJpg(new Uint8Array(logoBytes));
+          const logoWidth = 200;
+          const logoHeight = (logoImage.height / logoImage.width) * logoWidth;
+          const logoX = (width - logoWidth) / 2;
+          page.drawImage(logoImage, {
+            x: logoX,
+            y: height - 55 - logoHeight,
+            width: logoWidth,
+            height: logoHeight,
+          });
+          logoEmbedded = true;
+          console.log('Logo embedded successfully');
+        }
+      } catch (logoError) {
+        console.error('Error loading logo:', logoFileName, logoError);
+      }
+    }
+    
+    // Fallback to text if no logo loaded
+    if (!logoEmbedded) {
+      console.log('Using text fallback for logo');
+      const logoY = height - 90;
+      page.drawText('N', { x: 335, y: logoY, size: 28, font: timesRomanBold, color: DARK_BLUE });
+      page.drawText('O', { x: 355, y: logoY, size: 28, font: timesRomanBold, color: ORANGE });
+      page.drawText('VASALUD', { x: 375, y: logoY, size: 28, font: timesRomanBold, color: DARK_BLUE });
+      drawCenteredText(page, 'CARIBE I.P.S.', height - 115, 14, timesRomanBold, ORANGE);
+    }
     
     // Main title - CERTIFICADO or CONSTANCIA
     const mainTitle = isCertificate ? 'CERTIFICADO' : 'CONSTANCIA';
