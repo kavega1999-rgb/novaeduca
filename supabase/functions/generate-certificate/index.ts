@@ -14,6 +14,31 @@ const requestSchema = z.object({
   trainingId: z.string().uuid("Invalid training ID format"),
 });
 
+// Novasalud colors
+const DARK_BLUE = rgb(0.04, 0.24, 0.42);      // #0A3D6B - Dark navy blue
+const ORANGE = rgb(0.91, 0.45, 0.08);          // #E87314 - Orange
+const LIGHT_BLUE = rgb(0.18, 0.47, 0.71);      // #2E78B5 - Lighter blue for name
+
+// Helper function to center text
+function centerText(text: string, pageWidth: number, fontSize: number, font: any): number {
+  const textWidth = font.widthOfTextAtSize(text, fontSize);
+  return (pageWidth - textWidth) / 2;
+}
+
+// Helper function to draw text centered
+function drawCenteredText(
+  page: any, 
+  text: string, 
+  y: number, 
+  fontSize: number, 
+  font: any, 
+  color: any
+) {
+  const { width } = page.getSize();
+  const x = centerText(text, width, fontSize, font);
+  page.drawText(text, { x, y, size: fontSize, font, color });
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -180,143 +205,93 @@ serve(async (req) => {
 
     // Determine certificate type
     const certificateType = training.generates_certificate ? 'certificate' : 'constancia';
+    const isCertificate = certificateType === 'certificate';
     
-    // Generate PDF
+    // Generate PDF with Novasalud design
     console.log('Generating PDF certificate...');
     const pdfDoc = await PDFDocument.create();
     const page = pdfDoc.addPage([792, 612]); // Letter size landscape
     
-    const timesRomanFont = await pdfDoc.embedFont(StandardFonts.TimesRoman);
+    const timesRoman = await pdfDoc.embedFont(StandardFonts.TimesRoman);
     const timesRomanBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
-    const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const timesRomanItalic = await pdfDoc.embedFont(StandardFonts.TimesRomanItalic);
+    const timesRomanBoldItalic = await pdfDoc.embedFont(StandardFonts.TimesRomanBoldItalic);
     
     const { width, height } = page.getSize();
     
-    // Background border
+    // Draw outer dark blue border
     page.drawRectangle({
-      x: 30,
-      y: 30,
-      width: width - 60,
-      height: height - 60,
-      borderColor: rgb(0.2, 0.3, 0.5),
-      borderWidth: 3,
+      x: 20,
+      y: 20,
+      width: width - 40,
+      height: height - 40,
+      borderColor: DARK_BLUE,
+      borderWidth: 4,
     });
     
+    // Draw inner orange border
     page.drawRectangle({
-      x: 40,
-      y: 40,
-      width: width - 80,
-      height: height - 80,
-      borderColor: rgb(0.2, 0.3, 0.5),
-      borderWidth: 1,
+      x: 28,
+      y: 28,
+      width: width - 56,
+      height: height - 56,
+      borderColor: ORANGE,
+      borderWidth: 2,
     });
     
-    // Title
-    const title = certificateType === 'certificate' ? 'CERTIFICADO' : 'CONSTANCIA';
-    page.drawText(title, {
-      x: width / 2 - (title.length * 20),
-      y: height - 100,
-      size: 48,
-      font: helveticaBold,
-      color: rgb(0.2, 0.3, 0.5),
-    });
+    // Draw NOVASALUD text (logo placeholder)
+    const logoY = height - 90;
+    page.drawText('N', { x: 335, y: logoY, size: 28, font: timesRomanBold, color: DARK_BLUE });
+    page.drawText('O', { x: 355, y: logoY, size: 28, font: timesRomanBold, color: ORANGE });
+    page.drawText('VASALUD', { x: 375, y: logoY, size: 28, font: timesRomanBold, color: DARK_BLUE });
     
-    // Subtitle
-    const subtitle = certificateType === 'certificate' ? 'DE APROBACIÓN' : 'DE PARTICIPACIÓN';
-    page.drawText(subtitle, {
-      x: width / 2 - (subtitle.length * 8),
-      y: height - 140,
-      size: 24,
-      font: timesRomanBold,
-      color: rgb(0.3, 0.3, 0.3),
-    });
+    // CARIBE I.P.S. subtitle
+    drawCenteredText(page, 'CARIBE I.P.S.', height - 115, 14, timesRomanBold, ORANGE);
     
-    // Body text
-    const bodyText = 'Se otorga el presente certificado a:';
-    page.drawText(bodyText, {
-      x: width / 2 - (bodyText.length * 4.5),
-      y: height - 200,
-      size: 16,
-      font: timesRomanFont,
-      color: rgb(0, 0, 0),
-    });
+    // Main title - CERTIFICADO or CONSTANCIA
+    const mainTitle = isCertificate ? 'CERTIFICADO' : 'CONSTANCIA';
+    drawCenteredText(page, mainTitle, height - 175, 48, timesRomanBoldItalic, DARK_BLUE);
     
-    // User name
+    // Subtitle - De aprobación or De participación
+    const subtitle = isCertificate ? 'De aprobación' : 'De participación';
+    drawCenteredText(page, subtitle, height - 210, 22, timesRomanItalic, ORANGE);
+    
+    // "Otorgado a:" or "Otorgada a:"
+    const otorgadoText = isCertificate ? 'Otorgado a:' : 'Otorgada a:';
+    drawCenteredText(page, otorgadoText, height - 265, 16, timesRoman, rgb(0.3, 0.3, 0.3));
+    
+    // User name - larger and bold
     const userName = profile.full_name;
-    page.drawText(userName, {
-      x: width / 2 - (userName.length * 9),
-      y: height - 250,
-      size: 32,
-      font: timesRomanBold,
-      color: rgb(0.2, 0.3, 0.5),
-    });
+    drawCenteredText(page, userName, height - 310, 36, timesRomanBold, LIGHT_BLUE);
     
-    // Completion text
-    const completionText = certificateType === 'certificate' 
-      ? 'Por haber aprobado satisfactoriamente la capacitación:'
-      : 'Por haber completado la capacitación:';
-    page.drawText(completionText, {
-      x: width / 2 - (completionText.length * 4),
-      y: height - 300,
-      size: 14,
-      font: timesRomanFont,
-      color: rgb(0, 0, 0),
-    });
+    // Description text
+    const descText = 'Por concluir satisfactoriamente el curso de capacitación de';
+    drawCenteredText(page, descText, height - 365, 14, timesRoman, rgb(0.2, 0.2, 0.2));
     
-    // Training title (with line wrapping)
+    // Training title - with wrapping if needed
     const trainingTitle = training.title;
-    const maxLineLength = 60;
-    const lines: string[] = [];
-    let currentLine = '';
+    const maxCharsPerLine = 65;
     
-    trainingTitle.split(' ').forEach((word: string) => {
-      if ((currentLine + word).length <= maxLineLength) {
-        currentLine += (currentLine ? ' ' : '') + word;
-      } else {
-        lines.push(currentLine);
-        currentLine = word;
-      }
-    });
-    if (currentLine) lines.push(currentLine);
-    
-    lines.forEach((line, index) => {
-      page.drawText(line, {
-        x: width / 2 - (line.length * 5),
-        y: height - 340 - (index * 20),
-        size: 18,
-        font: timesRomanBold,
-        color: rgb(0.1, 0.1, 0.1),
+    if (trainingTitle.length <= maxCharsPerLine) {
+      drawCenteredText(page, trainingTitle, height - 395, 16, timesRomanBold, DARK_BLUE);
+    } else {
+      // Split into multiple lines
+      const words = trainingTitle.split(' ');
+      const lines: string[] = [];
+      let currentLine = '';
+      
+      words.forEach((word: string) => {
+        if ((currentLine + ' ' + word).trim().length <= maxCharsPerLine) {
+          currentLine = (currentLine + ' ' + word).trim();
+        } else {
+          if (currentLine) lines.push(currentLine);
+          currentLine = word;
+        }
       });
-    });
-    
-    // Details
-    const yOffset = height - 380 - (lines.length * 20);
-    const areaText = `Área: ${training.areas?.name || 'N/A'}`;
-    page.drawText(areaText, {
-      x: 100,
-      y: yOffset,
-      size: 12,
-      font: timesRomanFont,
-      color: rgb(0, 0, 0),
-    });
-    
-    const durationText = `Duración: ${training.duration_minutes || 0} minutos`;
-    page.drawText(durationText, {
-      x: 100,
-      y: yOffset - 25,
-      size: 12,
-      font: timesRomanFont,
-      color: rgb(0, 0, 0),
-    });
-    
-    if (certificateType === 'certificate' && attempt) {
-      const scoreText = `Calificación: ${Number(attempt.score).toFixed(1)}%`;
-      page.drawText(scoreText, {
-        x: 100,
-        y: yOffset - 50,
-        size: 12,
-        font: timesRomanBold,
-        color: rgb(0, 0.5, 0),
+      if (currentLine) lines.push(currentLine);
+      
+      lines.forEach((line, index) => {
+        drawCenteredText(page, line, height - 395 - (index * 22), 16, timesRomanBold, DARK_BLUE);
       });
     }
     
@@ -326,13 +301,41 @@ serve(async (req) => {
       month: 'long', 
       day: 'numeric' 
     });
-    const dateText = `Fecha: ${completedDate}`;
-    page.drawText(dateText, {
-      x: width / 2 - (dateText.length * 3.5),
-      y: 100,
+    drawCenteredText(page, completedDate, height - 445, 14, timesRomanBold, rgb(0.3, 0.3, 0.3));
+    
+    // Signature lines
+    const signatureY = 100;
+    const leftSignatureX = 130;
+    const rightSignatureX = 520;
+    
+    // Left signature line
+    page.drawLine({
+      start: { x: leftSignatureX - 60, y: signatureY },
+      end: { x: leftSignatureX + 60, y: signatureY },
+      thickness: 1,
+      color: rgb(0.4, 0.4, 0.4),
+    });
+    page.drawText('Gerente', {
+      x: leftSignatureX - 25,
+      y: signatureY - 20,
       size: 12,
-      font: timesRomanFont,
-      color: rgb(0, 0, 0),
+      font: timesRomanBold,
+      color: rgb(0.3, 0.3, 0.3),
+    });
+    
+    // Right signature line
+    page.drawLine({
+      start: { x: rightSignatureX - 80, y: signatureY },
+      end: { x: rightSignatureX + 80, y: signatureY },
+      thickness: 1,
+      color: rgb(0.4, 0.4, 0.4),
+    });
+    page.drawText('Jefe de Gestión Humana', {
+      x: rightSignatureX - 70,
+      y: signatureY - 20,
+      size: 12,
+      font: timesRomanBold,
+      color: rgb(0.3, 0.3, 0.3),
     });
     
     const pdfBuffer = await pdfDoc.save();
