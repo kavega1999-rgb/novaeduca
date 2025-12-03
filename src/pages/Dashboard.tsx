@@ -38,7 +38,7 @@ const Dashboard = () => {
   });
   const [loading, setLoading] = useState(true);
 
-  const isSubRoute = location.pathname === "/dashboard/reports" || location.pathname === "/dashboard/users";
+  const isSubRoute = ["/dashboard/reports", "/dashboard/users", "/dashboard/trainings", "/dashboard/overview"].includes(location.pathname);
 
   useEffect(() => {
     const checkAuth = async () => {
