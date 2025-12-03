@@ -7,17 +7,24 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Power } from "lucide-react";
+import { Loader2, Power, ArrowLeft, Mail } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { logAccess } from "@/hooks/useAccessLog";
 import heroImage from "@/assets/team-celebration.jpg";
+
+type AuthView = "main" | "otp-verify" | "forgot-password" | "reset-password";
 
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [area, setArea] = useState<"medicos" | "asistencial" | "administrativos" | "">("");
+  const [otpCode, setOtpCode] = useState("");
+  const [view, setView] = useState<AuthView>("main");
+  const [otpPurpose, setOtpPurpose] = useState<"login" | "signup" | "reset">("login");
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -32,15 +39,14 @@ const Auth = () => {
     checkSession();
   }, [navigate]);
 
-  // Listen for logout events to log them
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_OUT') {
-        // Logout is handled in the component that triggers it
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const accessToken = hashParams.get('access_token');
+    const type = hashParams.get('type');
+    
+    if (accessToken && type === 'recovery') {
+      setView("reset-password");
+    }
   }, []);
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -180,6 +186,333 @@ const Auth = () => {
     }
   };
 
+  const handleSendOTP = async (purpose: "login" | "signup") => {
+    if (!email) {
+      toast({
+        title: "Correo requerido",
+        description: "Por favor ingresa tu correo electrónico.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setIsLoading(true);
+    setOtpPurpose(purpose);
+    
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          shouldCreateUser: purpose === "signup",
+          data: purpose === "signup" ? { full_name: fullName } : undefined
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Código enviado",
+        description: `Hemos enviado un código de verificación a ${email}`
+      });
+      setView("otp-verify");
+    } catch (error: any) {
+      toast({
+        title: "Error al enviar código",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleVerifyOTP = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    
+    try {
+      const { data, error } = await supabase.auth.verifyOtp({
+        email,
+        token: otpCode,
+        type: otpPurpose === "reset" ? "recovery" : "email"
+      });
+
+      if (error) {
+        await logAccess({
+          userEmail: email,
+          eventType: otpPurpose === "signup" ? 'registro' : 'login',
+          status: 'fallido',
+          details: `OTP inválido: ${error.message}`
+        });
+        throw error;
+      }
+
+      if (otpPurpose === "reset") {
+        setView("reset-password");
+        toast({
+          title: "Código verificado",
+          description: "Ahora puedes crear tu nueva contraseña."
+        });
+      } else {
+        if (otpPurpose === "signup" && data.user && area) {
+          await supabase
+            .from('profiles')
+            .update({
+              full_name: fullName,
+              area: area as "medicos" | "asistencial" | "administrativos"
+            })
+            .eq('id', data.user.id);
+        }
+
+        let userRole = 'user';
+        if (data.user) {
+          const { data: roles } = await supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", data.user.id);
+          userRole = roles?.[0]?.role || 'user';
+        }
+
+        await logAccess({
+          userId: data.user?.id,
+          userName: fullName || data.user?.email?.split('@')[0],
+          userEmail: email,
+          userRole: userRole,
+          eventType: otpPurpose === "signup" ? 'registro' : 'login',
+          status: 'exitoso',
+          details: 'Acceso via OTP'
+        });
+
+        toast({
+          title: "¡Bienvenido!",
+          description: otpPurpose === "signup" ? "Tu cuenta ha sido creada." : "Has iniciado sesión correctamente."
+        });
+        navigate("/dashboard");
+      }
+    } catch (error: any) {
+      toast({
+        title: "Código inválido",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) {
+      toast({
+        title: "Correo requerido",
+        description: "Por favor ingresa tu correo electrónico.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setIsLoading(true);
+    
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth`
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Correo enviado",
+        description: "Revisa tu bandeja de entrada para restablecer tu contraseña."
+      });
+      setOtpPurpose("reset");
+      setView("otp-verify");
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: "Error",
+        description: "Las contraseñas no coinciden.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      toast({
+        title: "Error",
+        description: "La contraseña debe tener al menos 6 caracteres.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setIsLoading(true);
+    
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "¡Contraseña actualizada!",
+        description: "Tu contraseña ha sido cambiada exitosamente."
+      });
+      setView("main");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const renderBackButton = () => (
+    <Button 
+      variant="ghost" 
+      onClick={() => { setView("main"); setOtpCode(""); }}
+      className="mb-4"
+    >
+      <ArrowLeft className="w-4 h-4 mr-2" />
+      Volver
+    </Button>
+  );
+
+  const renderOTPVerify = () => (
+    <Card className="bg-white/95 backdrop-blur-md border-white/20" style={{ boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
+      <CardHeader>
+        {renderBackButton()}
+        <CardTitle>Verificar código</CardTitle>
+        <CardDescription>
+          Ingresa el código de 6 dígitos enviado a {email}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleVerifyOTP} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="otp">Código de verificación</Label>
+            <Input 
+              id="otp" 
+              type="text" 
+              placeholder="123456"
+              value={otpCode}
+              onChange={e => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              maxLength={6}
+              className="text-center text-2xl tracking-widest"
+              required 
+            />
+          </div>
+          <Button type="submit" className="w-full" disabled={isLoading || otpCode.length !== 6}>
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Verificando...
+              </>
+            ) : "Verificar código"}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+  );
+
+  const renderForgotPassword = () => (
+    <Card className="bg-white/95 backdrop-blur-md border-white/20" style={{ boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
+      <CardHeader>
+        {renderBackButton()}
+        <CardTitle>¿Olvidaste tu contraseña?</CardTitle>
+        <CardDescription>
+          Ingresa tu correo y te enviaremos un enlace para restablecerla
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleForgotPassword} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="reset-email">Correo electrónico</Label>
+            <Input 
+              id="reset-email" 
+              type="email" 
+              placeholder="tu@correo.com"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              required 
+            />
+          </div>
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Enviando...
+              </>
+            ) : "Enviar enlace de recuperación"}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+  );
+
+  const renderResetPassword = () => (
+    <Card className="bg-white/95 backdrop-blur-md border-white/20" style={{ boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
+      <CardHeader>
+        <CardTitle>Nueva contraseña</CardTitle>
+        <CardDescription>
+          Crea una nueva contraseña para tu cuenta
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleResetPassword} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="new-password">Nueva contraseña</Label>
+            <Input 
+              id="new-password" 
+              type="password"
+              value={newPassword}
+              onChange={e => setNewPassword(e.target.value)}
+              minLength={6}
+              required 
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="confirm-password">Confirmar contraseña</Label>
+            <Input 
+              id="confirm-password" 
+              type="password"
+              value={confirmPassword}
+              onChange={e => setConfirmPassword(e.target.value)}
+              minLength={6}
+              required 
+            />
+          </div>
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Actualizando...
+              </>
+            ) : "Actualizar contraseña"}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+  );
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
       {/* Background Image with Blur */}
@@ -205,125 +538,179 @@ const Auth = () => {
           <p className="text-white/90 drop-shadow">Plataforma de Capacitación</p>
         </div>
 
-        <Tabs defaultValue="signin" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-4 bg-white/90 backdrop-blur-sm">
-            <TabsTrigger value="signin">Iniciar Sesión</TabsTrigger>
-            <TabsTrigger value="signup">Registro</TabsTrigger>
-          </TabsList>
+        {view === "main" && (
+          <Tabs defaultValue="signin" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-4 bg-white/90 backdrop-blur-sm">
+              <TabsTrigger value="signin">Iniciar Sesión</TabsTrigger>
+              <TabsTrigger value="signup">Registro</TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="signin">
-            <Card className="bg-white/95 backdrop-blur-md border-white/20" style={{ boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
-              <CardHeader>
-                <CardTitle>Inicia sesión</CardTitle>
-                <CardDescription>Ingresa tus credenciales para acceder</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSignIn} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Correo electrónico</Label>
-                    <Input 
-                      id="email" 
-                      type="email" 
-                      placeholder="tu@correo.com" 
-                      value={email} 
-                      onChange={e => setEmail(e.target.value)} 
-                      required 
-                    />
+            <TabsContent value="signin">
+              <Card className="bg-white/95 backdrop-blur-md border-white/20" style={{ boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
+                <CardHeader>
+                  <CardTitle>Inicia sesión</CardTitle>
+                  <CardDescription>Ingresa tus credenciales para acceder</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <form onSubmit={handleSignIn} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Correo electrónico</Label>
+                      <Input 
+                        id="email" 
+                        type="email" 
+                        placeholder="tu@correo.com" 
+                        value={email} 
+                        onChange={e => setEmail(e.target.value)} 
+                        required 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="password">Contraseña</Label>
+                      <Input 
+                        id="password" 
+                        type="password" 
+                        value={password} 
+                        onChange={e => setPassword(e.target.value)} 
+                        required 
+                      />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={isLoading}>
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Iniciando...
+                        </>
+                      ) : "Iniciar Sesión"}
+                    </Button>
+                  </form>
+                  
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-white px-2 text-muted-foreground">O</span>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Contraseña</Label>
-                    <Input 
-                      id="password" 
-                      type="password" 
-                      value={password} 
-                      onChange={e => setPassword(e.target.value)} 
-                      required 
-                    />
-                  </div>
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Iniciando...
-                      </>
-                    ) : "Iniciar Sesión"}
+                  
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => handleSendOTP("login")}
+                    disabled={isLoading || !email}
+                  >
+                    <Mail className="mr-2 h-4 w-4" />
+                    Iniciar con código por email
                   </Button>
-                </form>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                  
+                  <Button 
+                    type="button" 
+                    variant="link" 
+                    className="w-full text-sm"
+                    onClick={() => setView("forgot-password")}
+                  >
+                    ¿Olvidaste tu contraseña?
+                  </Button>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-          <TabsContent value="signup">
-            <Card className="bg-white/95 backdrop-blur-md border-white/20" style={{ boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
-              <CardHeader>
-                <CardTitle>Crear cuenta</CardTitle>
-                <CardDescription>Regístrate para acceder a las capacitaciones</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSignUp} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="fullname">Nombre completo</Label>
-                    <Input 
-                      id="fullname" 
-                      type="text" 
-                      placeholder="Juan Pérez" 
-                      value={fullName} 
-                      onChange={e => setFullName(e.target.value)} 
-                      required 
-                    />
+            <TabsContent value="signup">
+              <Card className="bg-white/95 backdrop-blur-md border-white/20" style={{ boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
+                <CardHeader>
+                  <CardTitle>Crear cuenta</CardTitle>
+                  <CardDescription>Regístrate para acceder a las capacitaciones</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <form onSubmit={handleSignUp} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="fullname">Nombre completo</Label>
+                      <Input 
+                        id="fullname" 
+                        type="text" 
+                        placeholder="Juan Pérez" 
+                        value={fullName} 
+                        onChange={e => setFullName(e.target.value)} 
+                        required 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-email">Correo electrónico</Label>
+                      <Input 
+                        id="signup-email" 
+                        type="email" 
+                        placeholder="tu@correo.com" 
+                        value={email} 
+                        onChange={e => setEmail(e.target.value)} 
+                        required 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-password">Contraseña</Label>
+                      <Input 
+                        id="signup-password" 
+                        type="password" 
+                        value={password} 
+                        onChange={e => setPassword(e.target.value)} 
+                        required 
+                        minLength={6} 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="area">Área de trabajo</Label>
+                      <Select 
+                        value={area} 
+                        onValueChange={value => setArea(value as "medicos" | "asistencial" | "administrativos")} 
+                        required
+                      >
+                        <SelectTrigger id="area">
+                          <SelectValue placeholder="Selecciona tu área" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="medicos">Médicos</SelectItem>
+                          <SelectItem value="asistencial">Asistencial</SelectItem>
+                          <SelectItem value="administrativos">Administrativos</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button type="submit" className="w-full" disabled={isLoading}>
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Creando cuenta...
+                        </>
+                      ) : "Crear Cuenta"}
+                    </Button>
+                  </form>
+                  
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-white px-2 text-muted-foreground">O</span>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-email">Correo electrónico</Label>
-                    <Input 
-                      id="signup-email" 
-                      type="email" 
-                      placeholder="tu@correo.com" 
-                      value={email} 
-                      onChange={e => setEmail(e.target.value)} 
-                      required 
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-password">Contraseña</Label>
-                    <Input 
-                      id="signup-password" 
-                      type="password" 
-                      value={password} 
-                      onChange={e => setPassword(e.target.value)} 
-                      required 
-                      minLength={6} 
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="area">Área de trabajo</Label>
-                    <Select 
-                      value={area} 
-                      onValueChange={value => setArea(value as "medicos" | "asistencial" | "administrativos")} 
-                      required
-                    >
-                      <SelectTrigger id="area">
-                        <SelectValue placeholder="Selecciona tu área" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="medicos">Médicos</SelectItem>
-                        <SelectItem value="asistencial">Asistencial</SelectItem>
-                        <SelectItem value="administrativos">Administrativos</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Creando cuenta...
-                      </>
-                    ) : "Crear Cuenta"}
+                  
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => handleSendOTP("signup")}
+                    disabled={isLoading || !email || !fullName || !area}
+                  >
+                    <Mail className="mr-2 h-4 w-4" />
+                    Registrarse con código por email
                   </Button>
-                </form>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        )}
+        {view === "otp-verify" && renderOTPVerify()}
+        {view === "forgot-password" && renderForgotPassword()}
+        {view === "reset-password" && renderResetPassword()}
       </div>
     </div>
   );
