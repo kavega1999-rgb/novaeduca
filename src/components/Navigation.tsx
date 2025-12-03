@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Home, BookOpen, User, LogOut, Settings, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
+import { logAccess } from "@/hooks/useAccessLog";
 import novasaludLogo from "@/assets/novasalud-logo-white.png";
 
 interface NavigationProps {
@@ -15,11 +16,16 @@ const Navigation = ({ userRole }: NavigationProps) => {
   const location = useLocation();
   const { toast } = useToast();
   const [userName, setUserName] = useState("");
+  const [userEmail, setUserEmail] = useState("");
+  const [userId, setUserId] = useState("");
 
   useEffect(() => {
     const fetchProfile = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
+        setUserId(user.id);
+        setUserEmail(user.email || "");
+        
         const { data: profile } = await supabase
           .from("profiles")
           .select("full_name")
@@ -36,6 +42,16 @@ const Navigation = ({ userRole }: NavigationProps) => {
   }, []);
 
   const handleSignOut = async () => {
+    // Log logout before signing out (while we still have user context)
+    await logAccess({
+      userId: userId,
+      userName: userName,
+      userEmail: userEmail,
+      userRole: userRole,
+      eventType: 'logout',
+      status: 'exitoso'
+    });
+
     await supabase.auth.signOut();
     toast({
       title: "Sesión cerrada",

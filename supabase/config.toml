@@ -5,3 +5,7 @@ verify_jwt = true
 
 [functions.generate-evaluation-questions]
 verify_jwt = false
+
+[functions.log-access]
+verify_jwt = false
+verify_jwt = false

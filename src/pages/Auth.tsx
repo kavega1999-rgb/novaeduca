@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Power } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { logAccess } from "@/hooks/useAccessLog";
 import heroImage from "@/assets/team-celebration.jpg";
+
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
@@ -17,20 +19,78 @@ const Auth = () => {
   const [fullName, setFullName] = useState("");
   const [area, setArea] = useState<"medicos" | "asistencial" | "administrativos" | "">("");
   const navigate = useNavigate();
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
+
+  // Check if user is already logged in
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        navigate("/dashboard");
+      }
+    };
+    checkSession();
+  }, [navigate]);
+
+  // Listen for logout events to log them
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_OUT') {
+        // Logout is handled in the component that triggers it
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    
     try {
-      const {
-        error
-      } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
-      if (error) throw error;
+
+      if (error) {
+        // Log failed login attempt
+        await logAccess({
+          userEmail: email,
+          eventType: 'login',
+          status: 'fallido',
+          details: error.message
+        });
+        throw error;
+      }
+
+      // Get user role for logging
+      let userRole = 'user';
+      if (data.user) {
+        const { data: roles } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", data.user.id);
+        userRole = roles?.[0]?.role || 'user';
+      }
+
+      // Get user name
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", data.user?.id)
+        .single();
+
+      // Log successful login
+      await logAccess({
+        userId: data.user?.id,
+        userName: profile?.full_name || data.user?.email?.split('@')[0],
+        userEmail: email,
+        userRole: userRole,
+        eventType: 'login',
+        status: 'exitoso'
+      });
+
       toast({
         title: "¡Bienvenido!",
         description: "Has iniciado sesión correctamente."
@@ -46,6 +106,7 @@ const Auth = () => {
       setIsLoading(false);
     }
   };
+
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!area) {
@@ -57,11 +118,9 @@ const Auth = () => {
       return;
     }
     setIsLoading(true);
+    
     try {
-      const {
-        data: authData,
-        error: authError
-      } = await supabase.auth.signUp({
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -71,17 +130,41 @@ const Auth = () => {
           emailRedirectTo: `${window.location.origin}/dashboard`
         }
       });
-      if (authError) throw authError;
+
+      if (authError) {
+        // Log failed registration
+        await logAccess({
+          userEmail: email,
+          userName: fullName,
+          eventType: 'registro',
+          status: 'fallido',
+          details: authError.message
+        });
+        throw authError;
+      }
 
       // Update profile with area
       if (authData.user && area) {
-        const {
-          error: profileError
-        } = await supabase.from('profiles').update({
-          area: area as "medicos" | "asistencial" | "administrativos"
-        }).eq('id', authData.user.id);
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({
+            area: area as "medicos" | "asistencial" | "administrativos"
+          })
+          .eq('id', authData.user.id);
+        
         if (profileError) throw profileError;
       }
+
+      // Log successful registration
+      await logAccess({
+        userId: authData.user?.id,
+        userName: fullName,
+        userEmail: email,
+        userRole: 'user',
+        eventType: 'registro',
+        status: 'exitoso'
+      });
+
       toast({
         title: "¡Cuenta creada!",
         description: "Tu cuenta ha sido creada exitosamente. Ya puedes iniciar sesión."
@@ -96,13 +179,18 @@ const Auth = () => {
       setIsLoading(false);
     }
   };
-  return <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
       {/* Background Image with Blur */}
-      <div className="absolute inset-0 bg-cover bg-center" style={{
-      backgroundImage: `url(${heroImage})`,
-      filter: 'blur(8px)',
-      transform: 'scale(1.1)'
-    }} />
+      <div 
+        className="absolute inset-0 bg-cover bg-center" 
+        style={{
+          backgroundImage: `url(${heroImage})`,
+          filter: 'blur(8px)',
+          transform: 'scale(1.1)'
+        }} 
+      />
       
       {/* Overlay */}
       <div className="absolute inset-0 bg-primary/60" />
@@ -124,9 +212,7 @@ const Auth = () => {
           </TabsList>
 
           <TabsContent value="signin">
-            <Card className="bg-white/95 backdrop-blur-md border-white/20" style={{
-            boxShadow: "0 8px 32px rgba(0,0,0,0.2)"
-          }}>
+            <Card className="bg-white/95 backdrop-blur-md border-white/20" style={{ boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
               <CardHeader>
                 <CardTitle>Inicia sesión</CardTitle>
                 <CardDescription>Ingresa tus credenciales para acceder</CardDescription>
@@ -135,17 +221,32 @@ const Auth = () => {
                 <form onSubmit={handleSignIn} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="email">Correo electrónico</Label>
-                    <Input id="email" type="email" placeholder="tu@correo.com" value={email} onChange={e => setEmail(e.target.value)} required />
+                    <Input 
+                      id="email" 
+                      type="email" 
+                      placeholder="tu@correo.com" 
+                      value={email} 
+                      onChange={e => setEmail(e.target.value)} 
+                      required 
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="password">Contraseña</Label>
-                    <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
+                    <Input 
+                      id="password" 
+                      type="password" 
+                      value={password} 
+                      onChange={e => setPassword(e.target.value)} 
+                      required 
+                    />
                   </div>
                   <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? <>
+                    {isLoading ? (
+                      <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Iniciando...
-                      </> : "Iniciar Sesión"}
+                      </>
+                    ) : "Iniciar Sesión"}
                   </Button>
                 </form>
               </CardContent>
@@ -153,9 +254,7 @@ const Auth = () => {
           </TabsContent>
 
           <TabsContent value="signup">
-            <Card className="bg-white/95 backdrop-blur-md border-white/20" style={{
-            boxShadow: "0 8px 32px rgba(0,0,0,0.2)"
-          }}>
+            <Card className="bg-white/95 backdrop-blur-md border-white/20" style={{ boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
               <CardHeader>
                 <CardTitle>Crear cuenta</CardTitle>
                 <CardDescription>Regístrate para acceder a las capacitaciones</CardDescription>
@@ -164,19 +263,44 @@ const Auth = () => {
                 <form onSubmit={handleSignUp} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="fullname">Nombre completo</Label>
-                    <Input id="fullname" type="text" placeholder="Juan Pérez" value={fullName} onChange={e => setFullName(e.target.value)} required />
+                    <Input 
+                      id="fullname" 
+                      type="text" 
+                      placeholder="Juan Pérez" 
+                      value={fullName} 
+                      onChange={e => setFullName(e.target.value)} 
+                      required 
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-email">Correo electrónico</Label>
-                    <Input id="signup-email" type="email" placeholder="tu@correo.com" value={email} onChange={e => setEmail(e.target.value)} required />
+                    <Input 
+                      id="signup-email" 
+                      type="email" 
+                      placeholder="tu@correo.com" 
+                      value={email} 
+                      onChange={e => setEmail(e.target.value)} 
+                      required 
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-password">Contraseña</Label>
-                    <Input id="signup-password" type="password" value={password} onChange={e => setPassword(e.target.value)} required minLength={6} />
+                    <Input 
+                      id="signup-password" 
+                      type="password" 
+                      value={password} 
+                      onChange={e => setPassword(e.target.value)} 
+                      required 
+                      minLength={6} 
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="area">Área de trabajo</Label>
-                    <Select value={area} onValueChange={value => setArea(value as "medicos" | "asistencial" | "administrativos")} required>
+                    <Select 
+                      value={area} 
+                      onValueChange={value => setArea(value as "medicos" | "asistencial" | "administrativos")} 
+                      required
+                    >
                       <SelectTrigger id="area">
                         <SelectValue placeholder="Selecciona tu área" />
                       </SelectTrigger>
@@ -188,10 +312,12 @@ const Auth = () => {
                     </Select>
                   </div>
                   <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? <>
+                    {isLoading ? (
+                      <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Creando cuenta...
-                      </> : "Crear Cuenta"}
+                      </>
+                    ) : "Crear Cuenta"}
                   </Button>
                 </form>
               </CardContent>
@@ -199,6 +325,8 @@ const Auth = () => {
           </TabsContent>
         </Tabs>
       </div>
-    </div>;
+    </div>
+  );
 };
+
 export default Auth;
