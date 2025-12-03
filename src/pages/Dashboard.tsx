@@ -38,7 +38,7 @@ const Dashboard = () => {
   });
   const [loading, setLoading] = useState(true);
 
-  const isReportsRoute = location.pathname === "/dashboard/reports";
+  const isSubRoute = location.pathname === "/dashboard/reports" || location.pathname === "/dashboard/users";
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -120,7 +120,7 @@ const Dashboard = () => {
   }
 
   // If admin/leader and on a sub-route, show with sidebar
-  if (isAdminOrLeader && isReportsRoute) {
+  if (isAdminOrLeader && isSubRoute) {
     return (
       <div className="min-h-screen bg-background">
         <Navigation userRole={userRole} />
