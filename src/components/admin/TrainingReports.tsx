@@ -45,8 +45,8 @@ interface GlobalStats {
   averageProgress: number;
 }
 
-// Blue tones for institutional consistency
-const COLORS = ["hsl(210, 80%, 45%)", "hsl(210, 60%, 60%)", "hsl(210, 40%, 75%)", "hsl(210, 30%, 85%)"];
+// Blue and green tones for better visual distinction
+const COLORS = ["hsl(152, 60%, 45%)", "hsl(210, 70%, 55%)", "hsl(210, 40%, 75%)", "hsl(200, 50%, 65%)"];
 
 const TrainingReports = () => {
   const { toast } = useToast();
@@ -200,11 +200,11 @@ const TrainingReports = () => {
     notStarted: filteredProgress.filter(p => p.status === "pending").length,
   };
 
-  // Chart data with blue tones
+  // Chart data with blue and green tones
   const barChartData = [
     { name: "No Iniciadas", value: globalStats.notStartedUsers, fill: "hsl(210, 40%, 75%)" },
-    { name: "En Progreso", value: globalStats.inProgressUsers, fill: "hsl(210, 60%, 60%)" },
-    { name: "Completadas", value: globalStats.completedUsers, fill: "hsl(210, 80%, 45%)" },
+    { name: "En Progreso", value: globalStats.inProgressUsers, fill: "hsl(210, 70%, 55%)" },
+    { name: "Completadas", value: globalStats.completedUsers, fill: "hsl(152, 60%, 45%)" },
   ];
 
   const pieChartData = [
@@ -292,14 +292,14 @@ const TrainingReports = () => {
           </CardContent>
         </Card>
 
-        <Card className="bg-[hsl(210,80%,35%)] border-none shadow-lg">
+        <Card className="bg-[hsl(152,60%,40%)] border-none shadow-lg">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-blue-200">Completadas</p>
+                <p className="text-sm text-green-100">Completadas</p>
                 <p className="text-3xl font-bold text-white">{globalStats.completedUsers}</p>
               </div>
-              <CheckCircle className="h-10 w-10 text-blue-300" />
+              <CheckCircle className="h-10 w-10 text-green-200" />
             </div>
           </CardContent>
         </Card>
@@ -467,15 +467,15 @@ const TrainingReports = () => {
             </CardTitle>
             <div className="flex gap-4 text-sm text-muted-foreground">
               <span className="flex items-center gap-1">
-                <CheckCircle className="h-4 w-4 text-[hsl(210,80%,35%)]" />
+                <CheckCircle className="h-4 w-4 text-[hsl(152,60%,40%)]" />
                 {trainingStats.completed} completados
               </span>
               <span className="flex items-center gap-1">
-                <Clock className="h-4 w-4 text-[hsl(210,70%,45%)]" />
+                <Clock className="h-4 w-4 text-[hsl(210,70%,55%)]" />
                 {trainingStats.inProgress} en progreso
               </span>
               <span className="flex items-center gap-1">
-                <AlertCircle className="h-4 w-4 text-[hsl(210,50%,55%)]" />
+                <AlertCircle className="h-4 w-4 text-[hsl(210,40%,75%)]" />
                 {trainingStats.notStarted} pendientes
               </span>
             </div>
