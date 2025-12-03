@@ -14,6 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
+      access_logs: {
+        Row: {
+          country: string | null
+          created_at: string
+          details: string | null
+          device_type: string | null
+          event_timestamp: string
+          event_type: string
+          id: string
+          ip_address: string | null
+          region: string | null
+          status: string
+          user_agent: string | null
+          user_email: string
+          user_id: string | null
+          user_name: string | null
+          user_role: string | null
+        }
+        Insert: {
+          country?: string | null
+          created_at?: string
+          details?: string | null
+          device_type?: string | null
+          event_timestamp?: string
+          event_type: string
+          id?: string
+          ip_address?: string | null
+          region?: string | null
+          status?: string
+          user_agent?: string | null
+          user_email: string
+          user_id?: string | null
+          user_name?: string | null
+          user_role?: string | null
+        }
+        Update: {
+          country?: string | null
+          created_at?: string
+          details?: string | null
+          device_type?: string | null
+          event_timestamp?: string
+          event_type?: string
+          id?: string
+          ip_address?: string | null
+          region?: string | null
+          status?: string
+          user_agent?: string | null
+          user_email?: string
+          user_id?: string | null
+          user_name?: string | null
+          user_role?: string | null
+        }
+        Relationships: []
+      }
       areas: {
         Row: {
           color: string | null
