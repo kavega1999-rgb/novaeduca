@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Clock, BookOpen, Award, PlayCircle } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Clock, BookOpen, Award, PlayCircle, Folder, ChevronDown, ChevronRight } from "lucide-react";
 
 const Trainings = () => {
   const navigate = useNavigate();
@@ -21,6 +22,7 @@ const Trainings = () => {
   const [userArea, setUserArea] = useState<string>("");
   const [userProgress, setUserProgress] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
+  const [openYears, setOpenYears] = useState<Record<number, boolean>>({});
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -96,6 +98,7 @@ const Trainings = () => {
         )
       `)
       .eq("status", "active")
+      .order("year", { ascending: false })
       .order("published_at", { ascending: false });
 
     if (areaFilter !== "all") {
@@ -108,6 +111,9 @@ const Trainings = () => {
       // If user is admin or leader, show all trainings
       if (userRole === 'admin' || userRole === 'leader') {
         setTrainings(allTrainings);
+        // Open current year by default
+        const currentYear = new Date().getFullYear();
+        setOpenYears({ [currentYear]: true });
       } else {
         // Filter trainings based on user area
         const visibleTrainings = await Promise.all(
@@ -132,7 +138,11 @@ const Trainings = () => {
         );
         
         // Filter out null values (trainings not visible to user)
-        setTrainings(visibleTrainings.filter(t => t !== null));
+        const filtered = visibleTrainings.filter(t => t !== null);
+        setTrainings(filtered);
+        // Open current year by default
+        const currentYear = new Date().getFullYear();
+        setOpenYears({ [currentYear]: true });
       }
     }
     setLoading(false);
@@ -154,6 +164,25 @@ const Trainings = () => {
       socializacion: "bg-accent",
     };
     return colors[type] || "bg-muted";
+  };
+
+  // Group trainings by year
+  const trainingsByYear = trainings.reduce((acc, training) => {
+    const year = training.year || new Date().getFullYear();
+    if (!acc[year]) {
+      acc[year] = [];
+    }
+    acc[year].push(training);
+    return acc;
+  }, {} as Record<number, any[]>);
+
+  // Sort years in descending order
+  const sortedYears = Object.keys(trainingsByYear)
+    .map(Number)
+    .sort((a, b) => b - a);
+
+  const toggleYear = (year: number) => {
+    setOpenYears(prev => ({ ...prev, [year]: !prev[year] }));
   };
 
   if (loading) {
@@ -205,65 +234,101 @@ const Trainings = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {trainings.map((training) => {
-              const progress = userProgress[training.id];
-              const progressPercentage = progress?.progress_percentage || 0;
-              const status = progress?.status || "pending";
-
-              return (
-                <Card 
-                  key={training.id}
-                  className="group hover:scale-105 transition-all cursor-pointer"
-                  style={{ boxShadow: "var(--shadow-card)" }}
-                  onClick={() => navigate(`/training/${training.id}`)}
-                >
-                  <CardHeader>
-                    <div className="flex items-start justify-between mb-2">
-                      <Badge className={`${getTypeColor(training.type)} text-white`}>
-                        {getTypeLabel(training.type)}
-                      </Badge>
-                      {training.generates_certificate && (
-                        <Award className="w-5 h-5 text-secondary" />
-                      )}
-                    </div>
-                    <CardTitle className="text-xl line-clamp-2">{training.title}</CardTitle>
-                    <CardDescription className="line-clamp-2">
-                      {training.description || "Sin descripción"}
-                    </CardDescription>
-                  </CardHeader>
-                  
-                  <CardContent>
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Clock className="w-4 h-4" />
-                        <span>{training.duration_minutes || 30} minutos</span>
-                      </div>
-                      
-                      {status !== "pending" && (
-                        <div className="space-y-1">
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground">Progreso</span>
-                            <span className="font-medium">{progressPercentage}%</span>
-                          </div>
-                          <Progress value={progressPercentage} className="h-2" />
+          <div className="space-y-4">
+            {sortedYears.map((year) => (
+              <Collapsible
+                key={year}
+                open={openYears[year]}
+                onOpenChange={() => toggleYear(year)}
+              >
+                <CollapsibleTrigger asChild>
+                  <Card 
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    style={{ boxShadow: "var(--shadow-card)" }}
+                  >
+                    <CardHeader className="py-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Folder className="w-6 h-6 text-primary" />
+                          <CardTitle className="text-xl">{year}</CardTitle>
+                          <Badge variant="secondary">
+                            {trainingsByYear[year].length} capacitación{trainingsByYear[year].length !== 1 ? 'es' : ''}
+                          </Badge>
                         </div>
-                      )}
-                    </div>
-                  </CardContent>
-                  
-                  <CardFooter>
-                    <Button 
-                      className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
-                      variant={status === "pending" ? "default" : "outline"}
-                    >
-                      <PlayCircle className="w-4 h-4 mr-2" />
-                      {status === "completed" ? "Revisar" : status === "in_progress" ? "Continuar" : "Comenzar"}
-                    </Button>
-                  </CardFooter>
-                </Card>
-              );
-            })}
+                        {openYears[year] ? (
+                          <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                        ) : (
+                          <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                        )}
+                      </div>
+                    </CardHeader>
+                  </Card>
+                </CollapsibleTrigger>
+                
+                <CollapsibleContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4 pl-4 border-l-2 border-primary/20 ml-3">
+                    {trainingsByYear[year].map((training: any) => {
+                      const progress = userProgress[training.id];
+                      const progressPercentage = progress?.progress_percentage || 0;
+                      const status = progress?.status || "pending";
+
+                      return (
+                        <Card 
+                          key={training.id}
+                          className="group hover:scale-105 transition-all cursor-pointer"
+                          style={{ boxShadow: "var(--shadow-card)" }}
+                          onClick={() => navigate(`/training/${training.id}`)}
+                        >
+                          <CardHeader>
+                            <div className="flex items-start justify-between mb-2">
+                              <Badge className={`${getTypeColor(training.type)} text-white`}>
+                                {getTypeLabel(training.type)}
+                              </Badge>
+                              {training.generates_certificate && (
+                                <Award className="w-5 h-5 text-secondary" />
+                              )}
+                            </div>
+                            <CardTitle className="text-xl line-clamp-2">{training.title}</CardTitle>
+                            <CardDescription className="line-clamp-2">
+                              {training.description || "Sin descripción"}
+                            </CardDescription>
+                          </CardHeader>
+                          
+                          <CardContent>
+                            <div className="space-y-3">
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <Clock className="w-4 h-4" />
+                                <span>{training.duration_minutes || 30} minutos</span>
+                              </div>
+                              
+                              {status !== "pending" && (
+                                <div className="space-y-1">
+                                  <div className="flex items-center justify-between text-sm">
+                                    <span className="text-muted-foreground">Progreso</span>
+                                    <span className="font-medium">{progressPercentage}%</span>
+                                  </div>
+                                  <Progress value={progressPercentage} className="h-2" />
+                                </div>
+                              )}
+                            </div>
+                          </CardContent>
+                          
+                          <CardFooter>
+                            <Button 
+                              className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
+                              variant={status === "pending" ? "default" : "outline"}
+                            >
+                              <PlayCircle className="w-4 h-4 mr-2" />
+                              {status === "completed" ? "Revisar" : status === "in_progress" ? "Continuar" : "Comenzar"}
+                            </Button>
+                          </CardFooter>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            ))}
           </div>
         )}
       </div>
