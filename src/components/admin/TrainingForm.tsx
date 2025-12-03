@@ -12,6 +12,9 @@ import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import FileUploader from "./FileUploader";
 
+const currentYear = new Date().getFullYear();
+const yearOptions = Array.from({ length: 10 }, (_, i) => currentYear - 5 + i);
+
 const formSchema = z.object({
   title: z.string().min(3, "El título debe tener al menos 3 caracteres").max(200),
   description: z.string().min(10, "La descripción debe tener al menos 10 caracteres").max(1000),
@@ -20,6 +23,7 @@ const formSchema = z.object({
   duration_minutes: z.coerce.number().min(1, "La duración debe ser mayor a 0"),
   total_pages: z.coerce.number().min(1, "El número de páginas debe ser mayor a 0").default(10),
   status: z.enum(["active", "draft", "archived"]),
+  year: z.coerce.number().min(2020).max(2100).default(currentYear),
   requires_evaluation: z.boolean().default(false),
   generates_certificate: z.boolean().default(false),
   generates_constancia: z.boolean().default(false),
@@ -48,6 +52,7 @@ const TrainingForm = ({ trainingId, onSuccess }: TrainingFormProps) => {
       duration_minutes: 60,
       total_pages: 10,
       status: "active",
+      year: currentYear,
       requires_evaluation: false,
       generates_certificate: false,
       generates_constancia: false,
@@ -92,6 +97,7 @@ const TrainingForm = ({ trainingId, onSuccess }: TrainingFormProps) => {
         duration_minutes: data.duration_minutes || 60,
         total_pages: data.total_pages || 10,
         status: data.status as any,
+        year: data.year || currentYear,
         requires_evaluation: data.requires_evaluation || false,
         generates_certificate: data.generates_certificate || false,
         generates_constancia: data.generates_constancia || false,
@@ -121,6 +127,7 @@ const TrainingForm = ({ trainingId, onSuccess }: TrainingFormProps) => {
           duration_minutes: values.duration_minutes,
           total_pages: values.total_pages,
           status: values.status,
+          year: values.year,
           requires_evaluation: values.requires_evaluation,
           generates_certificate: values.generates_certificate,
           generates_constancia: values.generates_constancia,
@@ -141,6 +148,7 @@ const TrainingForm = ({ trainingId, onSuccess }: TrainingFormProps) => {
           duration_minutes: values.duration_minutes,
           total_pages: values.total_pages,
           status: values.status,
+          year: values.year,
           requires_evaluation: values.requires_evaluation,
           generates_certificate: values.generates_certificate,
           generates_constancia: values.generates_constancia,
@@ -328,28 +336,55 @@ const TrainingForm = ({ trainingId, onSuccess }: TrainingFormProps) => {
           />
         </div>
 
-        <FormField
-          control={form.control}
-          name="status"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Estado</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecciona el estado" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="active">Activo</SelectItem>
-                  <SelectItem value="draft">Borrador</SelectItem>
-                  <SelectItem value="archived">Archivado</SelectItem>
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="status"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Estado</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona el estado" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="active">Activo</SelectItem>
+                    <SelectItem value="draft">Borrador</SelectItem>
+                    <SelectItem value="archived">Archivado</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="year"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Año</FormLabel>
+                <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona el año" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {yearOptions.map((year) => (
+                      <SelectItem key={year} value={year.toString()}>
+                        {year}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         <div className="space-y-4">
           <FormField

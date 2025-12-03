@@ -422,6 +422,7 @@ export type Database = {
           type: string
           updated_at: string
           visible_to_all: boolean | null
+          year: number
         }
         Insert: {
           area_id: string
@@ -441,6 +442,7 @@ export type Database = {
           type: string
           updated_at?: string
           visible_to_all?: boolean | null
+          year?: number
         }
         Update: {
           area_id?: string
@@ -460,6 +462,7 @@ export type Database = {
           type?: string
           updated_at?: string
           visible_to_all?: boolean | null
+          year?: number
         }
         Relationships: [
           {
