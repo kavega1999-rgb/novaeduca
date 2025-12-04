@@ -8,19 +8,17 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
 import { 
   CheckCircle, 
   XCircle, 
   Clock, 
-  AlertTriangle, 
   Users, 
   Target, 
-  TrendingUp, 
   Award,
-  Activity,
-  Timer,
-  BarChart3,
-  AlertCircle
+  AlertTriangle,
+  TrendingUp,
+  TrendingDown
 } from "lucide-react";
 import {
   BarChart,
@@ -33,12 +31,9 @@ import {
   PieChart,
   Pie,
   Cell,
-  LineChart,
-  Line,
   Legend,
 } from "recharts";
-import { format, subDays, differenceInMinutes, parseISO } from "date-fns";
-import { es } from "date-fns/locale";
+import { format, subDays } from "date-fns";
 
 interface EvaluationAttempt {
   id: string;
@@ -58,8 +53,6 @@ interface UserProgress {
   training_id: string;
   progress_percentage: number | null;
   status: string;
-  started_at: string | null;
-  completed_at: string | null;
 }
 
 interface Training {
@@ -74,29 +67,11 @@ interface Profile {
   area: string | null;
 }
 
-interface AccessLog {
-  id: string;
-  user_id: string | null;
-  user_name: string | null;
-  user_email: string;
-  event_type: string;
-  event_timestamp: string;
-}
-
-interface Evaluation {
-  id: string;
-  training_id: string;
-  title: string;
-  trainings?: { title: string };
-}
-
-// Colors for charts - blue and green tones
 const COLORS = {
   approved: "hsl(152, 60%, 45%)",
   failed: "hsl(0, 70%, 55%)",
   pending: "hsl(45, 80%, 50%)",
   notStarted: "hsl(210, 40%, 75%)",
-  inProgress: "hsl(210, 70%, 55%)",
   primary: "hsl(210, 80%, 45%)",
 };
 
@@ -105,28 +80,21 @@ const AdherenceEvaluations = () => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
 
-  // Data states
   const [attempts, setAttempts] = useState<EvaluationAttempt[]>([]);
   const [userProgress, setUserProgress] = useState<UserProgress[]>([]);
   const [trainings, setTrainings] = useState<Training[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [accessLogs, setAccessLogs] = useState<AccessLog[]>([]);
-  const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
 
-  // Filter states
   const [selectedUser, setSelectedUser] = useState<string>("all");
   const [selectedTraining, setSelectedTraining] = useState<string>("all");
-  const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [dateFrom, setDateFrom] = useState<string>(format(subDays(new Date(), 30), "yyyy-MM-dd"));
   const [dateTo, setDateTo] = useState<string>(format(new Date(), "yyyy-MM-dd"));
 
   useEffect(() => {
     const checkAccess = async () => {
-      console.log("AdherenceEvaluations: checking access...");
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
-        console.log("AdherenceEvaluations: no user, redirecting to auth");
         navigate("/auth");
         return;
       }
@@ -136,7 +104,6 @@ const AdherenceEvaluations = () => {
         .select("role")
         .eq("user_id", user.id);
 
-      console.log("AdherenceEvaluations: user roles:", roles);
       const hasAccess = roles?.some(r => r.role === "admin" || r.role === "leader");
 
       if (!hasAccess) {
@@ -149,7 +116,6 @@ const AdherenceEvaluations = () => {
         return;
       }
 
-      console.log("AdherenceEvaluations: access granted, fetching data...");
       fetchData();
     };
 
@@ -157,50 +123,21 @@ const AdherenceEvaluations = () => {
   }, [navigate, toast]);
 
   const fetchData = async () => {
-    console.log("AdherenceEvaluations: fetchData started");
     setIsLoading(true);
     try {
-      // Fetch data individually to handle errors better
-      const { data: attemptsData, error: attemptsError } = await supabase
-        .from("evaluation_attempts").select("*");
-      if (attemptsError) console.error("Error fetching attempts:", attemptsError);
+      const [attemptsRes, progressRes, trainingsRes, profilesRes] = await Promise.all([
+        supabase.from("evaluation_attempts").select("*"),
+        supabase.from("user_progress").select("*"),
+        supabase.from("trainings").select("id, title, requires_evaluation"),
+        supabase.from("profiles").select("id, full_name, area"),
+      ]);
 
-      const { data: progressData, error: progressError } = await supabase
-        .from("user_progress").select("*");
-      if (progressError) console.error("Error fetching progress:", progressError);
-
-      const { data: trainingsData, error: trainingsError } = await supabase
-        .from("trainings").select("id, title, requires_evaluation");
-      if (trainingsError) console.error("Error fetching trainings:", trainingsError);
-
-      const { data: profilesData, error: profilesError } = await supabase
-        .from("profiles").select("id, full_name, area");
-      if (profilesError) console.error("Error fetching profiles:", profilesError);
-
-      const { data: logsData, error: logsError } = await supabase
-        .from("access_logs")
-        .select("id, user_id, user_name, user_email, event_type, event_timestamp")
-        .order("event_timestamp", { ascending: false })
-        .limit(500);
-      if (logsError) console.error("Error fetching logs:", logsError);
-
-      const { data: evaluationsData, error: evaluationsError } = await supabase
-        .from("evaluations").select("id, training_id, title, trainings(title)");
-      if (evaluationsError) console.error("Error fetching evaluations:", evaluationsError);
-
-      setAttempts(attemptsData || []);
-      setUserProgress(progressData || []);
-      setTrainings(trainingsData || []);
-      setProfiles(profilesData || []);
-      setAccessLogs(logsData || []);
-      setEvaluations(evaluationsData || []);
+      setAttempts(attemptsRes.data || []);
+      setUserProgress(progressRes.data || []);
+      setTrainings(trainingsRes.data || []);
+      setProfiles(profilesRes.data || []);
     } catch (error) {
       console.error("Error fetching data:", error);
-      toast({
-        title: "Error",
-        description: "No se pudieron cargar los datos",
-        variant: "destructive",
-      });
     } finally {
       setIsLoading(false);
     }
@@ -215,62 +152,31 @@ const AdherenceEvaluations = () => {
 
     if (selectedUser !== "all" && a.user_id !== selectedUser) return false;
     if (attemptDate < fromDate || attemptDate > toDate) return false;
-    if (selectedStatus !== "all") {
-      if (selectedStatus === "approved" && !a.passed) return false;
-      if (selectedStatus === "failed" && (a.passed || a.status !== "completed")) return false;
-      if (selectedStatus === "pending" && a.status !== "in_progress") return false;
-    }
     return true;
   });
 
-  const filteredProgress = userProgress.filter(p => {
-    if (selectedUser !== "all" && p.user_id !== selectedUser) return false;
-    if (selectedTraining !== "all" && p.training_id !== selectedTraining) return false;
-    return true;
-  });
-
-  // Calculate KPIs
+  // KPIs
   const completedAttempts = filteredAttempts.filter(a => a.status === "completed");
   const approvedCount = completedAttempts.filter(a => a.passed).length;
   const failedCount = completedAttempts.filter(a => !a.passed).length;
   const pendingCount = filteredAttempts.filter(a => a.status === "in_progress").length;
   
-  // Users who haven't started any evaluation
   const usersWithAttempts = new Set(attempts.map(a => a.user_id));
   const notStartedCount = profiles.filter(p => !usersWithAttempts.has(p.id)).length;
 
-  // General adherence percentage
-  const totalMandatoryTrainings = trainings.filter(t => t.requires_evaluation).length;
+  // Adherencia general
+  const totalMandatory = trainings.filter(t => t.requires_evaluation).length;
   const completedMandatory = userProgress.filter(p => {
     const training = trainings.find(t => t.id === p.training_id);
     return training?.requires_evaluation && p.status === "completed";
   }).length;
-  const expectedCompletions = profiles.length * totalMandatoryTrainings;
+  const expectedCompletions = profiles.length * totalMandatory;
   const adherencePercentage = expectedCompletions > 0 
     ? Math.round((completedMandatory / expectedCompletions) * 100) 
     : 0;
 
-  // Average time per evaluation (in minutes)
-  const completedWithTime = completedAttempts.filter(a => a.completed_at && a.started_at);
-  const avgTimeMinutes = completedWithTime.length > 0
-    ? Math.round(completedWithTime.reduce((sum, a) => {
-        return sum + differenceInMinutes(new Date(a.completed_at!), new Date(a.started_at));
-      }, 0) / completedWithTime.length)
-    : 0;
-
-  // Attempts per evaluation
-  const attemptsByEvaluation = evaluations.map(e => {
-    const evalAttempts = filteredAttempts.filter(a => a.evaluation_id === e.id);
-    return {
-      name: e.title || (e.trainings as any)?.title || "Sin título",
-      attempts: evalAttempts.length,
-      approved: evalAttempts.filter(a => a.passed).length,
-      failed: evalAttempts.filter(a => a.status === "completed" && !a.passed).length,
-    };
-  }).filter(e => e.attempts > 0).slice(0, 10);
-
-  // User ranking by completion
-  const userCompletionRanking = profiles.map(p => {
+  // User ranking
+  const userRanking = profiles.map(p => {
     const userAttempts = attempts.filter(a => a.user_id === p.id);
     const passed = userAttempts.filter(a => a.passed).length;
     const total = userAttempts.length;
@@ -284,72 +190,52 @@ const AdherenceEvaluations = () => {
     };
   }).sort((a, b) => b.percentage - a.percentage);
 
-  const topUsers = userCompletionRanking.slice(0, 5);
-  const bottomUsers = userCompletionRanking.filter(u => u.total > 0).slice(-5).reverse();
+  const topUsers = userRanking.filter(u => u.total > 0).slice(0, 5);
+  const lowUsers = userRanking.filter(u => u.total > 0 && u.percentage < 50).slice(0, 5);
 
-  // Mandatory courses without completion
-  const mandatoryIncomplete = trainings
-    .filter(t => t.requires_evaluation)
-    .map(t => {
-      const usersCompleted = userProgress.filter(
-        p => p.training_id === t.id && p.status === "completed"
-      ).length;
-      return {
-        id: t.id,
-        title: t.title,
-        completed: usersCompleted,
-        pending: profiles.length - usersCompleted,
-        percentage: Math.round((usersCompleted / profiles.length) * 100),
-      };
-    })
-    .filter(t => t.percentage < 100)
-    .sort((a, b) => a.percentage - b.percentage);
-
-  // Low adherence alerts
-  const lowAdherenceUsers = userCompletionRanking.filter(u => u.total > 0 && u.percentage < 50);
-  const criticalCourses = mandatoryIncomplete.filter(c => c.percentage < 30);
-
-  // Activity history - logins per day
-  const activityByDay = accessLogs
-    .filter(l => l.event_type === "login")
-    .reduce((acc, log) => {
-      const day = format(new Date(log.event_timestamp), "MM/dd");
-      acc[day] = (acc[day] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-  const activityData = Object.entries(activityByDay)
-    .slice(-14)
-    .map(([day, count]) => ({ day, accesos: count }));
-
-  // Pie chart data
+  // Chart data
   const statusPieData = [
     { name: "Aprobados", value: approvedCount, color: COLORS.approved },
     { name: "No Aprobados", value: failedCount, color: COLORS.failed },
-    { name: "Pendientes", value: pendingCount, color: COLORS.pending },
-    { name: "No Iniciados", value: notStartedCount, color: COLORS.notStarted },
+    { name: "En Curso", value: pendingCount, color: COLORS.pending },
+    { name: "Sin Iniciar", value: notStartedCount, color: COLORS.notStarted },
   ].filter(d => d.value > 0);
 
-  // Progress by training
-  const progressByTraining = trainings.slice(0, 8).map(t => {
-    const trainingProgress = userProgress.filter(p => p.training_id === t.id);
-    const avgProgress = trainingProgress.length > 0
-      ? Math.round(trainingProgress.reduce((sum, p) => sum + (p.progress_percentage || 0), 0) / trainingProgress.length)
-      : 0;
-    return {
-      name: t.title.length > 20 ? t.title.substring(0, 20) + "..." : t.title,
-      progreso: avgProgress,
-    };
-  });
+  const progressByTraining = trainings
+    .filter(t => selectedTraining === "all" || t.id === selectedTraining)
+    .slice(0, 6)
+    .map(t => {
+      const trainingProgress = userProgress.filter(p => p.training_id === t.id);
+      const avgProgress = trainingProgress.length > 0
+        ? Math.round(trainingProgress.reduce((sum, p) => sum + (p.progress_percentage || 0), 0) / trainingProgress.length)
+        : 0;
+      return {
+        name: t.title.length > 15 ? t.title.substring(0, 15) + "..." : t.title,
+        fullName: t.title,
+        progreso: avgProgress,
+      };
+    });
+
+  // Cursos con baja adherencia
+  const lowAdherenceCourses = trainings
+    .filter(t => t.requires_evaluation)
+    .map(t => {
+      const completed = userProgress.filter(p => p.training_id === t.id && p.status === "completed").length;
+      const percentage = profiles.length > 0 ? Math.round((completed / profiles.length) * 100) : 0;
+      return { id: t.id, title: t.title, percentage, completed, total: profiles.length };
+    })
+    .filter(t => t.percentage < 70)
+    .sort((a, b) => a.percentage - b.percentage)
+    .slice(0, 4);
 
   if (isLoading) {
     return (
       <div className="space-y-6">
         <Skeleton className="h-10 w-64" />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-32" />)}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-28" />)}
         </div>
-        <Skeleton className="h-80" />
+        <Skeleton className="h-72" />
       </div>
     );
   }
@@ -358,24 +244,22 @@ const AdherenceEvaluations = () => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Adherencia y Evaluaciones</h1>
-        <p className="text-muted-foreground mt-2">
-          Dashboard avanzado de seguimiento y cumplimiento
-        </p>
+        <h1 className="text-2xl font-bold text-foreground">Adherencia y Evaluaciones</h1>
+        <p className="text-muted-foreground text-sm">Resumen de cumplimiento y resultados</p>
       </div>
 
-      {/* Filters */}
+      {/* Filters - simplified */}
       <Card>
         <CardContent className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
-              <Label>Usuario</Label>
+              <Label className="text-xs">Usuario</Label>
               <Select value={selectedUser} onValueChange={setSelectedUser}>
-                <SelectTrigger>
+                <SelectTrigger className="h-9">
                   <SelectValue placeholder="Todos" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos los usuarios</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
                   {profiles.map(p => (
                     <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>
                   ))}
@@ -383,13 +267,13 @@ const AdherenceEvaluations = () => {
               </Select>
             </div>
             <div>
-              <Label>Curso</Label>
+              <Label className="text-xs">Curso</Label>
               <Select value={selectedTraining} onValueChange={setSelectedTraining}>
-                <SelectTrigger>
+                <SelectTrigger className="h-9">
                   <SelectValue placeholder="Todos" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos los cursos</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
                   {trainings.map(t => (
                     <SelectItem key={t.id} value={t.id}>{t.title}</SelectItem>
                   ))}
@@ -397,134 +281,93 @@ const AdherenceEvaluations = () => {
               </Select>
             </div>
             <div>
-              <Label>Estado</Label>
-              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Todos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos los estados</SelectItem>
-                  <SelectItem value="approved">Aprobados</SelectItem>
-                  <SelectItem value="failed">No aprobados</SelectItem>
-                  <SelectItem value="pending">Pendientes</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label className="text-xs">Desde</Label>
+              <Input type="date" className="h-9" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
             </div>
             <div>
-              <Label>Desde</Label>
-              <Input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-              />
-            </div>
-            <div>
-              <Label>Hasta</Label>
-              <Input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-              />
+              <Label className="text-xs">Hasta</Label>
+              <Input type="date" className="h-9" value={dateTo} onChange={e => setDateTo(e.target.value)} />
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-        <Card className="bg-[hsl(152,60%,40%)] border-none shadow-lg">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-green-100">Aprobados</p>
-                <p className="text-2xl font-bold text-white">{approvedCount}</p>
-              </div>
-              <CheckCircle className="h-8 w-8 text-green-200" />
+      {/* Main KPI - Adherencia */}
+      <Card className="bg-gradient-to-r from-[hsl(210,80%,40%)] to-[hsl(210,70%,50%)] border-none">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-blue-100 text-sm">Adherencia General</p>
+              <p className="text-4xl font-bold text-white">{adherencePercentage}%</p>
+              <p className="text-blue-200 text-xs mt-1">
+                {completedMandatory} de {expectedCompletions} cursos obligatorios completados
+              </p>
+            </div>
+            <Target className="h-16 w-16 text-blue-200/50" />
+          </div>
+          <Progress value={adherencePercentage} className="mt-4 h-2 bg-blue-900/30" />
+        </CardContent>
+      </Card>
+
+      {/* Status KPIs */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="bg-[hsl(152,55%,42%)] border-none">
+          <CardContent className="p-4 flex items-center gap-3">
+            <CheckCircle className="h-8 w-8 text-green-200" />
+            <div>
+              <p className="text-green-100 text-xs">Aprobados</p>
+              <p className="text-2xl font-bold text-white">{approvedCount}</p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-[hsl(0,65%,50%)] border-none shadow-lg">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-red-100">No Aprobados</p>
-                <p className="text-2xl font-bold text-white">{failedCount}</p>
-              </div>
-              <XCircle className="h-8 w-8 text-red-200" />
+        <Card className="bg-[hsl(0,60%,50%)] border-none">
+          <CardContent className="p-4 flex items-center gap-3">
+            <XCircle className="h-8 w-8 text-red-200" />
+            <div>
+              <p className="text-red-100 text-xs">No Aprobados</p>
+              <p className="text-2xl font-bold text-white">{failedCount}</p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-[hsl(45,75%,45%)] border-none shadow-lg">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-yellow-100">Pendientes</p>
-                <p className="text-2xl font-bold text-white">{pendingCount}</p>
-              </div>
-              <Clock className="h-8 w-8 text-yellow-200" />
+        <Card className="bg-[hsl(45,70%,48%)] border-none">
+          <CardContent className="p-4 flex items-center gap-3">
+            <Clock className="h-8 w-8 text-yellow-200" />
+            <div>
+              <p className="text-yellow-100 text-xs">En Curso</p>
+              <p className="text-2xl font-bold text-white">{pendingCount}</p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-[hsl(210,60%,55%)] border-none shadow-lg">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-blue-100">No Iniciados</p>
-                <p className="text-2xl font-bold text-white">{notStartedCount}</p>
-              </div>
-              <Users className="h-8 w-8 text-blue-200" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-[hsl(210,80%,35%)] border-none shadow-lg">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-blue-100">Adherencia</p>
-                <p className="text-2xl font-bold text-white">{adherencePercentage}%</p>
-              </div>
-              <Target className="h-8 w-8 text-blue-200" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-[hsl(200,50%,45%)] border-none shadow-lg">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-cyan-100">Tiempo Prom.</p>
-                <p className="text-2xl font-bold text-white">{avgTimeMinutes} min</p>
-              </div>
-              <Timer className="h-8 w-8 text-cyan-200" />
+        <Card className="bg-[hsl(210,50%,55%)] border-none">
+          <CardContent className="p-4 flex items-center gap-3">
+            <Users className="h-8 w-8 text-blue-200" />
+            <div>
+              <p className="text-blue-100 text-xs">Sin Iniciar</p>
+              <p className="text-2xl font-bold text-white">{notStartedCount}</p>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Charts Row 1 */}
+      {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Status Distribution Pie Chart */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-primary" />
-              Distribución de Estados
-            </CardTitle>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Estado de Evaluaciones</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={280}>
+            <ResponsiveContainer width="100%" height={220}>
               <PieChart>
                 <Pie
                   data={statusPieData}
                   cx="50%"
                   cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={100}
+                  innerRadius={50}
+                  outerRadius={80}
+                  paddingAngle={2}
                   dataKey="value"
                 >
                   {statusPieData.map((entry, index) => (
@@ -532,229 +375,103 @@ const AdherenceEvaluations = () => {
                   ))}
                 </Pie>
                 <Tooltip />
+                <Legend iconSize={10} wrapperStyle={{ fontSize: "12px" }} />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
-        {/* Attempts by Evaluation Bar Chart */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5 text-primary" />
-              Intentos por Evaluación
-            </CardTitle>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Progreso por Curso</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={attemptsByEvaluation} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" />
-                <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 11 }} />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="approved" name="Aprobados" fill={COLORS.approved} stackId="a" />
-                <Bar dataKey="failed" name="No Aprobados" fill={COLORS.failed} stackId="a" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Charts Row 2 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Activity Line Chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-primary" />
-              Actividad de Accesos (últimos 14 días)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={280}>
-              <LineChart data={activityData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="day" />
-                <YAxis />
-                <Tooltip />
-                <Line 
-                  type="monotone" 
-                  dataKey="accesos" 
-                  stroke={COLORS.primary} 
-                  strokeWidth={2}
-                  dot={{ fill: COLORS.primary }}
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={progressByTraining} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                <XAxis type="number" domain={[0, 100]} tickFormatter={v => `${v}%`} />
+                <YAxis dataKey="name" type="category" width={90} tick={{ fontSize: 11 }} />
+                <Tooltip 
+                  formatter={(value) => [`${value}%`, "Progreso"]}
+                  labelFormatter={(label, payload) => payload?.[0]?.payload?.fullName || label}
                 />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        {/* Progress by Training */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5 text-primary" />
-              Progreso Promedio por Curso
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={progressByTraining}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" tick={{ fontSize: 10 }} angle={-45} textAnchor="end" height={80} />
-                <YAxis domain={[0, 100]} />
-                <Tooltip formatter={(value) => [`${value}%`, "Progreso"]} />
-                <Bar dataKey="progreso" fill={COLORS.inProgress} radius={[4, 4, 0, 0]} />
+                <Bar dataKey="progreso" fill={COLORS.primary} radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
       </div>
 
-      {/* Rankings and Alerts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Top Users */}
+      {/* Rankings & Alerts */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Top performers */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Award className="h-5 w-5 text-[hsl(152,60%,45%)]" />
-              Mayor Cumplimiento
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-green-500" />
+              Mejor Desempeño
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {topUsers.map((user, i) => (
-                <div key={user.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
-                  <div className="flex items-center gap-3">
-                    <span className="text-lg font-bold text-muted-foreground">#{i + 1}</span>
-                    <div>
-                      <p className="font-medium text-sm">{user.name}</p>
-                      <p className="text-xs text-muted-foreground">{user.area || "Sin área"}</p>
-                    </div>
-                  </div>
-                  <Badge variant="secondary" className="bg-[hsl(152,60%,90%)] text-[hsl(152,60%,30%)]">
-                    {user.percentage}%
+          <CardContent className="space-y-2">
+            {topUsers.length > 0 ? topUsers.map((user, i) => (
+              <div key={user.id} className="flex items-center justify-between py-1.5 border-b last:border-0">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="w-6 h-6 p-0 justify-center text-xs">
+                    {i + 1}
                   </Badge>
+                  <span className="text-sm truncate max-w-[120px]">{user.name}</span>
                 </div>
-              ))}
-              {topUsers.length === 0 && (
-                <p className="text-muted-foreground text-center py-4">Sin datos disponibles</p>
-              )}
-            </div>
+                <Badge className="bg-green-100 text-green-700 hover:bg-green-100">{user.percentage}%</Badge>
+              </div>
+            )) : (
+              <p className="text-muted-foreground text-sm text-center py-2">Sin datos</p>
+            )}
           </CardContent>
         </Card>
 
-        {/* Bottom Users */}
+        {/* Low performers */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-[hsl(45,80%,50%)]" />
-              Menor Cumplimiento
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <TrendingDown className="h-4 w-4 text-red-500" />
+              Requieren Atención
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {bottomUsers.map((user, i) => (
-                <div key={user.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
-                  <div className="flex items-center gap-3">
-                    <span className="text-lg font-bold text-muted-foreground">#{userCompletionRanking.length - 4 + i}</span>
-                    <div>
-                      <p className="font-medium text-sm">{user.name}</p>
-                      <p className="text-xs text-muted-foreground">{user.area || "Sin área"}</p>
-                    </div>
-                  </div>
-                  <Badge variant="secondary" className="bg-[hsl(0,60%,95%)] text-[hsl(0,60%,40%)]">
-                    {user.percentage}%
-                  </Badge>
-                </div>
-              ))}
-              {bottomUsers.length === 0 && (
-                <p className="text-muted-foreground text-center py-4">Sin datos disponibles</p>
-              )}
-            </div>
+          <CardContent className="space-y-2">
+            {lowUsers.length > 0 ? lowUsers.map((user) => (
+              <div key={user.id} className="flex items-center justify-between py-1.5 border-b last:border-0">
+                <span className="text-sm truncate max-w-[140px]">{user.name}</span>
+                <Badge variant="destructive">{user.percentage}%</Badge>
+              </div>
+            )) : (
+              <p className="text-muted-foreground text-sm text-center py-2">Sin alertas</p>
+            )}
           </CardContent>
         </Card>
 
-        {/* Low Adherence Alerts */}
+        {/* Courses needing attention */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-[hsl(0,70%,55%)]" />
-              Alertas de Baja Adherencia
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-yellow-500" />
+              Cursos Pendientes
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-3 max-h-[300px] overflow-y-auto">
-              {lowAdherenceUsers.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase">Usuarios con &lt;50% cumplimiento</p>
-                  {lowAdherenceUsers.slice(0, 3).map(user => (
-                    <div key={user.id} className="flex items-center justify-between p-2 rounded bg-red-50 dark:bg-red-950/20">
-                      <span className="text-sm">{user.name}</span>
-                      <Badge variant="destructive">{user.percentage}%</Badge>
-                    </div>
-                  ))}
-                  {lowAdherenceUsers.length > 3 && (
-                    <p className="text-xs text-muted-foreground">+{lowAdherenceUsers.length - 3} más...</p>
-                  )}
+          <CardContent className="space-y-3">
+            {lowAdherenceCourses.length > 0 ? lowAdherenceCourses.map((course) => (
+              <div key={course.id} className="space-y-1">
+                <div className="flex justify-between text-sm">
+                  <span className="truncate max-w-[140px]">{course.title}</span>
+                  <span className="text-muted-foreground">{course.percentage}%</span>
                 </div>
-              )}
-              {criticalCourses.length > 0 && (
-                <div className="space-y-2 mt-4">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase">Cursos críticos (&lt;30%)</p>
-                  {criticalCourses.slice(0, 3).map(course => (
-                    <div key={course.id} className="flex items-center justify-between p-2 rounded bg-yellow-50 dark:bg-yellow-950/20">
-                      <span className="text-sm truncate max-w-[150px]">{course.title}</span>
-                      <Badge className="bg-yellow-500">{course.percentage}%</Badge>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {lowAdherenceUsers.length === 0 && criticalCourses.length === 0 && (
-                <p className="text-muted-foreground text-center py-4">Sin alertas</p>
-              )}
-            </div>
+                <Progress value={course.percentage} className="h-1.5" />
+              </div>
+            )) : (
+              <p className="text-muted-foreground text-sm text-center py-2">Todos al día</p>
+            )}
           </CardContent>
         </Card>
       </div>
-
-      {/* Mandatory Courses Incomplete */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Target className="h-5 w-5 text-primary" />
-            Cursos Obligatorios Sin Completar
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {mandatoryIncomplete.slice(0, 6).map(course => (
-              <div key={course.id} className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-medium text-sm">{course.title}</span>
-                  <span className="text-sm text-muted-foreground">
-                    {course.completed}/{course.completed + course.pending} ({course.percentage}%)
-                  </span>
-                </div>
-                <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <div 
-                    className="h-full rounded-full transition-all"
-                    style={{ 
-                      width: `${course.percentage}%`,
-                      backgroundColor: course.percentage < 30 ? COLORS.failed : 
-                                       course.percentage < 70 ? COLORS.pending : COLORS.inProgress
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
-            {mandatoryIncomplete.length === 0 && (
-              <p className="text-muted-foreground text-center py-4">Todos los cursos obligatorios están completos</p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };
