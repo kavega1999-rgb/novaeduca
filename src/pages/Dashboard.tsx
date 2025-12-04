@@ -12,6 +12,7 @@ import { Progress } from "@/components/ui/progress";
 import { Shield, Heart, Leaf, Activity, Users, Monitor, ArrowRight, BookOpen, Award, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { CertificatesList } from "@/components/profile/CertificatesList";
+import FloatingDocumentsButton from "@/components/documents/FloatingDocumentsButton";
 import heroImage from "@/assets/team-celebration.jpg";
 
 const iconMap: Record<string, any> = {
@@ -149,6 +150,7 @@ const Dashboard = () => {
       <Navigation userRole={userRole} />
       
       {isAdminOrLeader && (
+        <>
         <SidebarProvider defaultOpen={true}>
           <div className="flex min-h-[calc(100vh-64px)] w-full">
             <AdminSidebar />
@@ -286,9 +288,12 @@ const Dashboard = () => {
             </main>
           </div>
         </SidebarProvider>
+        <FloatingDocumentsButton isAdmin={true} />
+        </>
       )}
 
       {!isAdminOrLeader && (
+        <>
         <div className="container mx-auto px-4 py-8">
           {/* Hero Section */}
           <div className="mb-8 rounded-2xl overflow-hidden relative h-[400px]">
@@ -407,6 +412,8 @@ const Dashboard = () => {
             <FAQ />
           </div>
         </div>
+        <FloatingDocumentsButton isAdmin={false} />
+        </>
       )}
     </div>
   );

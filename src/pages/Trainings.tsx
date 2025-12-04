@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Navigation from "@/components/Navigation";
+import FloatingDocumentsButton from "@/components/documents/FloatingDocumentsButton";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -402,6 +403,7 @@ const Trainings = () => {
           </div>
         )}
       </div>
+      <FloatingDocumentsButton isAdmin={userRole === "admin" || userRole === "leader"} />
     </div>
   );
 };

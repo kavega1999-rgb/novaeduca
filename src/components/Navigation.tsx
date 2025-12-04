@@ -1,7 +1,7 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Home, BookOpen, User, LogOut, Settings, FileText } from "lucide-react";
+import { Home, BookOpen, User, LogOut, Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { logAccess } from "@/hooks/useAccessLog";
@@ -91,14 +91,6 @@ const Navigation = ({ userRole }: NavigationProps) => {
               >
                 <BookOpen className="w-4 h-4 mr-2" />
                 Capacitaciones
-              </Button>
-              <Button
-                variant={isActive("/documents") ? "default" : "ghost"}
-                size="sm"
-                onClick={() => navigate("/documents")}
-              >
-                <FileText className="w-4 h-4 mr-2" />
-                Documentos
               </Button>
               {(userRole === "admin" || userRole === "leader") && (
                 <Button

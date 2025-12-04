@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Navigation from "@/components/Navigation";
+import FloatingDocumentsButton from "@/components/documents/FloatingDocumentsButton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -252,6 +253,7 @@ const Profile = () => {
           </Card>
         </div>
       </div>
+      <FloatingDocumentsButton isAdmin={userRole === "admin"} />
     </div>
   );
 };

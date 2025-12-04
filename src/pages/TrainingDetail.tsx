@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Navigation from "@/components/Navigation";
+import FloatingDocumentsButton from "@/components/documents/FloatingDocumentsButton";
 import EvaluationTaker from "@/components/evaluations/EvaluationTaker";
 import EvaluationManager from "@/components/evaluations/EvaluationManager";
 import PagedContentViewer from "@/components/PagedContentViewer";
@@ -497,6 +498,7 @@ const TrainingDetail = () => {
           </div>
         </div>
       </div>
+      <FloatingDocumentsButton isAdmin={isAdminOrLeader} />
     </div>
   );
 };
