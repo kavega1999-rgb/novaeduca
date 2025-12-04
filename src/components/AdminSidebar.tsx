@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { LayoutDashboard, BarChart3, BookOpen, FolderOpen, Shield, UserCog, ChevronDown, TrendingUp, ClipboardCheck, FileSpreadsheet } from "lucide-react";
+import { LayoutDashboard, BarChart3, BookOpen, FolderOpen, Shield, UserCog, ChevronDown, TrendingUp, ClipboardCheck, FileSpreadsheet, Award } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -34,6 +34,7 @@ const analyticsItems = [
 
 const managementItems = [
   { title: "Gestión de Usuarios", url: "/dashboard/users", icon: UserCog },
+  { title: "Gestión de Certificados", url: "/dashboard/certificates", icon: Award },
   { title: "Documentos Institucionales", url: "/documents", icon: FolderOpen },
 ];
 
