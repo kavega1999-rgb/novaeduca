@@ -17,6 +17,7 @@ import Documents from "./pages/Documents";
 import AccessLogs from "./pages/AccessLogs";
 import AdherenceEvaluations from "./pages/AdherenceEvaluations";
 import AttendanceRecords from "./pages/AttendanceRecords";
+import CertificatesAdmin from "./pages/CertificatesAdmin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -48,6 +49,9 @@ const App = () => (
           </Route>
           <Route path="/dashboard/attendance" element={<Dashboard />}>
             <Route index element={<AttendanceRecords />} />
+          </Route>
+          <Route path="/dashboard/certificates" element={<Dashboard />}>
+            <Route index element={<CertificatesAdmin />} />
           </Route>
           <Route path="/trainings" element={<Trainings />} />
           <Route path="/training/:id" element={<TrainingDetail />} />
