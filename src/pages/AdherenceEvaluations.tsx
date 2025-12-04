@@ -282,8 +282,8 @@ const AdherenceEvaluations = () => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Adherencia y Evaluaciones</h1>
-        <p className="text-muted-foreground text-sm">Resumen de cumplimiento y resultados</p>
+        <h1 className="text-2xl font-bold text-foreground">Adherencia de Evaluaciones</h1>
+        <p className="text-muted-foreground text-sm">Aprobados, reprobados, intentos, % de adherencia y filtros por capacitación</p>
       </div>
 
       {/* Filters - simplified */}
