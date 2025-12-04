@@ -4,19 +4,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Download, FileText, Users, Calendar, CheckCircle, Clock, AlertCircle } from "lucide-react";
-import { format, subDays } from "date-fns";
+import { Download, FileSpreadsheet, Users } from "lucide-react";
+import { format } from "date-fns";
 
 interface Training {
   id: string;
   title: string;
-  type: string;
+  year: number;
 }
 
 interface UserProgress {
@@ -41,10 +40,16 @@ const AttendanceRecords = () => {
 
   const [trainings, setTrainings] = useState<Training[]>([]);
   const [userProgress, setUserProgress] = useState<UserProgress[]>([]);
-  const [selectedTraining, setSelectedTraining] = useState<string>("all");
-  const [areaFilter, setAreaFilter] = useState<string>("all");
-  const [dateFrom, setDateFrom] = useState<string>(format(subDays(new Date(), 30), "yyyy-MM-dd"));
-  const [dateTo, setDateTo] = useState<string>(format(new Date(), "yyyy-MM-dd"));
+  const [selectedYear, setSelectedYear] = useState<string>("all");
+  const [selectedTraining, setSelectedTraining] = useState<string>("");
+
+  // Get unique years from trainings
+  const years = [...new Set(trainings.map(t => t.year))].sort((a, b) => b - a);
+
+  // Filter trainings by year
+  const filteredTrainings = selectedYear === "all" 
+    ? trainings 
+    : trainings.filter(t => t.year === parseInt(selectedYear));
 
   useEffect(() => {
     const checkAccess = async () => {
@@ -81,9 +86,40 @@ const AttendanceRecords = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [trainingsRes, progressRes] = await Promise.all([
-        supabase.from("trainings").select("id, title, type").eq("status", "active"),
-        supabase.from("user_progress").select(`
+      const { data: trainingsData } = await supabase
+        .from("trainings")
+        .select("id, title, year")
+        .eq("status", "active")
+        .order("year", { ascending: false });
+
+      setTrainings(trainingsData || []);
+      
+      // Set default year to current year if exists
+      if (trainingsData && trainingsData.length > 0) {
+        const currentYear = new Date().getFullYear();
+        const hasCurrentYear = trainingsData.some(t => t.year === currentYear);
+        if (hasCurrentYear) {
+          setSelectedYear(currentYear.toString());
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Fetch progress when training is selected
+  useEffect(() => {
+    const fetchProgress = async () => {
+      if (!selectedTraining) {
+        setUserProgress([]);
+        return;
+      }
+
+      const { data: progressData } = await supabase
+        .from("user_progress")
+        .select(`
           id,
           user_id,
           training_id,
@@ -96,35 +132,14 @@ const AttendanceRecords = () => {
             area,
             position
           )
-        `),
-      ]);
+        `)
+        .eq("training_id", selectedTraining);
 
-      setTrainings(trainingsRes.data || []);
-      setUserProgress((progressRes.data || []) as UserProgress[]);
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      setUserProgress((progressData || []) as UserProgress[]);
+    };
 
-  // Filter progress
-  const filteredProgress = userProgress.filter(p => {
-    const progressDate = p.started_at ? new Date(p.started_at) : null;
-    const fromDate = new Date(dateFrom);
-    const toDate = new Date(dateTo);
-    toDate.setHours(23, 59, 59);
-
-    if (selectedTraining !== "all" && p.training_id !== selectedTraining) return false;
-    if (areaFilter !== "all" && p.profiles?.area !== areaFilter) return false;
-    if (progressDate && (progressDate < fromDate || progressDate > toDate)) return false;
-    return true;
-  });
-
-  // Stats
-  const completedCount = filteredProgress.filter(p => p.status === "completed").length;
-  const inProgressCount = filteredProgress.filter(p => p.status === "in_progress").length;
-  const pendingCount = filteredProgress.filter(p => p.status === "pending").length;
+    fetchProgress();
+  }, [selectedTraining]);
 
   const getAreaLabel = (area: string | null) => {
     const labels: Record<string, string> = {
@@ -146,7 +161,7 @@ const AttendanceRecords = () => {
   };
 
   const downloadCSV = () => {
-    if (filteredProgress.length === 0) {
+    if (userProgress.length === 0) {
       toast({
         title: "Sin datos",
         description: "No hay registros para exportar",
@@ -155,19 +170,15 @@ const AttendanceRecords = () => {
       return;
     }
 
-    const trainingName = selectedTraining === "all" 
-      ? "todas_capacitaciones" 
-      : trainings.find(t => t.id === selectedTraining)?.title || "capacitacion";
+    const training = trainings.find(t => t.id === selectedTraining);
 
     const csvContent = [
-      ["Nombre", "Área", "Posición", "Capacitación", "Estado", "Progreso", "Fecha Inicio", "Fecha Completado"].join(","),
-      ...filteredProgress.map(p => {
-        const training = trainings.find(t => t.id === p.training_id);
+      ["Nombre", "Área", "Posición", "Estado", "Progreso", "Fecha Inicio", "Fecha Completado"].join(","),
+      ...userProgress.map(p => {
         return [
           `"${p.profiles?.full_name || "N/A"}"`,
           getAreaLabel(p.profiles?.area || null),
           `"${p.profiles?.position || "N/A"}"`,
-          `"${training?.title || "N/A"}"`,
           p.status === "completed" ? "Completado" : p.status === "in_progress" ? "En progreso" : "Pendiente",
           `${p.progress_percentage || 0}%`,
           p.started_at ? format(new Date(p.started_at), "dd/MM/yyyy") : "N/A",
@@ -180,7 +191,7 @@ const AttendanceRecords = () => {
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
-    link.setAttribute("download", `asistencia_${trainingName.replace(/\s+/g, "_")}_${format(new Date(), "yyyy-MM-dd")}.csv`);
+    link.setAttribute("download", `asistencia_${training?.title.replace(/\s+/g, "_") || "capacitacion"}_${format(new Date(), "yyyy-MM-dd")}.csv`);
     link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
@@ -188,7 +199,7 @@ const AttendanceRecords = () => {
 
     toast({
       title: "Exportado",
-      description: `Se exportaron ${filteredProgress.length} registros`,
+      description: `Se exportaron ${userProgress.length} registros`,
     });
   };
 
@@ -196,9 +207,7 @@ const AttendanceRecords = () => {
     return (
       <div className="space-y-6">
         <Skeleton className="h-10 w-64" />
-        <div className="grid grid-cols-3 gap-4">
-          {[1, 2, 3].map(i => <Skeleton key={i} className="h-24" />)}
-        </div>
+        <Skeleton className="h-24" />
         <Skeleton className="h-96" />
       </div>
     );
@@ -209,92 +218,59 @@ const AttendanceRecords = () => {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-foreground">Asistencia y Registros</h1>
-        <p className="text-muted-foreground text-sm">Listas de asistencia y exportación de datos</p>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-[hsl(152,55%,42%)] border-none">
-          <CardContent className="p-4 flex items-center gap-3">
-            <CheckCircle className="h-8 w-8 text-green-200" />
-            <div>
-              <p className="text-green-100 text-xs">Completados</p>
-              <p className="text-2xl font-bold text-white">{completedCount}</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-[hsl(210,70%,45%)] border-none">
-          <CardContent className="p-4 flex items-center gap-3">
-            <Clock className="h-8 w-8 text-blue-200" />
-            <div>
-              <p className="text-blue-100 text-xs">En Progreso</p>
-              <p className="text-2xl font-bold text-white">{inProgressCount}</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-[hsl(210,50%,55%)] border-none">
-          <CardContent className="p-4 flex items-center gap-3">
-            <AlertCircle className="h-8 w-8 text-blue-200" />
-            <div>
-              <p className="text-blue-100 text-xs">Pendientes</p>
-              <p className="text-2xl font-bold text-white">{pendingCount}</p>
-            </div>
-          </CardContent>
-        </Card>
+        <p className="text-muted-foreground text-sm">Reportes de asistencia por capacitación</p>
       </div>
 
       {/* Filters */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
-            <FileText className="h-4 w-4" />
-            Filtros y Exportación
+            <FileSpreadsheet className="h-4 w-4" />
+            Seleccionar Capacitación
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <Label className="text-xs">Capacitación</Label>
-              <Select value={selectedTraining} onValueChange={setSelectedTraining}>
+              <Label className="text-xs">Año</Label>
+              <Select value={selectedYear} onValueChange={(value) => {
+                setSelectedYear(value);
+                setSelectedTraining("");
+              }}>
                 <SelectTrigger className="h-9">
-                  <SelectValue placeholder="Todas" />
+                  <SelectValue placeholder="Seleccionar año" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todas las capacitaciones</SelectItem>
-                  {trainings.map(t => (
-                    <SelectItem key={t.id} value={t.id}>{t.title}</SelectItem>
+                  <SelectItem value="all">Todos los años</SelectItem>
+                  {years.map(year => (
+                    <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label className="text-xs">Área</Label>
-              <Select value={areaFilter} onValueChange={setAreaFilter}>
+              <Label className="text-xs">Capacitación</Label>
+              <Select value={selectedTraining} onValueChange={setSelectedTraining}>
                 <SelectTrigger className="h-9">
-                  <SelectValue placeholder="Todas" />
+                  <SelectValue placeholder="Seleccionar capacitación" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todas las áreas</SelectItem>
-                  <SelectItem value="medicos">Médicos</SelectItem>
-                  <SelectItem value="asistencial">Asistencial</SelectItem>
-                  <SelectItem value="administrativos">Administrativos</SelectItem>
+                  {filteredTrainings.map(t => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.title} ({t.year})
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label className="text-xs">Desde</Label>
-              <Input type="date" className="h-9" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
-            </div>
-            <div>
-              <Label className="text-xs">Hasta</Label>
-              <Input type="date" className="h-9" value={dateTo} onChange={e => setDateTo(e.target.value)} />
-            </div>
             <div className="flex items-end">
-              <Button onClick={downloadCSV} className="w-full h-9">
+              <Button 
+                onClick={downloadCSV} 
+                className="w-full h-9"
+                disabled={userProgress.length === 0}
+              >
                 <Download className="w-4 h-4 mr-2" />
-                Exportar CSV
+                Descargar Reporte
               </Button>
             </div>
           </div>
@@ -302,64 +278,60 @@ const AttendanceRecords = () => {
       </Card>
 
       {/* Table */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            Lista de Asistencia ({filteredProgress.length} registros)
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Área</TableHead>
-                  <TableHead>Capacitación</TableHead>
-                  <TableHead className="text-center">Estado</TableHead>
-                  <TableHead className="text-center">Progreso</TableHead>
-                  <TableHead className="text-center">Fecha Inicio</TableHead>
-                  <TableHead className="text-center">Completado</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredProgress.length === 0 ? (
+      {selectedTraining ? (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Lista de Asistencia ({userProgress.length} registros)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                      No hay registros con los filtros seleccionados
-                    </TableCell>
+                    <TableHead>Nombre</TableHead>
+                    <TableHead>Área</TableHead>
+                    <TableHead>Posición</TableHead>
+                    <TableHead className="text-center">Estado</TableHead>
+                    <TableHead className="text-center">Progreso</TableHead>
+                    <TableHead className="text-center">Fecha Completado</TableHead>
                   </TableRow>
-                ) : (
-                  filteredProgress.slice(0, 50).map(p => {
-                    const training = trainings.find(t => t.id === p.training_id);
-                    return (
+                </TableHeader>
+                <TableBody>
+                  {userProgress.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                        No hay registros de asistencia para esta capacitación
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    userProgress.map(p => (
                       <TableRow key={p.id}>
                         <TableCell className="font-medium">{p.profiles?.full_name || "N/A"}</TableCell>
                         <TableCell>{getAreaLabel(p.profiles?.area || null)}</TableCell>
-                        <TableCell className="max-w-[200px] truncate">{training?.title || "N/A"}</TableCell>
+                        <TableCell>{p.profiles?.position || "N/A"}</TableCell>
                         <TableCell className="text-center">{getStatusBadge(p.status)}</TableCell>
                         <TableCell className="text-center">{p.progress_percentage || 0}%</TableCell>
-                        <TableCell className="text-center text-sm">
-                          {p.started_at ? format(new Date(p.started_at), "dd/MM/yyyy") : "-"}
-                        </TableCell>
                         <TableCell className="text-center text-sm">
                           {p.completed_at ? format(new Date(p.completed_at), "dd/MM/yyyy") : "-"}
                         </TableCell>
                       </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </div>
-          {filteredProgress.length > 50 && (
-            <p className="text-xs text-muted-foreground mt-2 text-center">
-              Mostrando 50 de {filteredProgress.length} registros. Exporta a CSV para ver todos.
-            </p>
-          )}
-        </CardContent>
-      </Card>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardContent className="py-12 text-center text-muted-foreground">
+            Selecciona una capacitación para ver el reporte de asistencia
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
