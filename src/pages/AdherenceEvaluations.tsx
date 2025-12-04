@@ -35,6 +35,13 @@ import {
 } from "recharts";
 import { format, subDays } from "date-fns";
 
+interface Evaluation {
+  id: string;
+  training_id: string;
+  title: string;
+  passing_score: number;
+}
+
 interface EvaluationAttempt {
   id: string;
   evaluation_id: string;
@@ -81,6 +88,7 @@ const AdherenceEvaluations = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   const [attempts, setAttempts] = useState<EvaluationAttempt[]>([]);
+  const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
   const [userProgress, setUserProgress] = useState<UserProgress[]>([]);
   const [trainings, setTrainings] = useState<Training[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -125,14 +133,16 @@ const AdherenceEvaluations = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [attemptsRes, progressRes, trainingsRes, profilesRes] = await Promise.all([
+      const [attemptsRes, evaluationsRes, progressRes, trainingsRes, profilesRes] = await Promise.all([
         supabase.from("evaluation_attempts").select("*"),
+        supabase.from("evaluations").select("id, training_id, title, passing_score"),
         supabase.from("user_progress").select("*"),
         supabase.from("trainings").select("id, title, requires_evaluation"),
         supabase.from("profiles").select("id, full_name, area"),
       ]);
 
       setAttempts(attemptsRes.data || []);
+      setEvaluations(evaluationsRes.data || []);
       setUserProgress(progressRes.data || []);
       setTrainings(trainingsRes.data || []);
       setProfiles(profilesRes.data || []);
@@ -143,6 +153,11 @@ const AdherenceEvaluations = () => {
     }
   };
 
+  // Get evaluation IDs for selected training
+  const evaluationIdsForTraining = selectedTraining === "all" 
+    ? evaluations.map(e => e.id)
+    : evaluations.filter(e => e.training_id === selectedTraining).map(e => e.id);
+
   // Apply filters
   const filteredAttempts = attempts.filter(a => {
     const attemptDate = new Date(a.started_at);
@@ -151,6 +166,7 @@ const AdherenceEvaluations = () => {
     toDate.setHours(23, 59, 59);
 
     if (selectedUser !== "all" && a.user_id !== selectedUser) return false;
+    if (selectedTraining !== "all" && !evaluationIdsForTraining.includes(a.evaluation_id)) return false;
     if (attemptDate < fromDate || attemptDate > toDate) return false;
     return true;
   });
@@ -161,18 +177,40 @@ const AdherenceEvaluations = () => {
   const failedCount = completedAttempts.filter(a => !a.passed).length;
   const pendingCount = filteredAttempts.filter(a => a.status === "in_progress").length;
   
-  const usersWithAttempts = new Set(attempts.map(a => a.user_id));
+  const usersWithAttempts = new Set(filteredAttempts.map(a => a.user_id));
   const notStartedCount = profiles.filter(p => !usersWithAttempts.has(p.id)).length;
 
-  // Adherencia general
-  const totalMandatory = trainings.filter(t => t.requires_evaluation).length;
-  const completedMandatory = userProgress.filter(p => {
-    const training = trainings.find(t => t.id === p.training_id);
-    return training?.requires_evaluation && p.status === "completed";
-  }).length;
-  const expectedCompletions = profiles.length * totalMandatory;
-  const adherencePercentage = expectedCompletions > 0 
-    ? Math.round((completedMandatory / expectedCompletions) * 100) 
+  // Adherencia por evaluación
+  const evaluationAdherence = evaluations
+    .filter(e => selectedTraining === "all" || e.training_id === selectedTraining)
+    .map(e => {
+      const training = trainings.find(t => t.id === e.training_id);
+      const evalAttempts = attempts.filter(a => a.evaluation_id === e.id);
+      const completedEval = evalAttempts.filter(a => a.status === "completed");
+      const passedEval = completedEval.filter(a => a.passed).length;
+      const failedEval = completedEval.filter(a => !a.passed).length;
+      const usersAttempted = new Set(evalAttempts.map(a => a.user_id)).size;
+      const adherence = profiles.length > 0 ? Math.round((passedEval / profiles.length) * 100) : 0;
+      
+      return {
+        id: e.id,
+        title: e.title,
+        trainingTitle: training?.title || "Sin capacitación",
+        passed: passedEval,
+        failed: failedEval,
+        inProgress: evalAttempts.filter(a => a.status === "in_progress").length,
+        notStarted: profiles.length - usersAttempted,
+        adherence,
+        totalUsers: profiles.length,
+      };
+    });
+
+  // Adherencia general (basada en evaluaciones filtradas)
+  const totalEvaluations = evaluationAdherence.length;
+  const totalExpectedCompletions = profiles.length * totalEvaluations;
+  const totalPassed = evaluationAdherence.reduce((sum, e) => sum + e.passed, 0);
+  const adherencePercentage = totalExpectedCompletions > 0 
+    ? Math.round((totalPassed / totalExpectedCompletions) * 100) 
     : 0;
 
   // User ranking
@@ -297,10 +335,10 @@ const AdherenceEvaluations = () => {
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-blue-100 text-sm">Adherencia General</p>
+              <p className="text-blue-100 text-sm">Adherencia General de Evaluaciones</p>
               <p className="text-4xl font-bold text-white">{adherencePercentage}%</p>
               <p className="text-blue-200 text-xs mt-1">
-                {completedMandatory} de {expectedCompletions} cursos obligatorios completados
+                {totalPassed} de {totalExpectedCompletions} evaluaciones aprobadas
               </p>
             </div>
             <Target className="h-16 w-16 text-blue-200/50" />
@@ -401,6 +439,63 @@ const AdherenceEvaluations = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Adherencia por Evaluación */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Award className="h-4 w-4 text-primary" />
+            Adherencia por Evaluación
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {evaluationAdherence.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-2 font-medium">Evaluación</th>
+                    <th className="text-left py-2 font-medium hidden md:table-cell">Capacitación</th>
+                    <th className="text-center py-2 font-medium">Aprobados</th>
+                    <th className="text-center py-2 font-medium">Reprobados</th>
+                    <th className="text-center py-2 font-medium hidden sm:table-cell">En Curso</th>
+                    <th className="text-center py-2 font-medium hidden sm:table-cell">Sin Iniciar</th>
+                    <th className="text-center py-2 font-medium">Adherencia</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {evaluationAdherence.slice(0, 10).map((e) => (
+                    <tr key={e.id} className="border-b last:border-0">
+                      <td className="py-2 truncate max-w-[150px]">{e.title}</td>
+                      <td className="py-2 text-muted-foreground truncate max-w-[120px] hidden md:table-cell">{e.trainingTitle}</td>
+                      <td className="py-2 text-center">
+                        <Badge className="bg-green-100 text-green-700 hover:bg-green-100">{e.passed}</Badge>
+                      </td>
+                      <td className="py-2 text-center">
+                        <Badge variant="destructive">{e.failed}</Badge>
+                      </td>
+                      <td className="py-2 text-center hidden sm:table-cell">
+                        <Badge variant="outline">{e.inProgress}</Badge>
+                      </td>
+                      <td className="py-2 text-center hidden sm:table-cell">
+                        <Badge variant="secondary">{e.notStarted}</Badge>
+                      </td>
+                      <td className="py-2 text-center">
+                        <div className="flex items-center gap-2 justify-center">
+                          <Progress value={e.adherence} className="w-16 h-2" />
+                          <span className="text-xs font-medium">{e.adherence}%</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-sm text-center py-4">No hay evaluaciones</p>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Rankings & Alerts */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
