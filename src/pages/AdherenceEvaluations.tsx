@@ -335,7 +335,11 @@ const AdherenceEvaluations = () => {
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-blue-100 text-sm">Adherencia General de Evaluaciones</p>
+              <p className="text-blue-100 text-sm">
+                {selectedTraining === "all" 
+                  ? "Adherencia General de Evaluaciones" 
+                  : `Adherencia: ${trainings.find(t => t.id === selectedTraining)?.title || "Capacitación"}`}
+              </p>
               <p className="text-4xl font-bold text-white">{adherencePercentage}%</p>
               <p className="text-blue-200 text-xs mt-1">
                 {totalPassed} de {totalExpectedCompletions} evaluaciones aprobadas
