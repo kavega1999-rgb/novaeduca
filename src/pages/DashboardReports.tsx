@@ -53,9 +53,9 @@ const DashboardReports = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Reportes y Asistencia</h1>
-        <p className="text-muted-foreground mt-2">
-          Gestiona los reportes de capacitaciones y descarga certificados
+        <h1 className="text-2xl font-bold text-foreground">Capacitaciones y Progreso</h1>
+        <p className="text-muted-foreground text-sm">
+          Estado global, completadas, iniciadas, no iniciadas y gráficos de progreso
         </p>
       </div>
       
