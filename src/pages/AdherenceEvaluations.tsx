@@ -18,7 +18,8 @@ import {
   Award,
   AlertTriangle,
   TrendingUp,
-  TrendingDown
+  TrendingDown,
+  Filter
 } from "lucide-react";
 import {
   BarChart,
@@ -66,12 +67,18 @@ interface Training {
   id: string;
   title: string;
   requires_evaluation: boolean | null;
+  area_id: string;
 }
 
 interface Profile {
   id: string;
   full_name: string;
   area: string | null;
+}
+
+interface Area {
+  id: string;
+  name: string;
 }
 
 const COLORS = {
@@ -92,9 +99,11 @@ const AdherenceEvaluations = () => {
   const [userProgress, setUserProgress] = useState<UserProgress[]>([]);
   const [trainings, setTrainings] = useState<Training[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [areas, setAreas] = useState<Area[]>([]);
 
   const [selectedUser, setSelectedUser] = useState<string>("all");
   const [selectedTraining, setSelectedTraining] = useState<string>("all");
+  const [selectedArea, setSelectedArea] = useState<string>("all");
   const [dateFrom, setDateFrom] = useState<string>(format(subDays(new Date(), 30), "yyyy-MM-dd"));
   const [dateTo, setDateTo] = useState<string>(format(new Date(), "yyyy-MM-dd"));
 
@@ -133,12 +142,13 @@ const AdherenceEvaluations = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [attemptsRes, evaluationsRes, progressRes, trainingsRes, profilesRes] = await Promise.all([
+      const [attemptsRes, evaluationsRes, progressRes, trainingsRes, profilesRes, areasRes] = await Promise.all([
         supabase.from("evaluation_attempts").select("*"),
         supabase.from("evaluations").select("id, training_id, title, passing_score"),
         supabase.from("user_progress").select("*"),
-        supabase.from("trainings").select("id, title, requires_evaluation"),
+        supabase.from("trainings").select("id, title, requires_evaluation, area_id"),
         supabase.from("profiles").select("id, full_name, area"),
+        supabase.from("areas").select("id, name").order("name"),
       ]);
 
       setAttempts(attemptsRes.data || []);
@@ -146,6 +156,7 @@ const AdherenceEvaluations = () => {
       setUserProgress(progressRes.data || []);
       setTrainings(trainingsRes.data || []);
       setProfiles(profilesRes.data || []);
+      setAreas(areasRes.data || []);
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -153,9 +164,16 @@ const AdherenceEvaluations = () => {
     }
   };
 
-  // Get evaluation IDs for selected training
+  // Filter trainings by area
+  const filteredTrainingsByArea = selectedArea === "all"
+    ? trainings
+    : trainings.filter(t => t.area_id === selectedArea);
+
+  const trainingIdsInArea = filteredTrainingsByArea.map(t => t.id);
+
+  // Get evaluation IDs for selected training and area
   const evaluationIdsForTraining = selectedTraining === "all" 
-    ? evaluations.map(e => e.id)
+    ? evaluations.filter(e => selectedArea === "all" || trainingIdsInArea.includes(e.training_id)).map(e => e.id)
     : evaluations.filter(e => e.training_id === selectedTraining).map(e => e.id);
 
   // Apply filters
@@ -166,7 +184,7 @@ const AdherenceEvaluations = () => {
     toDate.setHours(23, 59, 59);
 
     if (selectedUser !== "all" && a.user_id !== selectedUser) return false;
-    if (selectedTraining !== "all" && !evaluationIdsForTraining.includes(a.evaluation_id)) return false;
+    if (!evaluationIdsForTraining.includes(a.evaluation_id)) return false;
     if (attemptDate < fromDate || attemptDate > toDate) return false;
     return true;
   });
@@ -182,7 +200,8 @@ const AdherenceEvaluations = () => {
 
   // Adherencia por evaluación
   const evaluationAdherence = evaluations
-    .filter(e => selectedTraining === "all" || e.training_id === selectedTraining)
+    .filter(e => (selectedTraining === "all" || e.training_id === selectedTraining) && 
+                 (selectedArea === "all" || trainingIdsInArea.includes(e.training_id)))
     .map(e => {
       const training = trainings.find(t => t.id === e.training_id);
       const evalAttempts = attempts.filter(a => a.evaluation_id === e.id);
@@ -215,7 +234,7 @@ const AdherenceEvaluations = () => {
 
   // User ranking
   const userRanking = profiles.map(p => {
-    const userAttempts = attempts.filter(a => a.user_id === p.id);
+    const userAttempts = attempts.filter(a => a.user_id === p.id && evaluationIdsForTraining.includes(a.evaluation_id));
     const passed = userAttempts.filter(a => a.passed).length;
     const total = userAttempts.length;
     return {
@@ -239,7 +258,7 @@ const AdherenceEvaluations = () => {
     { name: "Sin Iniciar", value: notStartedCount, color: COLORS.notStarted },
   ].filter(d => d.value > 0);
 
-  const progressByTraining = trainings
+  const progressByTraining = filteredTrainingsByArea
     .filter(t => selectedTraining === "all" || t.id === selectedTraining)
     .slice(0, 6)
     .map(t => {
@@ -255,7 +274,7 @@ const AdherenceEvaluations = () => {
     });
 
   // Cursos con baja adherencia
-  const lowAdherenceCourses = trainings
+  const lowAdherenceCourses = filteredTrainingsByArea
     .filter(t => t.requires_evaluation)
     .map(t => {
       const completed = userProgress.filter(p => p.training_id === t.id && p.status === "completed").length;
@@ -289,7 +308,27 @@ const AdherenceEvaluations = () => {
       {/* Filters - simplified */}
       <Card>
         <CardContent className="p-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div>
+              <Label className="text-xs flex items-center gap-1">
+                <Filter className="h-3 w-3" />
+                Área
+              </Label>
+              <Select value={selectedArea} onValueChange={(value) => {
+                setSelectedArea(value);
+                setSelectedTraining("all");
+              }}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Todas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas las áreas</SelectItem>
+                  {areas.map(a => (
+                    <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div>
               <Label className="text-xs">Usuario</Label>
               <Select value={selectedUser} onValueChange={setSelectedUser}>
@@ -312,7 +351,7 @@ const AdherenceEvaluations = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos</SelectItem>
-                  {trainings.map(t => (
+                  {filteredTrainingsByArea.map(t => (
                     <SelectItem key={t.id} value={t.id}>{t.title}</SelectItem>
                   ))}
                 </SelectContent>
@@ -336,9 +375,11 @@ const AdherenceEvaluations = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-blue-100 text-sm">
-                {selectedTraining === "all" 
-                  ? "Adherencia General de Evaluaciones" 
-                  : `Adherencia: ${trainings.find(t => t.id === selectedTraining)?.title || "Capacitación"}`}
+                {selectedArea !== "all" 
+                  ? `Adherencia: ${areas.find(a => a.id === selectedArea)?.name || "Área"}`
+                  : selectedTraining === "all" 
+                    ? "Adherencia General de Evaluaciones" 
+                    : `Adherencia: ${trainings.find(t => t.id === selectedTraining)?.title || "Capacitación"}`}
               </p>
               <p className="text-4xl font-bold text-white">{adherencePercentage}%</p>
               <p className="text-blue-200 text-xs mt-1">
@@ -470,25 +511,24 @@ const AdherenceEvaluations = () => {
                 <tbody>
                   {evaluationAdherence.slice(0, 10).map((e) => (
                     <tr key={e.id} className="border-b last:border-0">
-                      <td className="py-2 truncate max-w-[150px]">{e.title}</td>
-                      <td className="py-2 text-muted-foreground truncate max-w-[120px] hidden md:table-cell">{e.trainingTitle}</td>
+                      <td className="py-2 font-medium">{e.title}</td>
+                      <td className="py-2 text-muted-foreground hidden md:table-cell">{e.trainingTitle}</td>
                       <td className="py-2 text-center">
-                        <Badge className="bg-green-100 text-green-700 hover:bg-green-100">{e.passed}</Badge>
+                        <Badge variant="default" className="bg-green-600">{e.passed}</Badge>
                       </td>
                       <td className="py-2 text-center">
                         <Badge variant="destructive">{e.failed}</Badge>
                       </td>
                       <td className="py-2 text-center hidden sm:table-cell">
-                        <Badge variant="outline">{e.inProgress}</Badge>
+                        <Badge variant="secondary">{e.inProgress}</Badge>
                       </td>
                       <td className="py-2 text-center hidden sm:table-cell">
-                        <Badge variant="secondary">{e.notStarted}</Badge>
+                        <Badge variant="outline">{e.notStarted}</Badge>
                       </td>
                       <td className="py-2 text-center">
-                        <div className="flex items-center gap-2 justify-center">
-                          <Progress value={e.adherence} className="w-16 h-2" />
-                          <span className="text-xs font-medium">{e.adherence}%</span>
-                        </div>
+                        <span className={`font-bold ${e.adherence >= 70 ? "text-green-600" : e.adherence >= 40 ? "text-yellow-600" : "text-red-600"}`}>
+                          {e.adherence}%
+                        </span>
                       </td>
                     </tr>
                   ))}
@@ -496,81 +536,97 @@ const AdherenceEvaluations = () => {
               </table>
             </div>
           ) : (
-            <p className="text-muted-foreground text-sm text-center py-4">No hay evaluaciones</p>
+            <p className="text-muted-foreground text-center py-8">No hay evaluaciones disponibles</p>
           )}
         </CardContent>
       </Card>
 
-      {/* Rankings & Alerts */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Top performers */}
+      {/* Rankings and Alerts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Top Users */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-green-500" />
+              <TrendingUp className="h-4 w-4 text-green-600" />
               Mejor Desempeño
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
-            {topUsers.length > 0 ? topUsers.map((user, i) => (
-              <div key={user.id} className="flex items-center justify-between py-1.5 border-b last:border-0">
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="w-6 h-6 p-0 justify-center text-xs">
-                    {i + 1}
-                  </Badge>
-                  <span className="text-sm truncate max-w-[120px]">{user.name}</span>
-                </div>
-                <Badge className="bg-green-100 text-green-700 hover:bg-green-100">{user.percentage}%</Badge>
+          <CardContent>
+            {topUsers.length > 0 ? (
+              <div className="space-y-3">
+                {topUsers.map((u, idx) => (
+                  <div key={u.id} className="flex items-center gap-3">
+                    <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center text-xs font-bold text-green-700">
+                      {idx + 1}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">{u.name}</p>
+                      <p className="text-xs text-muted-foreground">{u.passed}/{u.total} aprobadas</p>
+                    </div>
+                    <span className="text-lg font-bold text-green-600">{u.percentage}%</span>
+                  </div>
+                ))}
               </div>
-            )) : (
-              <p className="text-muted-foreground text-sm text-center py-2">Sin datos</p>
+            ) : (
+              <p className="text-muted-foreground text-center py-4 text-sm">Sin datos</p>
             )}
           </CardContent>
         </Card>
 
-        {/* Low performers */}
+        {/* Low Performance Users */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
-              <TrendingDown className="h-4 w-4 text-red-500" />
+              <TrendingDown className="h-4 w-4 text-red-600" />
               Requieren Atención
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
-            {lowUsers.length > 0 ? lowUsers.map((user) => (
-              <div key={user.id} className="flex items-center justify-between py-1.5 border-b last:border-0">
-                <span className="text-sm truncate max-w-[140px]">{user.name}</span>
-                <Badge variant="destructive">{user.percentage}%</Badge>
+          <CardContent>
+            {lowUsers.length > 0 ? (
+              <div className="space-y-3">
+                {lowUsers.map((u) => (
+                  <div key={u.id} className="flex items-center gap-3">
+                    <AlertTriangle className="w-5 h-5 text-yellow-500" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">{u.name}</p>
+                      <p className="text-xs text-muted-foreground">{u.passed}/{u.total} aprobadas</p>
+                    </div>
+                    <span className="text-lg font-bold text-red-600">{u.percentage}%</span>
+                  </div>
+                ))}
               </div>
-            )) : (
-              <p className="text-muted-foreground text-sm text-center py-2">Sin alertas</p>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Courses needing attention */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-yellow-500" />
-              Cursos Pendientes
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {lowAdherenceCourses.length > 0 ? lowAdherenceCourses.map((course) => (
-              <div key={course.id} className="space-y-1">
-                <div className="flex justify-between text-sm">
-                  <span className="truncate max-w-[140px]">{course.title}</span>
-                  <span className="text-muted-foreground">{course.percentage}%</span>
-                </div>
-                <Progress value={course.percentage} className="h-1.5" />
-              </div>
-            )) : (
-              <p className="text-muted-foreground text-sm text-center py-2">Todos al día</p>
+            ) : (
+              <p className="text-muted-foreground text-center py-4 text-sm">Todos los usuarios tienen buen desempeño</p>
             )}
           </CardContent>
         </Card>
       </div>
+
+      {/* Low Adherence Courses */}
+      {lowAdherenceCourses.length > 0 && (
+        <Card className="border-yellow-500/50">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-yellow-500" />
+              Cursos con Baja Adherencia (&lt;70%)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {lowAdherenceCourses.map(c => (
+                <div key={c.id} className="p-3 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800">
+                  <p className="text-sm font-medium truncate">{c.title}</p>
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="text-xs text-muted-foreground">{c.completed}/{c.total}</span>
+                    <span className="text-lg font-bold text-yellow-600">{c.percentage}%</span>
+                  </div>
+                  <Progress value={c.percentage} className="mt-2 h-1" />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

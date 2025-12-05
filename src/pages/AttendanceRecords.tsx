@@ -9,13 +9,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Download, FileSpreadsheet, Users } from "lucide-react";
+import { Download, FileSpreadsheet, Users, Filter } from "lucide-react";
 import { format } from "date-fns";
 
 interface Training {
   id: string;
   title: string;
   year: number;
+  area_id: string;
 }
 
 interface UserProgress {
@@ -33,6 +34,11 @@ interface UserProgress {
   };
 }
 
+interface Area {
+  id: string;
+  name: string;
+}
+
 const AttendanceRecords = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -40,16 +46,20 @@ const AttendanceRecords = () => {
 
   const [trainings, setTrainings] = useState<Training[]>([]);
   const [userProgress, setUserProgress] = useState<UserProgress[]>([]);
+  const [areas, setAreas] = useState<Area[]>([]);
   const [selectedYear, setSelectedYear] = useState<string>("all");
   const [selectedTraining, setSelectedTraining] = useState<string>("");
+  const [selectedArea, setSelectedArea] = useState<string>("all");
 
   // Get unique years from trainings
   const years = [...new Set(trainings.map(t => t.year))].sort((a, b) => b - a);
 
-  // Filter trainings by year
-  const filteredTrainings = selectedYear === "all" 
-    ? trainings 
-    : trainings.filter(t => t.year === parseInt(selectedYear));
+  // Filter trainings by year and area
+  const filteredTrainings = trainings.filter(t => {
+    const matchesYear = selectedYear === "all" || t.year === parseInt(selectedYear);
+    const matchesArea = selectedArea === "all" || t.area_id === selectedArea;
+    return matchesYear && matchesArea;
+  });
 
   useEffect(() => {
     const checkAccess = async () => {
@@ -86,18 +96,25 @@ const AttendanceRecords = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const { data: trainingsData } = await supabase
-        .from("trainings")
-        .select("id, title, year")
-        .eq("status", "active")
-        .order("year", { ascending: false });
+      const [trainingsRes, areasRes] = await Promise.all([
+        supabase
+          .from("trainings")
+          .select("id, title, year, area_id")
+          .eq("status", "active")
+          .order("year", { ascending: false }),
+        supabase
+          .from("areas")
+          .select("id, name")
+          .order("name"),
+      ]);
 
-      setTrainings(trainingsData || []);
+      setTrainings(trainingsRes.data || []);
+      setAreas(areasRes.data || []);
       
       // Set default year to current year if exists
-      if (trainingsData && trainingsData.length > 0) {
+      if (trainingsRes.data && trainingsRes.data.length > 0) {
         const currentYear = new Date().getFullYear();
-        const hasCurrentYear = trainingsData.some(t => t.year === currentYear);
+        const hasCurrentYear = trainingsRes.data.some(t => t.year === currentYear);
         if (hasCurrentYear) {
           setSelectedYear(currentYear.toString());
         }
@@ -230,7 +247,27 @@ const AttendanceRecords = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <Label className="text-xs flex items-center gap-1">
+                <Filter className="h-3 w-3" />
+                Área
+              </Label>
+              <Select value={selectedArea} onValueChange={(value) => {
+                setSelectedArea(value);
+                setSelectedTraining("");
+              }}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Todas las áreas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas las áreas</SelectItem>
+                  {areas.map(area => (
+                    <SelectItem key={area.id} value={area.id}>{area.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div>
               <Label className="text-xs">Año</Label>
               <Select value={selectedYear} onValueChange={(value) => {

@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Download, Award, FileText, Search } from "lucide-react";
+import { Download, Award, FileText, Search, Filter } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
 
@@ -16,6 +16,7 @@ interface Training {
   id: string;
   title: string;
   year: number;
+  area_id: string;
 }
 
 interface Certificate {
@@ -31,6 +32,11 @@ interface Certificate {
   training_title?: string;
 }
 
+interface Area {
+  id: string;
+  name: string;
+}
+
 const CertificatesAdmin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -38,15 +44,24 @@ const CertificatesAdmin = () => {
 
   const [trainings, setTrainings] = useState<Training[]>([]);
   const [certificates, setCertificates] = useState<Certificate[]>([]);
+  const [areas, setAreas] = useState<Area[]>([]);
   const [selectedYear, setSelectedYear] = useState<string>("all");
   const [selectedTraining, setSelectedTraining] = useState<string>("all");
+  const [selectedArea, setSelectedArea] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
 
   const years = [...new Set(trainings.map(t => t.year))].sort((a, b) => b - a);
 
-  const filteredTrainings = selectedYear === "all" 
-    ? trainings 
-    : trainings.filter(t => t.year === parseInt(selectedYear));
+  // Filter trainings by year and area
+  const filteredTrainings = trainings.filter(t => {
+    const matchesYear = selectedYear === "all" || t.year === parseInt(selectedYear);
+    const matchesArea = selectedArea === "all" || t.area_id === selectedArea;
+    return matchesYear && matchesArea;
+  });
+
+  const trainingIdsInArea = selectedArea === "all" 
+    ? trainings.map(t => t.id)
+    : trainings.filter(t => t.area_id === selectedArea).map(t => t.id);
 
   useEffect(() => {
     const checkAccess = async () => {
@@ -83,13 +98,15 @@ const CertificatesAdmin = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [trainingsRes, certificatesRes, profilesRes] = await Promise.all([
-        supabase.from("trainings").select("id, title, year").eq("status", "active").order("year", { ascending: false }),
+      const [trainingsRes, certificatesRes, profilesRes, areasRes] = await Promise.all([
+        supabase.from("trainings").select("id, title, year, area_id").eq("status", "active").order("year", { ascending: false }),
         supabase.from("certificates").select("*").order("issued_at", { ascending: false }),
         supabase.from("profiles").select("id, full_name, area, position"),
+        supabase.from("areas").select("id, name").order("name"),
       ]);
 
       setTrainings(trainingsRes.data || []);
+      setAreas(areasRes.data || []);
 
       // Map certificates with user and training data
       const certs = (certificatesRes.data || []).map(cert => {
@@ -124,12 +141,13 @@ const CertificatesAdmin = () => {
   // Filter certificates
   const filteredCertificates = certificates.filter(c => {
     const matchesTraining = selectedTraining === "all" || c.training_id === selectedTraining;
+    const matchesArea = selectedArea === "all" || trainingIdsInArea.includes(c.training_id);
     const matchesYear = selectedYear === "all" || filteredTrainings.some(t => t.id === c.training_id);
     const matchesSearch = searchTerm === "" || 
       c.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       c.training_title?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    return matchesTraining && matchesYear && matchesSearch;
+    return matchesTraining && matchesArea && matchesYear && matchesSearch;
   });
 
   const getAreaLabel = (area: string | null) => {
@@ -213,7 +231,27 @@ const CertificatesAdmin = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div>
+              <Label className="text-xs flex items-center gap-1">
+                <Filter className="h-3 w-3" />
+                Área
+              </Label>
+              <Select value={selectedArea} onValueChange={(value) => {
+                setSelectedArea(value);
+                setSelectedTraining("all");
+              }}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Todas las áreas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas las áreas</SelectItem>
+                  {areas.map(area => (
+                    <SelectItem key={area.id} value={area.id}>{area.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div>
               <Label className="text-xs">Buscar usuario</Label>
               <Input 
