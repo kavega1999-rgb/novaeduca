@@ -39,12 +39,15 @@ const EvaluationPage = () => {
       return;
     }
 
+    // Clean trainingId - remove any query params that might have been appended
+    const cleanTrainingId = trainingId?.split('?')[0];
+    
     // Load training details
     const { data: trainingData } = await supabase
       .from("trainings")
       .select("id, title, content_url")
-      .eq("id", trainingId)
-      .single();
+      .eq("id", cleanTrainingId)
+      .maybeSingle();
 
     if (!trainingData) {
       toast.error("Capacitación no encontrada");
@@ -59,8 +62,8 @@ const EvaluationPage = () => {
       .from("user_progress")
       .select("content_viewed_completely")
       .eq("user_id", session.user.id)
-      .eq("training_id", trainingId)
-      .single();
+      .eq("training_id", cleanTrainingId)
+      .maybeSingle();
 
     if (!progressData?.content_viewed_completely) {
       setHasViewedContent(false);
@@ -239,7 +242,7 @@ const EvaluationPage = () => {
               },
               body: JSON.stringify({
                 attemptId: attemptId,
-                trainingId: trainingId,
+                trainingId: trainingId?.split('?')[0],
               }),
             }
           );
