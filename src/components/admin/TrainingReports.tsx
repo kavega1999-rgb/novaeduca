@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, CheckCircle, Clock, AlertCircle, TrendingUp, Users, Award, Target } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { BookOpen, CheckCircle, Clock, AlertCircle, TrendingUp, Users, Award, Target, Filter } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 
 interface GlobalStats {
@@ -29,10 +31,17 @@ interface TopTraining {
   percentage: number;
 }
 
+interface Area {
+  id: string;
+  name: string;
+}
+
 const COLORS = ["hsl(152, 60%, 45%)", "hsl(210, 70%, 55%)", "hsl(210, 40%, 75%)", "hsl(200, 50%, 65%)"];
 
 const TrainingReports = () => {
   const [isLoading, setIsLoading] = useState(true);
+  const [areas, setAreas] = useState<Area[]>([]);
+  const [selectedArea, setSelectedArea] = useState<string>("all");
   const [globalStats, setGlobalStats] = useState<GlobalStats>({
     totalTrainings: 0,
     completedUsers: 0,
@@ -46,31 +55,69 @@ const TrainingReports = () => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [selectedArea]);
 
   const fetchData = async () => {
     setIsLoading(true);
     
-    // Fetch trainings count
-    const { data: trainingsData } = await supabase
-      .from("trainings")
-      .select("id, title")
-      .eq("status", "active");
+    // Fetch areas
+    const { data: areasData } = await supabase
+      .from("areas")
+      .select("id, name")
+      .order("name");
+    
+    setAreas(areasData || []);
 
-    // Fetch global progress stats
-    const { data: allProgress } = await supabase
+    // Fetch trainings count - filter by area if selected
+    let trainingsQuery = supabase
+      .from("trainings")
+      .select("id, title, area_id")
+      .eq("status", "active");
+    
+    if (selectedArea !== "all") {
+      trainingsQuery = trainingsQuery.eq("area_id", selectedArea);
+    }
+    
+    const { data: trainingsData } = await trainingsQuery;
+
+    const trainingIds = trainingsData?.map(t => t.id) || [];
+
+    // Fetch global progress stats - filter by training IDs if area is selected
+    let progressQuery = supabase
       .from("user_progress")
       .select("status, progress_percentage, training_id, user_id");
+    
+    if (selectedArea !== "all" && trainingIds.length > 0) {
+      progressQuery = progressQuery.in("training_id", trainingIds);
+    } else if (selectedArea !== "all" && trainingIds.length === 0) {
+      // No trainings for this area
+      setGlobalStats({
+        totalTrainings: 0,
+        completedUsers: 0,
+        inProgressUsers: 0,
+        notStartedUsers: 0,
+        averageProgress: 0,
+      });
+      setAreaStats([]);
+      setTopTrainings([]);
+      setTotalCertificates(0);
+      setIsLoading(false);
+      return;
+    }
+    
+    const { data: allProgress } = await progressQuery;
 
     // Fetch profiles for area stats
     const { data: profiles } = await supabase
       .from("profiles")
       .select("id, area");
 
-    // Fetch certificates count
-    const { data: certificates } = await supabase
-      .from("certificates")
-      .select("id");
+    // Fetch certificates count - filter by training IDs if area is selected
+    let certificatesQuery = supabase.from("certificates").select("id");
+    if (selectedArea !== "all" && trainingIds.length > 0) {
+      certificatesQuery = certificatesQuery.in("training_id", trainingIds);
+    }
+    const { data: certificates } = await certificatesQuery;
 
     if (allProgress) {
       const completed = allProgress.filter(p => p.status === "completed").length;
@@ -90,14 +137,14 @@ const TrainingReports = () => {
 
       // Calculate area stats
       if (profiles) {
-        const areas = ["medicos", "asistencial", "administrativos"];
+        const userAreas = ["medicos", "asistencial", "administrativos"];
         const areaLabels: Record<string, string> = {
           medicos: "Médicos",
           asistencial: "Asistencial",
           administrativos: "Administrativos",
         };
 
-        const stats = areas.map(area => {
+        const stats = userAreas.map(area => {
           const areaUsers = profiles.filter(p => p.area === area).map(p => p.id);
           const areaProgress = allProgress.filter(p => areaUsers.includes(p.user_id));
           
@@ -164,6 +211,29 @@ const TrainingReports = () => {
 
   return (
     <div className="space-y-6">
+      {/* Area Filter */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center gap-4">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <div className="flex-1 max-w-xs">
+              <Label className="text-xs">Filtrar por Área de Capacitación</Label>
+              <Select value={selectedArea} onValueChange={setSelectedArea}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Todas las áreas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas las áreas</SelectItem>
+                  {areas.map(area => (
+                    <SelectItem key={area.id} value={area.id}>{area.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card className="bg-[hsl(210,80%,25%)] border-none shadow-lg">
@@ -303,7 +373,7 @@ const TrainingReports = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Target className="h-5 w-5" />
-              Progreso por Área
+              Progreso por Área de Usuario
             </CardTitle>
           </CardHeader>
           <CardContent>

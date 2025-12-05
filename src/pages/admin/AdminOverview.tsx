@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, CheckCircle, XCircle, Clock, TrendingUp, Calendar, Users, FileText } from "lucide-react";
+import { BookOpen, CheckCircle, XCircle, Clock, TrendingUp, Calendar, Users, FileText, Filter } from "lucide-react";
 
 interface AreaStats {
   name: string;
@@ -19,6 +21,11 @@ interface RecentTraining {
   area_name: string;
 }
 
+interface Area {
+  id: string;
+  name: string;
+}
+
 const AdminOverview = () => {
   const [stats, setStats] = useState({
     total: 0,
@@ -28,17 +35,31 @@ const AdminOverview = () => {
   });
   const [areaStats, setAreaStats] = useState<AreaStats[]>([]);
   const [recentTrainings, setRecentTrainings] = useState<RecentTraining[]>([]);
+  const [areas, setAreas] = useState<Area[]>([]);
+  const [selectedArea, setSelectedArea] = useState<string>("all");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchStats();
+    fetchAreas();
   }, []);
+
+  useEffect(() => {
+    fetchStats();
+  }, [selectedArea]);
+
+  const fetchAreas = async () => {
+    const { data } = await supabase
+      .from("areas")
+      .select("id, name")
+      .order("name");
+    setAreas(data || []);
+  };
 
   const fetchStats = async () => {
     setLoading(true);
 
     // Fetch all trainings with area info
-    const { data: trainings } = await supabase
+    let trainingsQuery = supabase
       .from("trainings")
       .select(`
         id,
@@ -46,9 +67,16 @@ const AdminOverview = () => {
         type,
         status,
         created_at,
+        area_id,
         areas:area_id (name, color)
       `)
       .order("created_at", { ascending: false });
+
+    if (selectedArea !== "all") {
+      trainingsQuery = trainingsQuery.eq("area_id", selectedArea);
+    }
+
+    const { data: trainings } = await trainingsQuery;
 
     if (trainings) {
       // Calculate general stats
@@ -141,6 +169,29 @@ const AdminOverview = () => {
           Resumen general de capacitaciones y estadísticas
         </p>
       </div>
+
+      {/* Area Filter */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center gap-4">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <div className="flex-1 max-w-xs">
+              <Label className="text-xs">Filtrar por Área</Label>
+              <Select value={selectedArea} onValueChange={setSelectedArea}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Todas las áreas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas las áreas</SelectItem>
+                  {areas.map(area => (
+                    <SelectItem key={area.id} value={area.id}>{area.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Main Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
