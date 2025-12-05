@@ -126,15 +126,15 @@ const Dashboard = () => {
     return (
       <div className="min-h-screen bg-background">
         <Navigation userRole={userRole} />
-        <SidebarProvider defaultOpen={true}>
-          <div className="flex min-h-[calc(100vh-64px)] w-full">
+        <SidebarProvider defaultOpen={false}>
+          <div className="flex min-h-[calc(100vh-56px)] md:min-h-[calc(100vh-64px)] w-full">
             <AdminSidebar />
             <main className="flex-1 overflow-auto">
-              <div className="container mx-auto px-6 py-8">
-                <div className="mb-6 flex items-center gap-2">
+              <div className="container mx-auto px-4 md:px-6 py-4 md:py-8">
+                <div className="mb-4 md:mb-6 flex items-center gap-2">
                   <SidebarTrigger className="h-8 w-8" />
-                  <div className="h-6 w-px bg-border" />
-                  <h1 className="text-2xl font-bold">Panel de Administración</h1>
+                  <div className="h-6 w-px bg-border hidden md:block" />
+                  <h1 className="text-lg md:text-2xl font-bold">Panel de Administración</h1>
                 </div>
                 <Outlet />
               </div>
@@ -152,30 +152,30 @@ const Dashboard = () => {
       
       {isAdminOrLeader && (
         <>
-        <SidebarProvider defaultOpen={true}>
-          <div className="flex min-h-[calc(100vh-64px)] w-full">
+        <SidebarProvider defaultOpen={false}>
+          <div className="flex min-h-[calc(100vh-56px)] md:min-h-[calc(100vh-64px)] w-full">
             <AdminSidebar />
             <main className="flex-1 overflow-auto">
-              <div className="container mx-auto px-6 py-8">
-                <div className="mb-6 flex items-center gap-2">
+              <div className="container mx-auto px-4 md:px-6 py-4 md:py-8">
+                <div className="mb-4 md:mb-6 flex items-center gap-2">
                   <SidebarTrigger className="h-8 w-8" />
-                  <div className="h-6 w-px bg-border" />
-                  <h1 className="text-2xl font-bold">Panel Principal</h1>
+                  <div className="h-6 w-px bg-border hidden md:block" />
+                  <h1 className="text-lg md:text-2xl font-bold">Panel Principal</h1>
                 </div>
                 
                 {/* Hero Section */}
-                <div className="mb-8 rounded-2xl overflow-hidden relative h-[400px] shadow-lg">
+                <div className="mb-6 md:mb-8 rounded-xl md:rounded-2xl overflow-hidden relative h-[200px] md:h-[400px] shadow-lg">
                   <img 
                     src={heroImage} 
                     alt="Equipo médico Novasalud" 
                     className="w-full h-full object-cover"
                   />
                   <div className="absolute inset-0 bg-gradient-to-r from-primary/95 via-primary/75 to-primary-glow/60 flex items-center">
-                    <div className="container mx-auto px-8">
-                      <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
+                    <div className="container mx-auto px-4 md:px-8">
+                      <h2 className="text-xl md:text-4xl lg:text-5xl font-bold text-white mb-2 md:mb-4">
                         Bienvenido a tu Centro de Aprendizaje
                       </h2>
-                      <p className="text-xl text-white/95 max-w-2xl">
+                      <p className="text-sm md:text-xl text-white/95 max-w-2xl">
                         Desarrolla tus habilidades y mantente actualizado con nuestras capacitaciones profesionales de salud
                       </p>
                     </div>
@@ -183,73 +183,73 @@ const Dashboard = () => {
                 </div>
 
                 {/* Stats Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mb-6 md:mb-8">
                   <Card className="bg-gradient-to-br from-card to-primary/5 border-primary/20" style={{ boxShadow: "var(--shadow-card)" }}>
-                    <CardHeader className="pb-3">
-                      <CardDescription>Total Capacitaciones</CardDescription>
+                    <CardHeader className="pb-2 md:pb-3 p-3 md:p-6">
+                      <CardDescription className="text-xs md:text-sm">Total Capacitaciones</CardDescription>
                     </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-primary/10">
-                          <BookOpen className="w-5 h-5 text-primary" />
+                    <CardContent className="p-3 md:p-6 pt-0">
+                      <div className="flex items-center gap-2 md:gap-3">
+                        <div className="p-1.5 md:p-2 rounded-lg bg-primary/10">
+                          <BookOpen className="w-4 h-4 md:w-5 md:h-5 text-primary" />
                         </div>
-                        <span className="text-3xl font-bold text-primary">{stats.totalTrainings}</span>
+                        <span className="text-xl md:text-3xl font-bold text-primary">{stats.totalTrainings}</span>
                       </div>
                     </CardContent>
                   </Card>
 
                   <Card className="bg-gradient-to-br from-card to-primary/5 border-primary/20" style={{ boxShadow: "var(--shadow-card)" }}>
-                    <CardHeader className="pb-3">
-                      <CardDescription>Completadas</CardDescription>
+                    <CardHeader className="pb-2 md:pb-3 p-3 md:p-6">
+                      <CardDescription className="text-xs md:text-sm">Completadas</CardDescription>
                     </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-primary/10">
-                          <Award className="w-5 h-5 text-primary" />
+                    <CardContent className="p-3 md:p-6 pt-0">
+                      <div className="flex items-center gap-2 md:gap-3">
+                        <div className="p-1.5 md:p-2 rounded-lg bg-primary/10">
+                          <Award className="w-4 h-4 md:w-5 md:h-5 text-primary" />
                         </div>
-                        <span className="text-3xl font-bold text-primary">{stats.completedTrainings}</span>
+                        <span className="text-xl md:text-3xl font-bold text-primary">{stats.completedTrainings}</span>
                       </div>
                     </CardContent>
                   </Card>
 
                   <Card className="bg-gradient-to-br from-card to-primary/5 border-primary/20" style={{ boxShadow: "var(--shadow-card)" }}>
-                    <CardHeader className="pb-3">
-                      <CardDescription>En Progreso</CardDescription>
+                    <CardHeader className="pb-2 md:pb-3 p-3 md:p-6">
+                      <CardDescription className="text-xs md:text-sm">En Progreso</CardDescription>
                     </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-primary/10">
-                          <Clock className="w-5 h-5 text-primary" />
+                    <CardContent className="p-3 md:p-6 pt-0">
+                      <div className="flex items-center gap-2 md:gap-3">
+                        <div className="p-1.5 md:p-2 rounded-lg bg-primary/10">
+                          <Clock className="w-4 h-4 md:w-5 md:h-5 text-primary" />
                         </div>
-                        <span className="text-3xl font-bold text-primary">{stats.inProgress}</span>
+                        <span className="text-xl md:text-3xl font-bold text-primary">{stats.inProgress}</span>
                       </div>
                     </CardContent>
                   </Card>
 
                   <Card className="bg-gradient-to-br from-card to-primary/5 border-primary/20" style={{ boxShadow: "var(--shadow-card)" }}>
-                    <CardHeader className="pb-3">
-                      <CardDescription>Progreso Promedio</CardDescription>
+                    <CardHeader className="pb-2 md:pb-3 p-3 md:p-6">
+                      <CardDescription className="text-xs md:text-sm">Progreso Promedio</CardDescription>
                     </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        <div className="text-3xl font-bold text-primary">{stats.averageProgress}%</div>
-                        <Progress value={stats.averageProgress} className="h-2" />
+                    <CardContent className="p-3 md:p-6 pt-0">
+                      <div className="space-y-1 md:space-y-2">
+                        <div className="text-xl md:text-3xl font-bold text-primary">{stats.averageProgress}%</div>
+                        <Progress value={stats.averageProgress} className="h-1.5 md:h-2" />
                       </div>
                     </CardContent>
                   </Card>
                 </div>
 
                 {/* Certificates Section */}
-                <div className="mb-8">
+                <div className="mb-6 md:mb-8">
                   <CertificatesList />
                 </div>
 
                 {/* Areas Section */}
-                <div className="mb-6">
-                  <h2 className="text-2xl font-bold text-foreground mb-6">Áreas de Capacitación</h2>
+                <div className="mb-4 md:mb-6">
+                  <h2 className="text-lg md:text-2xl font-bold text-foreground mb-4 md:mb-6">Áreas de Capacitación</h2>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                   {areas.map((area) => {
                     const Icon = iconMap[area.icon] || BookOpen;
                     
@@ -260,17 +260,17 @@ const Dashboard = () => {
                         style={{ boxShadow: "var(--shadow-card)" }}
                         onClick={() => navigate(`/trainings?area=${area.id}`)}
                       >
-                        <CardHeader>
-                          <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center mb-3 shadow-lg">
-                            <Icon className="w-7 h-7 text-white" />
+                        <CardHeader className="p-4 md:p-6">
+                          <div className="w-10 h-10 md:w-14 md:h-14 rounded-xl bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center mb-2 md:mb-3 shadow-lg">
+                            <Icon className="w-5 h-5 md:w-7 md:h-7 text-white" />
                           </div>
-                          <CardTitle className="text-xl">{area.name}</CardTitle>
-                          <CardDescription>{area.description}</CardDescription>
+                          <CardTitle className="text-base md:text-xl">{area.name}</CardTitle>
+                          <CardDescription className="text-xs md:text-sm">{area.description}</CardDescription>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="p-4 md:p-6 pt-0">
                           <Button 
                             variant="ghost" 
-                            className="w-full justify-between group-hover:bg-primary/10 group-hover:text-primary transition-colors"
+                            className="w-full justify-between group-hover:bg-primary/10 group-hover:text-primary transition-colors text-sm md:text-base"
                           >
                             Ver capacitaciones
                             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -292,20 +292,20 @@ const Dashboard = () => {
 
       {!isAdminOrLeader && (
         <>
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto px-4 py-4 md:py-8">
           {/* Hero Section */}
-          <div className="mb-8 rounded-2xl overflow-hidden relative h-[400px]">
+          <div className="mb-6 md:mb-8 rounded-xl md:rounded-2xl overflow-hidden relative h-[200px] md:h-[400px]">
             <img 
               src={heroImage} 
               alt="Equipo médico Novasalud" 
               className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-r from-primary/90 to-primary/70 flex items-center">
-              <div className="container mx-auto px-8">
-                <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
+              <div className="container mx-auto px-4 md:px-8">
+                <h1 className="text-xl md:text-4xl lg:text-5xl font-bold text-white mb-2 md:mb-4">
                   Bienvenido a tu Centro de Aprendizaje
                 </h1>
-                <p className="text-xl text-white/90 max-w-2xl">
+                <p className="text-sm md:text-xl text-white/90 max-w-2xl">
                   Desarrolla tus habilidades y mantente actualizado con nuestras capacitaciones profesionales de salud
                 </p>
               </div>
@@ -313,67 +313,67 @@ const Dashboard = () => {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
             <Card className="bg-gradient-to-br from-card to-primary/5 border-primary/20" style={{ boxShadow: "var(--shadow-card)" }}>
-              <CardHeader className="pb-3">
-                <CardDescription>Total Capacitaciones</CardDescription>
+              <CardHeader className="pb-2 md:pb-3 p-3 md:p-6">
+                <CardDescription className="text-xs md:text-sm">Total Capacitaciones</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-3 md:p-6 pt-0">
                 <div className="flex items-center gap-2">
-                  <BookOpen className="w-5 h-5 text-primary" />
-                  <span className="text-3xl font-bold text-primary">{stats.totalTrainings}</span>
+                  <BookOpen className="w-4 h-4 md:w-5 md:h-5 text-primary" />
+                  <span className="text-xl md:text-3xl font-bold text-primary">{stats.totalTrainings}</span>
                 </div>
               </CardContent>
             </Card>
 
             <Card className="bg-gradient-to-br from-card to-primary/5 border-primary/20" style={{ boxShadow: "var(--shadow-card)" }}>
-              <CardHeader className="pb-3">
-                <CardDescription>Completadas</CardDescription>
+              <CardHeader className="pb-2 md:pb-3 p-3 md:p-6">
+                <CardDescription className="text-xs md:text-sm">Completadas</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-3 md:p-6 pt-0">
                 <div className="flex items-center gap-2">
-                  <Award className="w-5 h-5 text-primary" />
-                  <span className="text-3xl font-bold text-primary">{stats.completedTrainings}</span>
+                  <Award className="w-4 h-4 md:w-5 md:h-5 text-primary" />
+                  <span className="text-xl md:text-3xl font-bold text-primary">{stats.completedTrainings}</span>
                 </div>
               </CardContent>
             </Card>
 
             <Card className="bg-gradient-to-br from-card to-primary/5 border-primary/20" style={{ boxShadow: "var(--shadow-card)" }}>
-              <CardHeader className="pb-3">
-                <CardDescription>En Progreso</CardDescription>
+              <CardHeader className="pb-2 md:pb-3 p-3 md:p-6">
+                <CardDescription className="text-xs md:text-sm">En Progreso</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-3 md:p-6 pt-0">
                 <div className="flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-primary" />
-                  <span className="text-3xl font-bold text-primary">{stats.inProgress}</span>
+                  <Clock className="w-4 h-4 md:w-5 md:h-5 text-primary" />
+                  <span className="text-xl md:text-3xl font-bold text-primary">{stats.inProgress}</span>
                 </div>
               </CardContent>
             </Card>
 
             <Card className="bg-gradient-to-br from-card to-primary/5 border-primary/20" style={{ boxShadow: "var(--shadow-card)" }}>
-              <CardHeader className="pb-3">
-                <CardDescription>Progreso Promedio</CardDescription>
+              <CardHeader className="pb-2 md:pb-3 p-3 md:p-6">
+                <CardDescription className="text-xs md:text-sm">Progreso Promedio</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="text-3xl font-bold text-primary">{stats.averageProgress}%</div>
-                  <Progress value={stats.averageProgress} className="h-2" />
+              <CardContent className="p-3 md:p-6 pt-0">
+                <div className="space-y-1 md:space-y-2">
+                  <div className="text-xl md:text-3xl font-bold text-primary">{stats.averageProgress}%</div>
+                  <Progress value={stats.averageProgress} className="h-1.5 md:h-2" />
                 </div>
               </CardContent>
             </Card>
           </div>
 
           {/* Certificates Section */}
-          <div className="mb-8">
+          <div className="mb-6 md:mb-8">
             <CertificatesList />
           </div>
 
           {/* Areas Section */}
           <div className="mb-4">
-            <h2 className="text-2xl font-bold text-foreground mb-6">Áreas de Capacitación</h2>
+            <h2 className="text-lg md:text-2xl font-bold text-foreground mb-4 md:mb-6">Áreas de Capacitación</h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             {areas.map((area) => {
               const Icon = iconMap[area.icon] || BookOpen;
               
@@ -384,17 +384,17 @@ const Dashboard = () => {
                   style={{ boxShadow: "var(--shadow-card)" }}
                   onClick={() => navigate(`/trainings?area=${area.id}`)}
                 >
-                  <CardHeader>
-                    <div className={`w-12 h-12 rounded-xl bg-${area.color}-100 dark:bg-${area.color}-900/20 flex items-center justify-center mb-3`}>
-                      <Icon className={`w-6 h-6 text-${area.color}-600 dark:text-${area.color}-400`} />
+                  <CardHeader className="p-4 md:p-6">
+                    <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl bg-${area.color}-100 dark:bg-${area.color}-900/20 flex items-center justify-center mb-2 md:mb-3`}>
+                      <Icon className={`w-5 h-5 md:w-6 md:h-6 text-${area.color}-600 dark:text-${area.color}-400`} />
                     </div>
-                    <CardTitle className="text-xl">{area.name}</CardTitle>
-                    <CardDescription>{area.description}</CardDescription>
+                    <CardTitle className="text-base md:text-xl">{area.name}</CardTitle>
+                    <CardDescription className="text-xs md:text-sm">{area.description}</CardDescription>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="p-4 md:p-6 pt-0">
                     <Button 
                       variant="ghost" 
-                      className="w-full justify-between group-hover:bg-primary/10 transition-colors"
+                      className="w-full justify-between group-hover:bg-primary/10 transition-colors text-sm md:text-base"
                     >
                       Ver capacitaciones
                       <ArrowRight className="w-4 h-4" />
