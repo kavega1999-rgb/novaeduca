@@ -286,7 +286,6 @@ const Dashboard = () => {
           </div>
         </SidebarProvider>
         <FloatingDocumentsButton isAdmin={true} />
-        <FloatingFAQChat />
         </>
       )}
 
@@ -407,9 +406,10 @@ const Dashboard = () => {
 
         </div>
         <FloatingDocumentsButton isAdmin={false} />
-        <FloatingFAQChat />
         </>
       )}
+
+      <FloatingFAQChat />
     </div>
   );
 };
