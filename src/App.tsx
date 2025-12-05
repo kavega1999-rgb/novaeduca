@@ -12,6 +12,7 @@ import AdminOverview from "./pages/admin/AdminOverview";
 import AdminTrainings from "./pages/admin/AdminTrainings";
 import Trainings from "./pages/Trainings";
 import TrainingDetail from "./pages/TrainingDetail";
+import EvaluationPage from "./pages/EvaluationPage";
 import Profile from "./pages/Profile";
 import AccessLogs from "./pages/AccessLogs";
 import AdherenceEvaluations from "./pages/AdherenceEvaluations";
@@ -54,6 +55,7 @@ const App = () => (
           </Route>
           <Route path="/trainings" element={<Trainings />} />
           <Route path="/training/:id" element={<TrainingDetail />} />
+          <Route path="/evaluation/:trainingId" element={<EvaluationPage />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/access-logs" element={<AccessLogs />} />
           {/* Redirect old /admin route to new location */}

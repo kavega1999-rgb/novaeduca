@@ -425,20 +425,33 @@ const TrainingDetail = () => {
                 <CardHeader>
                   <CardTitle className="text-lg">Evaluación</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
                   {!userProgress?.content_viewed_completely ? (
-                    <Alert className="mb-4">
+                    <Alert>
                       <AlertCircle className="h-4 w-4" />
                       <AlertDescription>
                         Debes visualizar todo el contenido de la capacitación antes de poder realizar la evaluación.
                       </AlertDescription>
                     </Alert>
                   ) : (
-                    <EvaluationTaker
-                      evaluationId={evaluation.id}
-                      trainingId={id!}
-                      onComplete={loadTraining}
-                    />
+                    <>
+                      <div className="text-sm text-muted-foreground">
+                        <p className="font-medium text-foreground mb-2">{evaluation.title}</p>
+                        <p>{evaluation.description}</p>
+                      </div>
+                      <Alert className="border-amber-500 bg-amber-50 dark:bg-amber-950/20">
+                        <AlertCircle className="h-4 w-4 text-amber-600" />
+                        <AlertDescription className="text-amber-800 dark:text-amber-200">
+                          Durante la evaluación no tendrás acceso al material de apoyo.
+                        </AlertDescription>
+                      </Alert>
+                      <Button 
+                        className="w-full"
+                        onClick={() => navigate(`/evaluation/${id}?evaluationId=${evaluation.id}`)}
+                      >
+                        Ir a la Evaluación
+                      </Button>
+                    </>
                   )}
                 </CardContent>
               </Card>
