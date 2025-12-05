@@ -12,7 +12,7 @@ import { Progress } from "@/components/ui/progress";
 import { Shield, Heart, Leaf, Activity, Users, Monitor, ArrowRight, BookOpen, Award, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { CertificatesList } from "@/components/profile/CertificatesList";
-import FloatingDocumentsButton from "@/components/documents/FloatingDocumentsButton";
+
 import heroImage from "@/assets/team-celebration.jpg";
 
 const iconMap: Record<string, any> = {
@@ -284,7 +284,6 @@ const Dashboard = () => {
             </main>
           </div>
         </SidebarProvider>
-        <FloatingDocumentsButton isAdmin={true} />
         <FloatingFAQChat />
         </>
       )}
@@ -405,7 +404,6 @@ const Dashboard = () => {
           </div>
 
         </div>
-        <FloatingDocumentsButton isAdmin={false} />
         <FloatingFAQChat />
         </>
       )}
