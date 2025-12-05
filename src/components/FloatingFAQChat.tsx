@@ -158,7 +158,7 @@ const FloatingFAQChat = () => {
       <Button
         onClick={() => setIsOpen(true)}
         className={cn(
-          "fixed bottom-6 right-24 z-40 h-14 w-14 rounded-full shadow-lg",
+          "fixed bottom-24 right-6 z-40 h-14 w-14 rounded-full shadow-lg",
           "bg-primary hover:bg-primary/90 text-primary-foreground",
           "transition-all duration-300 hover:scale-110",
           isOpen && "hidden"
