@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, Outlet, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Navigation from "@/components/Navigation";
-import FAQ from "@/components/FAQ";
+import FloatingFAQChat from "@/components/FloatingFAQChat";
 import { AdminSidebar } from "@/components/AdminSidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -280,15 +280,12 @@ const Dashboard = () => {
                   })}
                 </div>
 
-                {/* FAQ Section */}
-                <div className="mt-12">
-                  <FAQ />
-                </div>
               </div>
             </main>
           </div>
         </SidebarProvider>
         <FloatingDocumentsButton isAdmin={true} />
+        <FloatingFAQChat />
         </>
       )}
 
@@ -407,12 +404,9 @@ const Dashboard = () => {
             })}
           </div>
 
-          {/* FAQ Section */}
-          <div className="mt-12">
-            <FAQ />
-          </div>
         </div>
         <FloatingDocumentsButton isAdmin={false} />
+        <FloatingFAQChat />
         </>
       )}
     </div>
