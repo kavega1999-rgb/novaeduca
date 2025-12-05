@@ -328,8 +328,14 @@ const TrainingForm = ({ trainingId, onSuccess }: TrainingFormProps) => {
               <FormItem>
                 <FormLabel>Total de páginas</FormLabel>
                 <FormControl>
-                  <Input type="number" min="1" {...field} />
+                  <Input 
+                    type="number" 
+                    min="1" 
+                    {...field} 
+                    className="bg-muted/50"
+                  />
                 </FormControl>
+                <p className="text-xs text-muted-foreground">Se detecta automáticamente al subir un PDF</p>
                 <FormMessage />
               </FormItem>
             )}
@@ -496,7 +502,12 @@ const TrainingForm = ({ trainingId, onSuccess }: TrainingFormProps) => {
         <div>
           <FormLabel>Material de Apoyo</FormLabel>
           <FileUploader 
-            onUploadComplete={setUploadedFileUrl}
+            onUploadComplete={(url, pageCount) => {
+              setUploadedFileUrl(url);
+              if (pageCount) {
+                form.setValue("total_pages", pageCount);
+              }
+            }}
             currentFileUrl={uploadedFileUrl}
           />
         </div>

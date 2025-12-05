@@ -3,11 +3,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, File, X } from "lucide-react";
+import { Upload, File, X, FileText, Loader2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import * as pdfjsLib from "pdfjs-dist";
+
+// Configure PDF.js worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.mjs`;
 
 interface FileUploaderProps {
-  onUploadComplete: (url: string) => void;
+  onUploadComplete: (url: string, pageCount?: number) => void;
   currentFileUrl?: string;
 }
 
@@ -15,11 +19,31 @@ const FileUploader = ({ onUploadComplete, currentFileUrl }: FileUploaderProps) =
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isCountingPages, setIsCountingPages] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [fileName, setFileName] = useState("");
+  const [detectedPages, setDetectedPages] = useState<number | null>(null);
 
   // Accept all file types
   const acceptedFileTypes = "*/*";
+
+  const countPdfPages = async (file: File): Promise<number | null> => {
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+      return null;
+    }
+
+    try {
+      setIsCountingPages(true);
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      return pdf.numPages;
+    } catch (error) {
+      console.error("Error counting PDF pages:", error);
+      return null;
+    } finally {
+      setIsCountingPages(false);
+    }
+  };
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -39,8 +63,15 @@ const FileUploader = ({ onUploadComplete, currentFileUrl }: FileUploaderProps) =
     setIsUploading(true);
     setFileName(file.name);
     setUploadProgress(0);
+    setDetectedPages(null);
 
     try {
+      // Count PDF pages before upload
+      const pageCount = await countPdfPages(file);
+      if (pageCount) {
+        setDetectedPages(pageCount);
+      }
+
       const fileExt = file.name.split(".").pop();
       const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
       const filePath = `${fileName}`;
@@ -72,11 +103,13 @@ const FileUploader = ({ onUploadComplete, currentFileUrl }: FileUploaderProps) =
         .from("training-materials")
         .getPublicUrl(filePath);
 
-      onUploadComplete(publicUrl);
+      onUploadComplete(publicUrl, pageCount || undefined);
 
       toast({
         title: "Archivo subido",
-        description: "El material de apoyo ha sido subido exitosamente",
+        description: pageCount 
+          ? `Material subido exitosamente (${pageCount} páginas detectadas)`
+          : "El material de apoyo ha sido subido exitosamente",
       });
     } catch (error: any) {
       console.error("Error uploading file:", error);
@@ -92,8 +125,9 @@ const FileUploader = ({ onUploadComplete, currentFileUrl }: FileUploaderProps) =
   };
 
   const handleRemoveFile = () => {
-    onUploadComplete("");
+    onUploadComplete("", undefined);
     setFileName("");
+    setDetectedPages(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -125,13 +159,29 @@ const FileUploader = ({ onUploadComplete, currentFileUrl }: FileUploaderProps) =
         </span>
       </div>
 
-      {isUploading && (
+      {(isUploading || isCountingPages) && (
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <File className="w-4 h-4 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">{fileName}</span>
+            {isCountingPages ? (
+              <>
+                <Loader2 className="w-4 h-4 text-muted-foreground animate-spin" />
+                <span className="text-sm text-muted-foreground">Detectando páginas del PDF...</span>
+              </>
+            ) : (
+              <>
+                <File className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">{fileName}</span>
+              </>
+            )}
           </div>
-          <Progress value={uploadProgress} className="w-full" />
+          {!isCountingPages && <Progress value={uploadProgress} className="w-full" />}
+        </div>
+      )}
+
+      {detectedPages && !isUploading && (
+        <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+          <FileText className="w-4 h-4" />
+          <span>{detectedPages} páginas detectadas automáticamente</span>
         </div>
       )}
 
