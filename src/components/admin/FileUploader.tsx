@@ -5,10 +5,6 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Upload, File, X, FileText, Loader2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import * as pdfjsLib from "pdfjs-dist";
-
-// Configure PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.mjs`;
 
 interface FileUploaderProps {
   onUploadComplete: (url: string, pageCount?: number) => void;
@@ -35,8 +31,22 @@ const FileUploader = ({ onUploadComplete, currentFileUrl }: FileUploaderProps) =
     try {
       setIsCountingPages(true);
       const arrayBuffer = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-      return pdf.numPages;
+      const bytes = new Uint8Array(arrayBuffer);
+      const text = new TextDecoder('latin1').decode(bytes);
+      
+      // Method 1: Count /Type /Page occurrences (excluding /Type /Pages)
+      const pageMatches = text.match(/\/Type\s*\/Page[^s]/g);
+      if (pageMatches && pageMatches.length > 0) {
+        return pageMatches.length;
+      }
+      
+      // Method 2: Look for /Count in the Pages object
+      const countMatch = text.match(/\/Count\s+(\d+)/);
+      if (countMatch) {
+        return parseInt(countMatch[1], 10);
+      }
+      
+      return null;
     } catch (error) {
       console.error("Error counting PDF pages:", error);
       return null;
