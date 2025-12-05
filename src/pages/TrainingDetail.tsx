@@ -27,6 +27,7 @@ const TrainingDetail = () => {
   const [evaluation, setEvaluation] = useState<any>(null);
   const [isAdminOrLeader, setIsAdminOrLeader] = useState(false);
   const [certificates, setCertificates] = useState<any[]>([]);
+  const [showEvaluation, setShowEvaluation] = useState(false);
 
   const loadTraining = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -216,10 +217,34 @@ const TrainingDetail = () => {
   const isCompleted = userProgress?.status === "completed";
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background relative">
       <Navigation userRole={userRole} />
       
-      <div className="container mx-auto px-4 py-8">
+      {/* Evaluation Overlay */}
+      {showEvaluation && evaluation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <EvaluationTaker
+              evaluationId={evaluation.id}
+              trainingId={id!}
+              onComplete={() => {
+                setShowEvaluation(false);
+                loadTraining();
+              }}
+            />
+            <Button 
+              variant="ghost" 
+              className="mt-4 w-full"
+              onClick={() => setShowEvaluation(false)}
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Cancelar y volver
+            </Button>
+          </div>
+        </div>
+      )}
+      
+      <div className={`container mx-auto px-4 py-8 ${showEvaluation ? 'blur-sm pointer-events-none' : ''}`}>
         <Button
           variant="ghost"
           onClick={() => navigate("/trainings")}
@@ -447,9 +472,9 @@ const TrainingDetail = () => {
                       </Alert>
                       <Button 
                         className="w-full"
-                        onClick={() => navigate(`/evaluation/${id}?evaluationId=${evaluation.id}`)}
+                        onClick={() => setShowEvaluation(true)}
                       >
-                        Ir a la Evaluación
+                        Iniciar Evaluación
                       </Button>
                     </>
                   )}
@@ -511,7 +536,7 @@ const TrainingDetail = () => {
           </div>
         </div>
       </div>
-      <FloatingDocumentsButton isAdmin={isAdminOrLeader} />
+      {!showEvaluation && <FloatingDocumentsButton isAdmin={isAdminOrLeader} />}
     </div>
   );
 };
