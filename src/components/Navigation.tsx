@@ -1,7 +1,7 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Home, BookOpen, User, LogOut, Settings, Menu, X } from "lucide-react";
+import { Home, BookOpen, User, LogOut, Settings, Menu, BarChart3, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { logAccess } from "@/hooks/useAccessLog";
@@ -158,7 +158,7 @@ const Navigation = ({ userRole }: NavigationProps) => {
                   </div>
 
                   {/* Navigation Links */}
-                  <div className="flex-1 py-4">
+                  <div className="flex-1 py-4 overflow-y-auto">
                     <div className="space-y-1 px-2">
                       <Button
                         variant={isActive("/dashboard") ? "secondary" : "ghost"}
@@ -177,14 +177,69 @@ const Navigation = ({ userRole }: NavigationProps) => {
                         Capacitaciones
                       </Button>
                       {(userRole === "admin" || userRole === "leader") && (
-                        <Button
-                          variant={isActive("/admin") ? "secondary" : "ghost"}
-                          className="w-full justify-start"
-                          onClick={() => handleNavigate("/dashboard/trainings")}
-                        >
-                          <Settings className="w-5 h-5 mr-3" />
-                          Administración
-                        </Button>
+                        <>
+                          {/* Analítica y Cumplimiento Section */}
+                          <div className="pt-3 pb-1">
+                            <p className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                              Analítica
+                            </p>
+                          </div>
+                          <Button
+                            variant={isActive("/dashboard/reports") ? "secondary" : "ghost"}
+                            className="w-full justify-start text-sm"
+                            onClick={() => handleNavigate("/dashboard/reports")}
+                          >
+                            <BarChart3 className="w-5 h-5 mr-3" />
+                            Capacitaciones y Progreso
+                          </Button>
+                          <Button
+                            variant={isActive("/dashboard/adherence") ? "secondary" : "ghost"}
+                            className="w-full justify-start text-sm"
+                            onClick={() => handleNavigate("/dashboard/adherence")}
+                          >
+                            <BarChart3 className="w-5 h-5 mr-3" />
+                            Adherencia Evaluaciones
+                          </Button>
+                          <Button
+                            variant={isActive("/dashboard/attendance") ? "secondary" : "ghost"}
+                            className="w-full justify-start text-sm"
+                            onClick={() => handleNavigate("/dashboard/attendance")}
+                          >
+                            <BarChart3 className="w-5 h-5 mr-3" />
+                            Asistencia y Registros
+                          </Button>
+                          
+                          {/* Administración Section */}
+                          <div className="pt-3 pb-1">
+                            <p className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                              Administración
+                            </p>
+                          </div>
+                          <Button
+                            variant={isActive("/dashboard/trainings") ? "secondary" : "ghost"}
+                            className="w-full justify-start"
+                            onClick={() => handleNavigate("/dashboard/trainings")}
+                          >
+                            <Settings className="w-5 h-5 mr-3" />
+                            Gestionar Capacitaciones
+                          </Button>
+                          <Button
+                            variant={isActive("/dashboard/certificates") ? "secondary" : "ghost"}
+                            className="w-full justify-start"
+                            onClick={() => handleNavigate("/dashboard/certificates")}
+                          >
+                            <Settings className="w-5 h-5 mr-3" />
+                            Gestión de Certificados
+                          </Button>
+                          <Button
+                            variant={isActive("/dashboard/users") ? "secondary" : "ghost"}
+                            className="w-full justify-start"
+                            onClick={() => handleNavigate("/dashboard/users")}
+                          >
+                            <Settings className="w-5 h-5 mr-3" />
+                            Gestión de Usuarios
+                          </Button>
+                        </>
                       )}
                       <Button
                         variant={isActive("/profile") ? "secondary" : "ghost"}

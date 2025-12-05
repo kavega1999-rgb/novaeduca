@@ -132,35 +132,35 @@ export const CertificatesList = () => {
 
   return (
     <Card style={{ boxShadow: "var(--shadow-card)" }}>
-      <CardHeader>
-        <CardTitle>Mis Certificados</CardTitle>
-        <CardDescription>
+      <CardHeader className="p-4 md:p-6">
+        <CardTitle className="text-lg md:text-xl">Mis Certificados</CardTitle>
+        <CardDescription className="text-sm">
           Descarga tus certificados y constancias de capacitación ({certificates.length})
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-4 md:p-6 pt-0">
         <div className="space-y-3">
           {certificates.map((certificate) => (
             <div
               key={certificate.id}
-              className="flex items-center justify-between p-4 rounded-lg border border-border bg-card hover:bg-accent/5 transition-colors"
+              className="flex flex-col md:flex-row md:items-center justify-between p-3 md:p-4 rounded-lg border border-border bg-card hover:bg-accent/5 transition-colors gap-3"
             >
-              <div className="flex items-start gap-3 flex-1">
+              <div className="flex items-start gap-3 flex-1 min-w-0">
                 <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
                   {getCertificateIcon(certificate.certificate_type)}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h4 className="font-semibold text-foreground truncate">
+                  <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-2 mb-1">
+                    <h4 className="font-semibold text-foreground text-sm md:text-base line-clamp-2 md:truncate">
                       {certificate.trainings?.title || "Capacitación"}
                     </h4>
-                    <Badge variant="secondary" className="flex-shrink-0">
+                    <Badge variant="secondary" className="flex-shrink-0 w-fit text-xs">
                       {getCertificateLabel(certificate.certificate_type)}
                     </Badge>
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Calendar className="w-3 h-3" />
-                    <span>
+                  <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground">
+                    <Calendar className="w-3 h-3 flex-shrink-0" />
+                    <span className="truncate">
                       Emitido el {format(new Date(certificate.issued_at), "d 'de' MMMM, yyyy", { locale: es })}
                     </span>
                   </div>
@@ -170,7 +170,7 @@ export const CertificatesList = () => {
                 variant="outline"
                 size="sm"
                 onClick={() => handleDownload(certificate)}
-                className="flex-shrink-0 ml-4"
+                className="flex-shrink-0 w-full md:w-auto"
               >
                 <Download className="w-4 h-4 mr-2" />
                 Descargar
