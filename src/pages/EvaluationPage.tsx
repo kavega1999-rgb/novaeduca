@@ -29,10 +29,20 @@ const EvaluationPage = () => {
   const [hasViewedContent, setHasViewedContent] = useState(false);
 
   useEffect(() => {
+    // Wait until we have both trainingId and evaluationId before loading
+    if (!trainingId || !evaluationId) {
+      return;
+    }
     loadData();
   }, [trainingId, evaluationId]);
 
   const loadData = async () => {
+    if (!evaluationId) {
+      toast.error("ID de evaluación no proporcionado");
+      navigate("/trainings");
+      return;
+    }
+    
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       navigate("/auth");
@@ -74,18 +84,20 @@ const EvaluationPage = () => {
     setHasViewedContent(true);
 
     // Load evaluation details
-    const { data: evalData } = await supabase
+    const { data: evalData, error: evalError } = await supabase
       .from("evaluations")
       .select("*")
       .eq("id", evaluationId)
-      .single();
+      .maybeSingle();
 
+    console.log('Evaluation loaded:', evalData, 'Error:', evalError);
+    
     if (evalData) {
       setEvaluation(evalData);
     }
 
     // Load questions with options
-    const { data: questionsData } = await supabase
+    const { data: questionsData, error: questionsError } = await supabase
       .from("evaluation_questions")
       .select(`
         *,
@@ -94,7 +106,9 @@ const EvaluationPage = () => {
       .eq("evaluation_id", evaluationId)
       .order("order_index");
 
-    if (questionsData) {
+    console.log('Questions loaded:', questionsData, 'Error:', questionsError);
+
+    if (questionsData && questionsData.length > 0) {
       const sortedQuestions = questionsData.map(q => ({
         ...q,
         evaluation_question_options: q.evaluation_question_options.sort(
