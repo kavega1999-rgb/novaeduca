@@ -8,4 +8,6 @@ verify_jwt = false
 
 [functions.log-access]
 verify_jwt = false
+
+[functions.extract-evaluation-from-pdf]
 verify_jwt = false

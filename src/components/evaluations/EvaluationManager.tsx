@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Trash2, Save, Sparkles, Loader2 } from "lucide-react";
+import { Plus, Trash2, Save, Sparkles, Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -39,6 +39,8 @@ const EvaluationManager = ({ trainingId, trainingTitle, contentUrl }: Evaluation
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [generatingAI, setGeneratingAI] = useState(false);
+  const [extractingPDF, setExtractingPDF] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadEvaluation();
@@ -145,6 +147,73 @@ const EvaluationManager = ({ trainingId, trainingTitle, contentUrl }: Evaluation
       toast.error("Error al generar preguntas con IA");
     } finally {
       setGeneratingAI(false);
+    }
+  };
+
+  const extractQuestionsFromPDF = async (file: File) => {
+    if (!file || file.type !== 'application/pdf') {
+      toast.error("Por favor selecciona un archivo PDF válido");
+      return;
+    }
+
+    setExtractingPDF(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/extract-evaluation-from-pdf`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: formData,
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al extraer preguntas');
+      }
+
+      if (data.questions && Array.isArray(data.questions)) {
+        const newQuestions = data.questions.map((q: any, index: number) => ({
+          id: `temp-pdf-${Date.now()}-${index}`,
+          question_text: q.question_text,
+          points: 1,
+          order_index: questions.length + index,
+          evaluation_question_options: q.options.map((opt: any, optIndex: number) => ({
+            id: `temp-opt-pdf-${Date.now()}-${index}-${optIndex}`,
+            option_text: opt.option_text,
+            is_correct: opt.is_correct,
+            order_index: optIndex,
+          })),
+        }));
+
+        setQuestions([...questions, ...newQuestions]);
+        toast.success(`Se extrajeron ${newQuestions.length} preguntas del PDF`);
+        
+        if (data.metadata?.title && !evaluation.title) {
+          setEvaluation({ ...evaluation, title: data.metadata.title });
+        }
+      }
+    } catch (error) {
+      console.error("Error extracting questions from PDF:", error);
+      toast.error(error instanceof Error ? error.message : "Error al extraer preguntas del PDF");
+    } finally {
+      setExtractingPDF(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      extractQuestionsFromPDF(file);
     }
   };
 
@@ -390,7 +459,28 @@ const EvaluationManager = ({ trainingId, trainingTitle, contentUrl }: Evaluation
 
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h3 className="text-lg font-semibold">Preguntas</h3>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf"
+            onChange={handleFileChange}
+            className="hidden"
+          />
+          <Button 
+            onClick={() => fileInputRef.current?.click()} 
+            size="sm" 
+            variant="outline"
+            disabled={extractingPDF}
+            title="Subir un PDF de examen y extraer las preguntas automáticamente"
+          >
+            {extractingPDF ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Upload className="w-4 h-4 mr-2" />
+            )}
+            {extractingPDF ? "Extrayendo..." : "Importar desde PDF"}
+          </Button>
           <Button 
             onClick={generateQuestionsWithAI} 
             size="sm" 
