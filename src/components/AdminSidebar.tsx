@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { LayoutDashboard, BarChart3, BookOpen, Shield, UserCog, ChevronDown, TrendingUp, ClipboardCheck, FileSpreadsheet, Award } from "lucide-react";
+import { LayoutDashboard, BarChart3, BookOpen, Shield, UserCog, ChevronDown, TrendingUp, ClipboardCheck, FileSpreadsheet, Award, Home } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
-import { useLocation } from "react-router-dom";
+import { useLocation, Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import novasaludLogo from "@/assets/novasalud-logo-color.png";
 
 import {
   Sidebar,
@@ -13,6 +14,8 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarHeader,
+  SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
 import {
@@ -20,6 +23,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { Separator } from "@/components/ui/separator";
 
 const mainItems = [
   { title: "Panel Principal", url: "/dashboard", icon: LayoutDashboard },
@@ -52,81 +56,46 @@ export function AdminSidebar() {
   const [analyticsOpen, setAnalyticsOpen] = useState(isAnalyticsActive);
 
   return (
-    <Sidebar collapsible="icon">
-      <SidebarContent>
+    <Sidebar collapsible="icon" className="border-r border-border/50">
+      {/* Header with Logo */}
+      <SidebarHeader className="border-b border-border/30 px-3 py-4">
+        <Link to="/dashboard" className="flex items-center gap-3 group">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center shrink-0 group-hover:from-primary/20 group-hover:to-primary/10 transition-all shadow-sm">
+            <img 
+              src={novasaludLogo} 
+              alt="Novasalud" 
+              className="w-7 h-7 object-contain"
+            />
+          </div>
+          {open && (
+            <div className="flex flex-col">
+              <span className="font-bold text-foreground tracking-tight">Novasalud</span>
+              <span className="text-xs text-muted-foreground">Panel Administrativo</span>
+            </div>
+          )}
+        </Link>
+      </SidebarHeader>
+
+      <SidebarContent className="px-2 py-3">
+        {/* Main Navigation */}
         <SidebarGroup>
-          <SidebarGroupLabel>Administración</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider px-3 mb-2">
+            Navegación
+          </SidebarGroupLabel>
 
           <SidebarGroupContent>
-            <SidebarMenu>
-              {/* Main Items */}
+            <SidebarMenu className="space-y-1">
               {mainItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild tooltip={item.title}>
                     <NavLink
                       to={item.url}
                       end
-                      className="flex items-center gap-3 px-3 py-2 rounded-lg transition-all"
-                      activeClassName="bg-sidebar-accent text-sidebar-primary font-semibold shadow-sm"
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all hover:bg-accent/50"
+                      activeClassName="bg-primary text-primary-foreground font-medium shadow-md hover:bg-primary/90"
                     >
                       <item.icon className="h-5 w-5 shrink-0" />
-                      <span>{item.title}</span>
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-
-              {/* Analytics & Compliance - Collapsible */}
-              <Collapsible open={analyticsOpen} onOpenChange={setAnalyticsOpen} className="group/collapsible">
-                <SidebarMenuItem>
-                  <CollapsibleTrigger asChild>
-                    <SidebarMenuButton 
-                      tooltip="Analítica y Cumplimiento"
-                      className={cn(
-                        "flex items-center gap-3 px-3 py-2 rounded-lg transition-all w-full cursor-pointer",
-                        isAnalyticsActive && "bg-sidebar-accent/50"
-                      )}
-                    >
-                      <BarChart3 className="h-5 w-5 shrink-0" />
-                      <span className="flex-1 text-left">Analítica y Cumplimiento</span>
-                      <ChevronDown className={cn(
-                        "h-4 w-4 shrink-0 transition-transform duration-200",
-                        analyticsOpen && "rotate-180"
-                      )} />
-                    </SidebarMenuButton>
-                  </CollapsibleTrigger>
-                </SidebarMenuItem>
-                <CollapsibleContent className="pl-4">
-                  {analyticsItems.map((item) => (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton asChild tooltip={item.title}>
-                        <NavLink
-                          to={item.url}
-                          end
-                          className="flex items-center gap-3 px-3 py-2 rounded-lg transition-all text-sm"
-                          activeClassName="bg-sidebar-accent text-sidebar-primary font-semibold shadow-sm"
-                        >
-                          <item.icon className="h-4 w-4 shrink-0" />
-                          <span>{item.title}</span>
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </CollapsibleContent>
-              </Collapsible>
-
-              {/* Management Items */}
-              {managementItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild tooltip={item.title}>
-                    <NavLink
-                      to={item.url}
-                      end
-                      className="flex items-center gap-3 px-3 py-2 rounded-lg transition-all"
-                      activeClassName="bg-sidebar-accent text-sidebar-primary font-semibold shadow-sm"
-                    >
-                      <item.icon className="h-5 w-5 shrink-0" />
-                      <span>{item.title}</span>
+                      <span className="truncate">{item.title}</span>
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -135,22 +104,97 @@ export function AdminSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Audit Section - Separate */}
+        <Separator className="my-3 bg-border/30" />
+
+        {/* Analytics & Compliance */}
         <SidebarGroup>
-          <SidebarGroupLabel>Auditoría</SidebarGroupLabel>
+          <Collapsible open={analyticsOpen} onOpenChange={setAnalyticsOpen} className="group/collapsible">
+            <SidebarMenuItem className="list-none">
+              <CollapsibleTrigger asChild>
+                <SidebarMenuButton 
+                  tooltip="Analítica y Cumplimiento"
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all w-full cursor-pointer hover:bg-accent/50",
+                    isAnalyticsActive && "bg-accent text-accent-foreground"
+                  )}
+                >
+                  <BarChart3 className="h-5 w-5 shrink-0 text-primary" />
+                  <span className="flex-1 text-left font-medium truncate">Analítica</span>
+                  <ChevronDown className={cn(
+                    "h-4 w-4 shrink-0 transition-transform duration-300 text-muted-foreground",
+                    analyticsOpen && "rotate-180"
+                  )} />
+                </SidebarMenuButton>
+              </CollapsibleTrigger>
+            </SidebarMenuItem>
+            <CollapsibleContent className="mt-1 space-y-1">
+              {analyticsItems.map((item) => (
+                <SidebarMenuItem key={item.title} className="list-none">
+                  <SidebarMenuButton asChild tooltip={item.title}>
+                    <NavLink
+                      to={item.url}
+                      end
+                      className="flex items-center gap-3 px-3 py-2 ml-2 rounded-lg transition-all text-sm hover:bg-accent/50 border-l-2 border-transparent"
+                      activeClassName="bg-primary/10 text-primary font-medium border-l-2 border-primary hover:bg-primary/15"
+                    >
+                      <item.icon className="h-4 w-4 shrink-0" />
+                      <span className="truncate">{item.title}</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </CollapsibleContent>
+          </Collapsible>
+        </SidebarGroup>
+
+        <Separator className="my-3 bg-border/30" />
+
+        {/* Management */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider px-3 mb-2">
+            Administración
+          </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="space-y-1">
+              {managementItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild tooltip={item.title}>
+                    <NavLink
+                      to={item.url}
+                      end
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all hover:bg-accent/50"
+                      activeClassName="bg-primary text-primary-foreground font-medium shadow-md hover:bg-primary/90"
+                    >
+                      <item.icon className="h-5 w-5 shrink-0" />
+                      <span className="truncate">{item.title}</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <Separator className="my-3 bg-border/30" />
+
+        {/* Audit Section */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider px-3 mb-2">
+            Auditoría
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu className="space-y-1">
               {auditItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild tooltip={item.title}>
                     <NavLink
                       to={item.url}
                       end
-                      className="flex items-center gap-3 px-3 py-2 rounded-lg transition-all"
-                      activeClassName="bg-sidebar-accent text-sidebar-primary font-semibold shadow-sm"
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all hover:bg-accent/50"
+                      activeClassName="bg-primary text-primary-foreground font-medium shadow-md hover:bg-primary/90"
                     >
                       <item.icon className="h-5 w-5 shrink-0" />
-                      <span>{item.title}</span>
+                      <span className="truncate">{item.title}</span>
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -159,6 +203,23 @@ export function AdminSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+
+      {/* Footer */}
+      <SidebarFooter className="border-t border-border/30 p-3">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild tooltip="Ir al inicio">
+              <Link
+                to="/"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all hover:bg-accent/50 text-muted-foreground hover:text-foreground"
+              >
+                <Home className="h-5 w-5 shrink-0" />
+                <span className="truncate">Ir al inicio</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
     </Sidebar>
   );
 }

@@ -29,9 +29,18 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    // Convert PDF to base64 for the AI model
+    // Convert PDF to base64 for the AI model - using chunked approach to avoid stack overflow
     const arrayBuffer = await pdfFile.arrayBuffer();
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+    const uint8Array = new Uint8Array(arrayBuffer);
+    
+    // Process in chunks to avoid stack overflow with large files
+    const chunkSize = 32768; // 32KB chunks
+    let base64 = '';
+    for (let i = 0; i < uint8Array.length; i += chunkSize) {
+      const chunk = uint8Array.slice(i, i + chunkSize);
+      base64 += String.fromCharCode(...chunk);
+    }
+    base64 = btoa(base64);
     const dataUrl = `data:application/pdf;base64,${base64}`;
 
     const systemPrompt = `Eres un experto en extraer información de documentos de evaluación/exámenes. Tu tarea es analizar un PDF que contiene un examen o formulario de evaluación y extraer todas las preguntas con sus opciones de respuesta.
