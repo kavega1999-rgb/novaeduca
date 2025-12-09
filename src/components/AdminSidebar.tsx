@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/collapsible";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const mainItems = [
   { title: "Panel Principal", url: "/dashboard", icon: LayoutDashboard },
@@ -55,19 +56,16 @@ export function AdminSidebar() {
   const isAnalyticsActive = analyticsItems.some(item => isActive(item.url));
   
   const [analyticsOpen, setAnalyticsOpen] = useState(isAnalyticsActive);
-  const [isHovering, setIsHovering] = useState(false);
   const [isPinned, setIsPinned] = useState(true);
 
   const handleMouseEnter = useCallback(() => {
     if (!isPinned && !isMobile) {
-      setIsHovering(true);
       setOpen(true);
     }
   }, [isPinned, isMobile, setOpen]);
 
   const handleMouseLeave = useCallback(() => {
     if (!isPinned && !isMobile) {
-      setIsHovering(false);
       setOpen(false);
     }
   }, [isPinned, isMobile, setOpen]);
@@ -86,48 +84,75 @@ export function AdminSidebar() {
     <div
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      className="h-full"
     >
-      <Sidebar collapsible="icon" className="border-r border-border/50">
+      <Sidebar 
+        collapsible="icon" 
+        className={cn(
+          "border-r border-border/40 bg-sidebar transition-all duration-300 ease-in-out",
+          "shadow-lg"
+        )}
+      >
         {/* Header with Logo and Toggle */}
-        <SidebarHeader className="border-b border-border/30 px-3 py-4">
-          <div className="flex items-center justify-between">
+        <SidebarHeader className="border-b border-border/20 px-4 py-5 bg-gradient-to-b from-sidebar to-sidebar/95">
+          <div className="flex items-center justify-between gap-3">
             <Link to="/dashboard" className="flex items-center gap-3 group flex-1 min-w-0">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center shrink-0 group-hover:from-primary/20 group-hover:to-primary/10 transition-all shadow-sm">
+              <div className={cn(
+                "rounded-xl bg-gradient-to-br from-primary/20 via-primary/10 to-transparent flex items-center justify-center shrink-0 transition-all duration-300",
+                "group-hover:from-primary/30 group-hover:via-primary/15 shadow-md",
+                open ? "w-11 h-11" : "w-9 h-9"
+              )}>
                 <img 
                   src={novasaludLogo} 
                   alt="Novasalud" 
-                  className="w-7 h-7 object-contain"
+                  className={cn(
+                    "object-contain transition-all duration-300",
+                    open ? "w-7 h-7" : "w-6 h-6"
+                  )}
                 />
               </div>
-              {open && (
-                <div className="flex flex-col min-w-0">
-                  <span className="font-bold text-foreground tracking-tight truncate">Novasalud</span>
-                  <span className="text-xs text-muted-foreground truncate">Panel Administrativo</span>
-                </div>
-              )}
+              <div className={cn(
+                "flex flex-col min-w-0 transition-all duration-300 overflow-hidden",
+                open ? "opacity-100 max-w-[150px]" : "opacity-0 max-w-0"
+              )}>
+                <span className="font-bold text-foreground tracking-tight truncate text-sm">Novasalud</span>
+                <span className="text-[10px] text-muted-foreground truncate">Panel Administrativo</span>
+              </div>
             </Link>
-            {open && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={togglePin}
-                className="h-8 w-8 shrink-0 hover:bg-accent"
-                title={isPinned ? "Desanclar panel" : "Anclar panel"}
-              >
-                {isPinned ? (
-                  <PanelLeftClose className="h-4 w-4 text-muted-foreground" />
-                ) : (
-                  <PanelLeft className="h-4 w-4 text-muted-foreground" />
-                )}
-              </Button>
-            )}
+            <div className={cn(
+              "transition-all duration-300 overflow-hidden",
+              open ? "opacity-100 max-w-[40px]" : "opacity-0 max-w-0"
+            )}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={togglePin}
+                    className="h-8 w-8 shrink-0 hover:bg-accent/80 transition-colors"
+                  >
+                    {isPinned ? (
+                      <PanelLeftClose className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <PanelLeft className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  {isPinned ? "Colapsar panel" : "Fijar panel abierto"}
+                </TooltipContent>
+              </Tooltip>
+            </div>
           </div>
         </SidebarHeader>
 
-        <SidebarContent className="px-2 py-3">
+        <SidebarContent className="px-3 py-4">
           {/* Main Navigation */}
-          <SidebarGroup>
-            <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider px-3 mb-2">
+          <SidebarGroup className="space-y-1">
+            <SidebarGroupLabel className={cn(
+              "text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest px-3 mb-3 transition-all duration-300",
+              !open && "opacity-0"
+            )}>
               Navegación
             </SidebarGroupLabel>
 
@@ -139,11 +164,18 @@ export function AdminSidebar() {
                       <NavLink
                         to={item.url}
                         end
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all hover:bg-accent/50"
-                        activeClassName="bg-primary text-primary-foreground font-medium shadow-md hover:bg-primary/90"
+                        className={cn(
+                          "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200",
+                          "hover:bg-accent/60 hover:shadow-sm",
+                          "group/item"
+                        )}
+                        activeClassName="bg-primary text-primary-foreground font-semibold shadow-lg hover:bg-primary/90 hover:shadow-lg"
                       >
-                        <item.icon className="h-5 w-5 shrink-0" />
-                        <span className="truncate">{item.title}</span>
+                        <item.icon className="h-5 w-5 shrink-0 transition-transform duration-200 group-hover/item:scale-110" />
+                        <span className={cn(
+                          "truncate transition-all duration-300",
+                          open ? "opacity-100" : "opacity-0"
+                        )}>{item.title}</span>
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -152,7 +184,7 @@ export function AdminSidebar() {
             </SidebarGroupContent>
           </SidebarGroup>
 
-          <Separator className="my-3 bg-border/30" />
+          <Separator className="my-4 bg-border/20" />
 
           {/* Analytics & Compliance */}
           <SidebarGroup>
@@ -162,31 +194,46 @@ export function AdminSidebar() {
                   <SidebarMenuButton 
                     tooltip="Analítica y Cumplimiento"
                     className={cn(
-                      "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all w-full cursor-pointer hover:bg-accent/50",
-                      isAnalyticsActive && "bg-accent text-accent-foreground"
+                      "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 w-full cursor-pointer",
+                      "hover:bg-accent/60 hover:shadow-sm",
+                      isAnalyticsActive && "bg-accent/80 text-accent-foreground shadow-sm"
                     )}
                   >
-                    <BarChart3 className="h-5 w-5 shrink-0 text-primary" />
-                    <span className="flex-1 text-left font-medium truncate">Analítica</span>
+                    <BarChart3 className="h-5 w-5 shrink-0 text-primary transition-transform duration-200 hover:scale-110" />
+                    <span className={cn(
+                      "flex-1 text-left font-medium truncate transition-all duration-300",
+                      open ? "opacity-100" : "opacity-0"
+                    )}>Analítica</span>
                     <ChevronDown className={cn(
-                      "h-4 w-4 shrink-0 transition-transform duration-300 text-muted-foreground",
-                      analyticsOpen && "rotate-180"
+                      "h-4 w-4 shrink-0 transition-all duration-300 text-muted-foreground",
+                      analyticsOpen && "rotate-180",
+                      !open && "opacity-0"
                     )} />
                   </SidebarMenuButton>
                 </CollapsibleTrigger>
               </SidebarMenuItem>
-              <CollapsibleContent className="mt-1 space-y-1">
+              <CollapsibleContent className={cn(
+                "mt-1.5 space-y-1 overflow-hidden transition-all duration-300",
+                open ? "ml-2 pl-2 border-l-2 border-primary/20" : ""
+              )}>
                 {analyticsItems.map((item) => (
                   <SidebarMenuItem key={item.title} className="list-none">
                     <SidebarMenuButton asChild tooltip={item.title}>
                       <NavLink
                         to={item.url}
                         end
-                        className="flex items-center gap-3 px-3 py-2 ml-2 rounded-lg transition-all text-sm hover:bg-accent/50 border-l-2 border-transparent"
-                        activeClassName="bg-primary/10 text-primary font-medium border-l-2 border-primary hover:bg-primary/15"
+                        className={cn(
+                          "flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 text-sm",
+                          "hover:bg-accent/50 hover:shadow-sm",
+                          "group/subitem"
+                        )}
+                        activeClassName="bg-primary/15 text-primary font-semibold hover:bg-primary/20"
                       >
-                        <item.icon className="h-4 w-4 shrink-0" />
-                        <span className="truncate">{item.title}</span>
+                        <item.icon className="h-4 w-4 shrink-0 transition-transform duration-200 group-hover/subitem:scale-110" />
+                        <span className={cn(
+                          "truncate transition-all duration-300",
+                          open ? "opacity-100" : "opacity-0"
+                        )}>{item.title}</span>
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -195,11 +242,14 @@ export function AdminSidebar() {
             </Collapsible>
           </SidebarGroup>
 
-          <Separator className="my-3 bg-border/30" />
+          <Separator className="my-4 bg-border/20" />
 
           {/* Management */}
-          <SidebarGroup>
-            <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider px-3 mb-2">
+          <SidebarGroup className="space-y-1">
+            <SidebarGroupLabel className={cn(
+              "text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest px-3 mb-3 transition-all duration-300",
+              !open && "opacity-0"
+            )}>
               Administración
             </SidebarGroupLabel>
             <SidebarGroupContent>
@@ -210,11 +260,18 @@ export function AdminSidebar() {
                       <NavLink
                         to={item.url}
                         end
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all hover:bg-accent/50"
-                        activeClassName="bg-primary text-primary-foreground font-medium shadow-md hover:bg-primary/90"
+                        className={cn(
+                          "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200",
+                          "hover:bg-accent/60 hover:shadow-sm",
+                          "group/item"
+                        )}
+                        activeClassName="bg-primary text-primary-foreground font-semibold shadow-lg hover:bg-primary/90"
                       >
-                        <item.icon className="h-5 w-5 shrink-0" />
-                        <span className="truncate">{item.title}</span>
+                        <item.icon className="h-5 w-5 shrink-0 transition-transform duration-200 group-hover/item:scale-110" />
+                        <span className={cn(
+                          "truncate transition-all duration-300",
+                          open ? "opacity-100" : "opacity-0"
+                        )}>{item.title}</span>
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -223,11 +280,14 @@ export function AdminSidebar() {
             </SidebarGroupContent>
           </SidebarGroup>
 
-          <Separator className="my-3 bg-border/30" />
+          <Separator className="my-4 bg-border/20" />
 
           {/* Audit Section */}
-          <SidebarGroup>
-            <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider px-3 mb-2">
+          <SidebarGroup className="space-y-1">
+            <SidebarGroupLabel className={cn(
+              "text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest px-3 mb-3 transition-all duration-300",
+              !open && "opacity-0"
+            )}>
               Auditoría
             </SidebarGroupLabel>
             <SidebarGroupContent>
@@ -238,11 +298,18 @@ export function AdminSidebar() {
                       <NavLink
                         to={item.url}
                         end
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all hover:bg-accent/50"
-                        activeClassName="bg-primary text-primary-foreground font-medium shadow-md hover:bg-primary/90"
+                        className={cn(
+                          "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200",
+                          "hover:bg-accent/60 hover:shadow-sm",
+                          "group/item"
+                        )}
+                        activeClassName="bg-primary text-primary-foreground font-semibold shadow-lg hover:bg-primary/90"
                       >
-                        <item.icon className="h-5 w-5 shrink-0" />
-                        <span className="truncate">{item.title}</span>
+                        <item.icon className="h-5 w-5 shrink-0 transition-transform duration-200 group-hover/item:scale-110" />
+                        <span className={cn(
+                          "truncate transition-all duration-300",
+                          open ? "opacity-100" : "opacity-0"
+                        )}>{item.title}</span>
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -253,16 +320,23 @@ export function AdminSidebar() {
         </SidebarContent>
 
         {/* Footer */}
-        <SidebarFooter className="border-t border-border/30 p-3">
+        <SidebarFooter className="border-t border-border/20 p-3 bg-gradient-to-t from-muted/30 to-transparent">
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton asChild tooltip="Ir al inicio">
                 <Link
                   to="/"
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all hover:bg-accent/50 text-muted-foreground hover:text-foreground"
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200",
+                    "hover:bg-accent/60 text-muted-foreground hover:text-foreground",
+                    "group/item"
+                  )}
                 >
-                  <Home className="h-5 w-5 shrink-0" />
-                  <span className="truncate">Ir al inicio</span>
+                  <Home className="h-5 w-5 shrink-0 transition-transform duration-200 group-hover/item:scale-110" />
+                  <span className={cn(
+                    "truncate transition-all duration-300",
+                    open ? "opacity-100" : "opacity-0"
+                  )}>Ir al inicio</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
