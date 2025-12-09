@@ -126,7 +126,7 @@ const Dashboard = () => {
     return (
       <div className="min-h-screen bg-background">
         <Navigation userRole={userRole} />
-        <SidebarProvider defaultOpen={false}>
+        <SidebarProvider defaultOpen={true}>
           <div className="flex min-h-[calc(100vh-56px)] md:min-h-[calc(100vh-64px)] w-full">
             <AdminSidebar />
             <main className="flex-1 overflow-auto">
@@ -152,7 +152,7 @@ const Dashboard = () => {
       
       {isAdminOrLeader && (
         <>
-        <SidebarProvider defaultOpen={false}>
+        <SidebarProvider defaultOpen={true}>
           <div className="flex min-h-[calc(100vh-56px)] md:min-h-[calc(100vh-64px)] w-full">
             <AdminSidebar />
             <main className="flex-1 overflow-auto">
