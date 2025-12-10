@@ -47,37 +47,66 @@ serve(async (req) => {
 
 INSTRUCCIONES:
 1. Identifica todas las preguntas del documento
-2. Para cada pregunta, identifica todas las opciones de respuesta disponibles
-3. Si el documento indica cuál es la respuesta correcta (puede estar marcada, resaltada, o indicada de alguna forma), marca esa opción como correcta
-4. Si NO hay indicación de la respuesta correcta, marca la primera opción como correcta por defecto (el usuario podrá editarla después)
+2. Clasifica cada pregunta según su tipo:
+   - "multiple_choice": Preguntas de selección múltiple con varias opciones donde solo una es correcta
+   - "true_false": Preguntas de verdadero/falso o sí/no (solo dos opciones posibles)
+   - "open_ended": Preguntas abiertas que requieren respuesta escrita (sin opciones predefinidas)
+3. Para preguntas de selección múltiple y verdadero/falso:
+   - Identifica todas las opciones de respuesta disponibles
+   - Si el documento indica cuál es la respuesta correcta (puede estar marcada, resaltada, o indicada de alguna forma), marca esa opción como correcta
+   - Si NO hay indicación de la respuesta correcta, marca la primera opción como correcta por defecto
+4. Para preguntas abiertas:
+   - NO generes opciones, deja el array de opciones vacío
+   - Indica que el tipo es "open_ended"
 5. Mantén el texto exacto de las preguntas y opciones como aparecen en el documento
 
 IMPORTANTE:
 - Extrae TODAS las preguntas del documento, no importa cuántas sean
-- Cada pregunta debe tener al menos 2 opciones de respuesta
-- Solo UNA opción por pregunta puede ser marcada como correcta
+- Para preguntas de selección múltiple: debe tener al menos 2 opciones
+- Para preguntas verdadero/falso: exactamente 2 opciones (Verdadero/Falso, Sí/No, Correcto/Incorrecto)
+- Para preguntas abiertas: el array de opciones debe estar vacío
+- Solo UNA opción por pregunta puede ser marcada como correcta (excepto en preguntas abiertas)
 - Usa el texto exacto del documento, no modifiques el contenido
 
 Responde ÚNICAMENTE con un JSON válido con la siguiente estructura (sin markdown, sin explicaciones):
 {
   "questions": [
     {
-      "question_text": "¿Texto de la pregunta exacto del documento?",
+      "question_text": "¿Texto de la pregunta de selección múltiple?",
+      "question_type": "multiple_choice",
       "options": [
         { "option_text": "Opción A del documento", "is_correct": false },
         { "option_text": "Opción B del documento", "is_correct": true },
         { "option_text": "Opción C del documento", "is_correct": false },
         { "option_text": "Opción D del documento", "is_correct": false }
       ]
+    },
+    {
+      "question_text": "¿Esta afirmación es correcta?",
+      "question_type": "true_false",
+      "options": [
+        { "option_text": "Verdadero", "is_correct": true },
+        { "option_text": "Falso", "is_correct": false }
+      ]
+    },
+    {
+      "question_text": "Explique con sus propias palabras el concepto de...",
+      "question_type": "open_ended",
+      "options": []
     }
   ],
   "metadata": {
-    "total_questions": 5,
-    "title": "Título del examen si está disponible"
+    "total_questions": 10,
+    "title": "Título del examen si está disponible",
+    "question_types_count": {
+      "multiple_choice": 5,
+      "true_false": 3,
+      "open_ended": 2
+    }
   }
 }`;
 
-    const userPrompt = `Analiza el siguiente documento PDF que contiene un examen o formulario de evaluación. Extrae todas las preguntas con sus opciones de respuesta exactamente como aparecen en el documento.`;
+    const userPrompt = `Analiza el siguiente documento PDF que contiene un examen o formulario de evaluación. Extrae todas las preguntas clasificándolas correctamente como selección múltiple, verdadero/falso o preguntas abiertas, exactamente como aparecen en el documento.`;
 
     console.log('Calling AI gateway to extract questions from PDF...');
 
@@ -158,7 +187,43 @@ Responde ÚNICAMENTE con un JSON válido con la siguiente estructura (sin markdo
       throw new Error("No se encontraron preguntas en el documento");
     }
 
+    // Validate and normalize question types
+    result.questions = result.questions.map((q: any) => {
+      // Normalize question type
+      let questionType = q.question_type || 'multiple_choice';
+      if (!['multiple_choice', 'true_false', 'open_ended'].includes(questionType)) {
+        questionType = 'multiple_choice';
+      }
+
+      // For open_ended questions, ensure options is empty array
+      if (questionType === 'open_ended') {
+        return {
+          ...q,
+          question_type: questionType,
+          options: []
+        };
+      }
+
+      // For true_false, ensure exactly 2 options
+      if (questionType === 'true_false' && (!q.options || q.options.length !== 2)) {
+        return {
+          ...q,
+          question_type: questionType,
+          options: [
+            { option_text: "Verdadero", is_correct: true },
+            { option_text: "Falso", is_correct: false }
+          ]
+        };
+      }
+
+      return {
+        ...q,
+        question_type: questionType
+      };
+    });
+
     console.log('Questions extracted successfully:', result.questions.length);
+    console.log('Question types:', result.metadata?.question_types_count || 'not specified');
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
