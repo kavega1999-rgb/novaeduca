@@ -5,6 +5,7 @@ import Navigation from "@/components/Navigation";
 import FloatingDocumentsButton from "@/components/documents/FloatingDocumentsButton";
 import EvaluationTaker from "@/components/evaluations/EvaluationTaker";
 import EvaluationManager from "@/components/evaluations/EvaluationManager";
+import PretestTaker from "@/components/evaluations/PretestTaker";
 import PagedContentViewer from "@/components/PagedContentViewer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Clock, Award, CheckCircle, PlayCircle, Download, AlertCircle } from "lucide-react";
+import { ArrowLeft, Clock, Award, CheckCircle, PlayCircle, Download, AlertCircle, ClipboardCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -28,6 +29,8 @@ const TrainingDetail = () => {
   const [isAdminOrLeader, setIsAdminOrLeader] = useState(false);
   const [certificates, setCertificates] = useState<any[]>([]);
   const [showEvaluation, setShowEvaluation] = useState(false);
+  const [showPretest, setShowPretest] = useState(false);
+  const [pretestCompleted, setPretestCompleted] = useState(false);
 
   const loadTraining = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -101,6 +104,7 @@ const TrainingDetail = () => {
 
       if (progressData) {
         setUserProgress(progressData);
+        setPretestCompleted(progressData.pretest_completed || false);
       } else {
         // Create initial progress record
         const { data: newProgress } = await supabase
@@ -117,6 +121,7 @@ const TrainingDetail = () => {
 
         if (newProgress) {
           setUserProgress(newProgress);
+          setPretestCompleted(false);
         }
       }
 
@@ -216,9 +221,33 @@ const TrainingDetail = () => {
   const progressPercentage = userProgress?.progress_percentage || 0;
   const isCompleted = userProgress?.status === "completed";
 
+  // Check if user needs to take pretest (only if training has evaluation and pretest not completed)
+  const needsPretest = training?.requires_evaluation && evaluation && !pretestCompleted && !isCompleted;
+
   return (
     <div className="min-h-screen bg-background relative">
       <Navigation userRole={userRole} />
+      
+      {/* Pretest Overlay */}
+      {showPretest && evaluation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <PretestTaker
+              evaluationId={evaluation.id}
+              trainingId={id!}
+              onComplete={(score) => {
+                setShowPretest(false);
+                setPretestCompleted(true);
+                loadTraining();
+              }}
+              onSkip={() => {
+                setShowPretest(false);
+                setPretestCompleted(true);
+              }}
+            />
+          </div>
+        </div>
+      )}
       
       {/* Evaluation Overlay */}
       {showEvaluation && evaluation && (
@@ -227,8 +256,39 @@ const TrainingDetail = () => {
             <EvaluationTaker
               evaluationId={evaluation.id}
               trainingId={id!}
-              onComplete={() => {
+              onComplete={async () => {
                 setShowEvaluation(false);
+                // Generate adherence report after postest
+                try {
+                  const { data: latestAttempt } = await supabase
+                    .from("evaluation_attempts")
+                    .select("id")
+                    .eq("evaluation_id", evaluation.id)
+                    .eq("user_id", userId)
+                    .eq("status", "completed")
+                    .order("completed_at", { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+                  
+                  if (latestAttempt) {
+                    await fetch(
+                      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-adherence-report`,
+                      {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+                        },
+                        body: JSON.stringify({
+                          postestAttemptId: latestAttempt.id,
+                          trainingId: id,
+                        }),
+                      }
+                    );
+                  }
+                } catch (err) {
+                  console.error("Error generating adherence report:", err);
+                }
                 loadTraining();
               }}
             />
@@ -280,7 +340,32 @@ const TrainingDetail = () => {
                   </TabsList>
                   
                   <TabsContent value="content" className="space-y-4">
-                    {training.content_url ? (
+                    {/* Show pretest prompt if needed */}
+                    {needsPretest && !showPretest && (
+                      <Card className="border-amber-500/50 bg-amber-50/50 dark:bg-amber-950/20 mb-4">
+                        <CardHeader>
+                          <div className="flex items-center gap-2 text-amber-600">
+                            <ClipboardCheck className="w-5 h-5" />
+                            <CardTitle className="text-lg">Evaluación Diagnóstica Requerida</CardTitle>
+                          </div>
+                          <CardDescription>
+                            Antes de acceder al contenido, realiza un pretest para medir tu conocimiento inicial.
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <Button 
+                            onClick={() => setShowPretest(true)}
+                            className="w-full"
+                          >
+                            <ClipboardCheck className="w-4 h-4 mr-2" />
+                            Iniciar Pretest
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Show content only if pretest completed or not required */}
+                    {(!needsPretest || pretestCompleted) && training.content_url ? (
                       <PagedContentViewer
                         contentUrl={training.content_url}
                         userProgressId={userProgress?.id}
@@ -289,7 +374,7 @@ const TrainingDetail = () => {
                         totalPages={training.total_pages || 10}
                         requiresEvaluation={training.requires_evaluation}
                       />
-                    ) : (
+                    ) : (!needsPretest || pretestCompleted) ? (
                       <div className="w-full aspect-video bg-muted rounded-lg flex items-center justify-center">
                         <div className="text-center">
                           <PlayCircle className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
@@ -298,16 +383,18 @@ const TrainingDetail = () => {
                           </p>
                         </div>
                       </div>
-                    )}
+                    ) : null}
 
-                    <div className="space-y-4 pt-4">
-                      <div>
-                        <h3 className="text-lg font-semibold mb-2">Sobre esta capacitación</h3>
-                        <p className="text-muted-foreground">
-                          {training.description || "Sin descripción disponible"}
-                        </p>
+                    {(!needsPretest || pretestCompleted) && (
+                      <div className="space-y-4 pt-4">
+                        <div>
+                          <h3 className="text-lg font-semibold mb-2">Sobre esta capacitación</h3>
+                          <p className="text-muted-foreground">
+                            {training.description || "Sin descripción disponible"}
+                          </p>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </TabsContent>
                   
                   <TabsContent value="details" className="space-y-4">
@@ -387,9 +474,26 @@ const TrainingDetail = () => {
                 <CardTitle className="text-lg">Tu Progreso</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Pretest Status */}
+                {training.requires_evaluation && evaluation && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Pretest</span>
+                    {pretestCompleted ? (
+                      <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300">
+                        <CheckCircle className="w-3 h-3 mr-1" />
+                        Completado
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-300">
+                        Pendiente
+                      </Badge>
+                    )}
+                  </div>
+                )}
+
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Completado</span>
+                    <span className="text-muted-foreground">Progreso</span>
                     <span className="font-medium">{progressPercentage}%</span>
                   </div>
                   <Progress value={progressPercentage} className="h-2" />
