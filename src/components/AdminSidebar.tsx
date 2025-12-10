@@ -3,7 +3,6 @@ import { LayoutDashboard, BarChart3, BookOpen, Shield, UserCog, ChevronRight, Tr
 import { NavLink } from "@/components/NavLink";
 import { useLocation, Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import novasaludLogoWhite from "@/assets/novasalud-logo-white.png";
 import {
   Collapsible,
   CollapsibleContent,
@@ -85,35 +84,25 @@ export function AdminSidebar() {
       onMouseLeave={handleMouseLeave}
       className={cn(
         "h-screen flex flex-col transition-all duration-300 ease-in-out",
-        "bg-[hsl(220,25%,20%)] text-white",
+        "bg-primary text-white",
         isOpen ? "w-64" : "w-16"
       )}
     >
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-4 border-b border-white/10">
         <Link to="/dashboard" className="flex items-center gap-3 overflow-hidden">
-          <div className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center shrink-0">
-            <img 
-              src={novasaludLogoWhite} 
-              alt="Novasalud" 
-              className="w-6 h-6 object-contain"
-            />
-          </div>
           <span className={cn(
-            "font-semibold text-lg whitespace-nowrap transition-all duration-300",
+            "font-bold text-lg whitespace-nowrap transition-all duration-300",
             isOpen ? "opacity-100" : "opacity-0 w-0"
           )}>
-            Novasalud
+            Panel Admin
           </span>
         </Link>
         <Button
           variant="ghost"
           size="icon"
           onClick={() => setIsOpen(!isOpen)}
-          className={cn(
-            "h-8 w-8 text-white/70 hover:text-white hover:bg-white/10 shrink-0 transition-opacity duration-300",
-            isOpen ? "opacity-100" : "opacity-0"
-          )}
+          className="h-8 w-8 text-white/70 hover:text-white hover:bg-white/10 shrink-0"
         >
           <Menu className="h-5 w-5" />
         </Button>
