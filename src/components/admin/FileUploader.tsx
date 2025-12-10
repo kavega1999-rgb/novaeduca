@@ -165,7 +165,7 @@ const FileUploader = ({ onUploadComplete, currentFileUrl }: FileUploaderProps) =
           {isUploading ? "Subiendo..." : "Seleccionar archivo"}
         </Button>
         <span className="text-sm text-muted-foreground">
-          Todos los archivos (Máx. 500MB)
+          PDF, Video MP4 y otros (Máx. 500MB)
         </span>
       </div>
 
