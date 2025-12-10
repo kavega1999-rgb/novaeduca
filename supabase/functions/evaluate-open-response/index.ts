@@ -172,12 +172,12 @@ Evalúa si la respuesta del usuario es correcta basándote en el contexto de la 
       };
     }
 
-    // Calculate points earned
+    // Calculate points earned (must be integer for database)
     const scorePercentage = Math.max(0, Math.min(100, evaluation.score_percentage || 0));
-    const pointsEarned = Math.round((scorePercentage / 100) * question.points * 100) / 100;
+    const pointsEarned = Math.round((scorePercentage / 100) * question.points);
     const isCorrect = scorePercentage >= 60; // Consider 60% or above as "correct"
 
-    console.log(`Evaluation result: ${scorePercentage}% - ${pointsEarned} points earned`);
+    console.log(`Evaluation result: ${scorePercentage}% - ${pointsEarned} points earned (of ${question.points})`);
 
     // Save the answer with evaluation
     const { error: answerError } = await supabase
