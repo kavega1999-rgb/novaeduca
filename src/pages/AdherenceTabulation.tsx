@@ -14,7 +14,6 @@ import { Download, Search, TrendingUp, TrendingDown, Minus, Users, BookOpen, Bar
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
-import { AdminSidebar } from "@/components/AdminSidebar";
 import AdherenceReportCard from "@/components/adherence/AdherenceReportCard";
 import { getScoreCategory, getCategoryColor } from "@/lib/adherence-utils";
 import {
@@ -230,37 +229,29 @@ const AdherenceTabulation = () => {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen w-full bg-background">
-        <AdminSidebar />
-        <main className="flex-1 p-6 overflow-auto">
-          <div className="max-w-7xl mx-auto space-y-4">
-            <Skeleton className="h-8 w-64" />
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-32" />)}
-            </div>
-            <Skeleton className="h-96" />
-          </div>
-        </main>
+      <div className="space-y-4">
+        <Skeleton className="h-8 w-64" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-32" />)}
+        </div>
+        <Skeleton className="h-96" />
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen w-full bg-background">
-      <AdminSidebar />
-      <main className="flex-1 p-6 overflow-auto min-w-0">
-        <div className="max-w-7xl mx-auto space-y-6">
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold">Tabulación de Adherencia</h1>
-              <p className="text-muted-foreground">Comparación Pretest vs Postest por usuario y capacitación</p>
-            </div>
-            <Button onClick={exportCSV} variant="outline">
-              <Download className="w-4 h-4 mr-2" />
-              Exportar CSV
-            </Button>
-          </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">Tabulación de Adherencia</h1>
+          <p className="text-muted-foreground">Comparación Pretest vs Postest por usuario y capacitación</p>
+        </div>
+        <Button onClick={exportCSV} variant="outline">
+          <Download className="w-4 h-4 mr-2" />
+          Exportar CSV
+        </Button>
+      </div>
 
           {/* KPI Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -584,8 +575,6 @@ const AdherenceTabulation = () => {
               </div>
             </TabsContent>
           </Tabs>
-        </div>
-      </main>
     </div>
   );
 };
