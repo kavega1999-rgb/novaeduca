@@ -145,6 +145,7 @@ export type Database = {
       }
       evaluation_answers: {
         Row: {
+          ai_feedback: string | null
           attempt_id: string
           created_at: string
           id: string
@@ -152,8 +153,10 @@ export type Database = {
           points_earned: number | null
           question_id: string
           selected_option_id: string | null
+          text_response: string | null
         }
         Insert: {
+          ai_feedback?: string | null
           attempt_id: string
           created_at?: string
           id?: string
@@ -161,8 +164,10 @@ export type Database = {
           points_earned?: number | null
           question_id: string
           selected_option_id?: string | null
+          text_response?: string | null
         }
         Update: {
+          ai_feedback?: string | null
           attempt_id?: string
           created_at?: string
           id?: string
@@ -170,6 +175,7 @@ export type Database = {
           points_earned?: number | null
           question_id?: string
           selected_option_id?: string | null
+          text_response?: string | null
         }
         Relationships: [
           {

@@ -6,7 +6,9 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle, XCircle, Clock, AlertTriangle } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { CheckCircle, XCircle, Clock, AlertTriangle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface EvaluationTakerProps {
@@ -15,14 +17,24 @@ interface EvaluationTakerProps {
   onComplete: () => void;
 }
 
+type QuestionType = 'multiple_choice' | 'true_false' | 'open_ended';
+
+const questionTypeLabels: Record<QuestionType, string> = {
+  multiple_choice: 'Selección Múltiple',
+  true_false: 'Verdadero/Falso',
+  open_ended: 'Respuesta Abierta',
+};
+
 const EvaluationTaker = ({ evaluationId, trainingId, onComplete }: EvaluationTakerProps) => {
   const [evaluation, setEvaluation] = useState<any>(null);
   const [questions, setQuestions] = useState<any[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [textAnswers, setTextAnswers] = useState<Record<string, string>>({});
   const [attemptId, setAttemptId] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [evaluatingAI, setEvaluatingAI] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [previousAttempts, setPreviousAttempts] = useState<any[]>([]);
 
@@ -111,32 +123,87 @@ const EvaluationTaker = ({ evaluationId, trainingId, onComplete }: EvaluationTak
     setAnswers(prev => ({ ...prev, [questionId]: optionId }));
   };
 
+  const handleTextAnswerChange = (questionId: string, text: string) => {
+    setTextAnswers(prev => ({ ...prev, [questionId]: text }));
+  };
+
   const submitAnswer = async () => {
     const currentQuestion = questions[currentQuestionIndex];
-    const selectedOptionId = answers[currentQuestion.id];
+    const questionType = currentQuestion.question_type || 'multiple_choice';
 
-    if (!selectedOptionId) {
-      toast.error("Por favor selecciona una respuesta");
-      return;
-    }
+    if (questionType === 'open_ended') {
+      const textResponse = textAnswers[currentQuestion.id];
+      if (!textResponse || textResponse.trim().length < 10) {
+        toast.error("Por favor escribe una respuesta de al menos 10 caracteres");
+        return;
+      }
 
-    const selectedOption = currentQuestion.evaluation_question_options.find(
-      (opt: any) => opt.id === selectedOptionId
-    );
+      setEvaluatingAI(true);
+      try {
+        // Call AI to evaluate open response
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/evaluate-open-response`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            },
+            body: JSON.stringify({
+              attemptId,
+              questionId: currentQuestion.id,
+              textResponse: textResponse.trim(),
+              trainingId,
+            }),
+          }
+        );
 
-    const { error } = await supabase
-      .from("evaluation_answers")
-      .insert({
-        attempt_id: attemptId,
-        question_id: currentQuestion.id,
-        selected_option_id: selectedOptionId,
-        is_correct: selectedOption.is_correct,
-        points_earned: selectedOption.is_correct ? currentQuestion.points : 0,
-      });
+        const data = await response.json();
 
-    if (error) {
-      toast.error("Error al guardar la respuesta");
-      return;
+        if (!response.ok) {
+          throw new Error(data.error || 'Error al evaluar la respuesta');
+        }
+
+        // Show feedback to user
+        if (data.feedback) {
+          toast.info(`IA: ${data.feedback}`, { duration: 5000 });
+        }
+
+      } catch (error) {
+        console.error("Error evaluating open response:", error);
+        toast.error(error instanceof Error ? error.message : "Error al evaluar la respuesta");
+        setEvaluatingAI(false);
+        return;
+      }
+      setEvaluatingAI(false);
+
+    } else {
+      // Multiple choice or true/false
+      const selectedOptionId = answers[currentQuestion.id];
+
+      if (!selectedOptionId) {
+        toast.error("Por favor selecciona una respuesta");
+        return;
+      }
+
+      const selectedOption = currentQuestion.evaluation_question_options.find(
+        (opt: any) => opt.id === selectedOptionId
+      );
+
+      const { error } = await supabase
+        .from("evaluation_answers")
+        .insert({
+          attempt_id: attemptId,
+          question_id: currentQuestion.id,
+          selected_option_id: selectedOptionId,
+          is_correct: selectedOption.is_correct,
+          points_earned: selectedOption.is_correct ? currentQuestion.points : 0,
+        });
+
+      if (error) {
+        toast.error("Error al guardar la respuesta");
+        return;
+      }
     }
 
     if (currentQuestionIndex < questions.length - 1) {
@@ -160,7 +227,7 @@ const EvaluationTaker = ({ evaluationId, trainingId, onComplete }: EvaluationTak
       return;
     }
 
-    const totalEarned = answersData.reduce((sum, a) => sum + a.points_earned, 0);
+    const totalEarned = answersData.reduce((sum, a) => sum + (a.points_earned || 0), 0);
     const totalPoints = questions.reduce((sum, q) => sum + q.points, 0);
     const scorePercentage = (totalEarned / totalPoints) * 100;
     const passed = scorePercentage >= evaluation.passing_score;
@@ -331,6 +398,8 @@ const EvaluationTaker = ({ evaluationId, trainingId, onComplete }: EvaluationTak
 
   // Show start screen
   if (!attemptId) {
+    const hasOpenEndedQuestions = questions.some(q => q.question_type === 'open_ended');
+    
     return (
       <Card>
         <CardHeader>
@@ -364,6 +433,14 @@ const EvaluationTaker = ({ evaluationId, trainingId, onComplete }: EvaluationTak
             </div>
           </div>
 
+          {hasOpenEndedQuestions && (
+            <Alert>
+              <AlertDescription>
+                Esta evaluación incluye preguntas de respuesta abierta que serán evaluadas automáticamente por IA basándose en el material de capacitación.
+              </AlertDescription>
+            </Alert>
+          )}
+
           {completedAttempts.length > 0 && (
             <Alert>
               <AlertDescription>
@@ -382,14 +459,24 @@ const EvaluationTaker = ({ evaluationId, trainingId, onComplete }: EvaluationTak
 
   // Show question screen
   const currentQuestion = questions[currentQuestionIndex];
+  const questionType = (currentQuestion.question_type || 'multiple_choice') as QuestionType;
   const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
+
+  const isAnswered = questionType === 'open_ended' 
+    ? (textAnswers[currentQuestion.id]?.trim().length || 0) >= 10
+    : !!answers[currentQuestion.id];
 
   return (
     <Card>
       <CardHeader>
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <span>Pregunta {currentQuestionIndex + 1} de {questions.length}</span>
+            <div className="flex items-center gap-2">
+              <span>Pregunta {currentQuestionIndex + 1} de {questions.length}</span>
+              <Badge variant="outline" className="text-xs">
+                {questionTypeLabels[questionType]}
+              </Badge>
+            </div>
             <span>{currentQuestion.points} {currentQuestion.points === 1 ? 'punto' : 'puntos'}</span>
           </div>
           <Progress value={progress} className="h-2" />
@@ -397,39 +484,66 @@ const EvaluationTaker = ({ evaluationId, trainingId, onComplete }: EvaluationTak
         <CardTitle className="text-lg">{currentQuestion.question_text}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <RadioGroup
-          value={answers[currentQuestion.id] || ""}
-          onValueChange={(value) => handleAnswerChange(currentQuestion.id, value)}
-        >
-          {currentQuestion.evaluation_question_options.map((option: any) => (
-            <div key={option.id} className="flex items-center space-x-2">
-              <RadioGroupItem value={option.id} id={option.id} />
-              <Label htmlFor={option.id} className="flex-1 cursor-pointer">
-                {option.option_text}
-              </Label>
-            </div>
-          ))}
-        </RadioGroup>
+        {questionType === 'open_ended' ? (
+          <div className="space-y-2">
+            <Textarea
+              placeholder="Escribe tu respuesta aquí..."
+              value={textAnswers[currentQuestion.id] || ""}
+              onChange={(e) => handleTextAnswerChange(currentQuestion.id, e.target.value)}
+              className="min-h-[150px]"
+              maxLength={2000}
+            />
+            <p className="text-xs text-muted-foreground">
+              {(textAnswers[currentQuestion.id]?.length || 0)} / 2000 caracteres
+              {(textAnswers[currentQuestion.id]?.length || 0) < 10 && " (mínimo 10 caracteres)"}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Tu respuesta será evaluada automáticamente comparándola con el material de capacitación.
+            </p>
+          </div>
+        ) : (
+          <RadioGroup
+            value={answers[currentQuestion.id] || ""}
+            onValueChange={(value) => handleAnswerChange(currentQuestion.id, value)}
+          >
+            {currentQuestion.evaluation_question_options.map((option: any) => (
+              <div key={option.id} className="flex items-center space-x-2">
+                <RadioGroupItem value={option.id} id={option.id} />
+                <Label htmlFor={option.id} className="flex-1 cursor-pointer">
+                  {option.option_text}
+                </Label>
+              </div>
+            ))}
+          </RadioGroup>
+        )}
 
         <div className="flex gap-2">
           {currentQuestionIndex > 0 && (
             <Button
               variant="outline"
               onClick={() => setCurrentQuestionIndex(prev => prev - 1)}
+              disabled={submitting || evaluatingAI}
             >
               Anterior
             </Button>
           )}
           <Button
             onClick={submitAnswer}
-            disabled={!answers[currentQuestion.id] || submitting}
+            disabled={!isAnswered || submitting || evaluatingAI}
             className="flex-1"
           >
-            {submitting
-              ? "Finalizando..."
-              : currentQuestionIndex < questions.length - 1
-              ? "Siguiente"
-              : "Finalizar"}
+            {evaluatingAI ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Evaluando con IA...
+              </>
+            ) : submitting ? (
+              "Finalizando..."
+            ) : currentQuestionIndex < questions.length - 1 ? (
+              "Siguiente"
+            ) : (
+              "Finalizar"
+            )}
           </Button>
         </div>
       </CardContent>
