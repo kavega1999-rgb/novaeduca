@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.extract-evaluation-from-pdf]
 verify_jwt = true
+
+[functions.generate-adherence-report]
+verify_jwt = false
