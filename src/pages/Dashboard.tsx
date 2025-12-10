@@ -4,7 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import Navigation from "@/components/Navigation";
 import FloatingFAQChat from "@/components/FloatingFAQChat";
 import { AdminSidebar } from "@/components/AdminSidebar";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -126,21 +125,15 @@ const Dashboard = () => {
     return (
       <div className="min-h-screen bg-background">
         <Navigation userRole={userRole} />
-        <SidebarProvider defaultOpen={true}>
-          <div className="flex min-h-[calc(100vh-56px)] md:min-h-[calc(100vh-64px)] w-full">
-            <AdminSidebar />
-            <main className="flex-1 overflow-auto">
-              <div className="container mx-auto px-4 md:px-6 py-4 md:py-8">
-                <div className="mb-4 md:mb-6 flex items-center gap-2">
-                  <SidebarTrigger className="h-8 w-8" />
-                  <div className="h-6 w-px bg-border hidden md:block" />
-                  <h1 className="text-lg md:text-2xl font-bold">Panel de Administración</h1>
-                </div>
-                <Outlet />
-              </div>
-            </main>
-          </div>
-        </SidebarProvider>
+        <div className="flex min-h-[calc(100vh-56px)] md:min-h-[calc(100vh-64px)]">
+          <AdminSidebar />
+          <main className="flex-1 overflow-auto">
+            <div className="container mx-auto px-4 md:px-6 py-4 md:py-8">
+              <h1 className="text-lg md:text-2xl font-bold mb-4 md:mb-6">Panel de Administración</h1>
+              <Outlet />
+            </div>
+          </main>
+        </div>
       </div>
     );
   }
@@ -152,17 +145,12 @@ const Dashboard = () => {
       
       {isAdminOrLeader && (
         <>
-        <SidebarProvider defaultOpen={true}>
-          <div className="flex min-h-[calc(100vh-56px)] md:min-h-[calc(100vh-64px)] w-full">
-            <AdminSidebar />
-            <main className="flex-1 overflow-auto">
-              <div className="container mx-auto px-4 md:px-6 py-4 md:py-8">
-                <div className="mb-4 md:mb-6 flex items-center gap-2">
-                  <SidebarTrigger className="h-8 w-8" />
-                  <div className="h-6 w-px bg-border hidden md:block" />
-                  <h1 className="text-lg md:text-2xl font-bold">Panel Principal</h1>
-                </div>
-                
+        <div className="flex min-h-[calc(100vh-56px)] md:min-h-[calc(100vh-64px)]">
+          <AdminSidebar />
+          <main className="flex-1 overflow-auto">
+            <div className="container mx-auto px-4 md:px-6 py-4 md:py-8">
+              <h1 className="text-lg md:text-2xl font-bold mb-4 md:mb-6">Panel Principal</h1>
+              
                 {/* Hero Section */}
                 <div className="mb-6 md:mb-8 rounded-xl md:rounded-2xl overflow-hidden relative h-[200px] md:h-[400px] shadow-lg">
                   <img 
@@ -281,10 +269,9 @@ const Dashboard = () => {
                   })}
                 </div>
 
-              </div>
-            </main>
-          </div>
-        </SidebarProvider>
+            </div>
+          </main>
+        </div>
         <FloatingDocumentsButton isAdmin={true} />
         </>
       )}
