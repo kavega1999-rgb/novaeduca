@@ -221,8 +221,8 @@ const TrainingDetail = () => {
   const progressPercentage = userProgress?.progress_percentage || 0;
   const isCompleted = userProgress?.status === "completed";
 
-  // Check if user needs to take pretest (only if training has evaluation and pretest not completed)
-  const needsPretest = training?.requires_evaluation && evaluation && !pretestCompleted && !isCompleted;
+  // Check if user needs to take pretest (only if evaluation has requires_pretest enabled and pretest not completed)
+  const needsPretest = evaluation?.requires_pretest && !pretestCompleted && !isCompleted;
 
   return (
     <div className="min-h-screen bg-background relative">
