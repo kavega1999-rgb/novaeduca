@@ -1,16 +1,16 @@
 project_id = "wfamleexyhahbdbtirus"
 
 [functions.evaluate-open-response]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-certificate]
 verify_jwt = true
 
 [functions.generate-evaluation-questions]
-verify_jwt = false
+verify_jwt = true
 
 [functions.log-access]
 verify_jwt = false
 
 [functions.extract-evaluation-from-pdf]
-verify_jwt = false
+verify_jwt = true

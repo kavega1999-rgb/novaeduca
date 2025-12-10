@@ -12,6 +12,36 @@ serve(async (req) => {
   }
 
   try {
+    // Verify JWT - require authenticated user
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "No autorizado" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    
+    // Use anon key with user's auth header for user verification
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    // Get authenticated user
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: "No autorizado" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Use service role for database operations
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
     const { attemptId, questionId, textResponse, trainingId } = await req.json();
 
     if (!attemptId || !questionId || !textResponse || !trainingId) {
@@ -21,14 +51,25 @@ serve(async (req) => {
       });
     }
 
+    // Verify user owns this attempt
+    const { data: attempt, error: attemptError } = await supabase
+      .from("evaluation_attempts")
+      .select("user_id")
+      .eq("id", attemptId)
+      .single();
+
+    if (attemptError || !attempt || attempt.user_id !== user.id) {
+      console.log("Attempt ownership validation failed:", user.id);
+      return new Response(JSON.stringify({ error: "Acceso denegado" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
-
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Get the training content URL
     const { data: training, error: trainingError } = await supabase
@@ -60,7 +101,7 @@ serve(async (req) => {
       });
     }
 
-    console.log(`Evaluating open response for question: ${question.question_text.substring(0, 50)}...`);
+    console.log(`Evaluating open response for user ${user.id}, question: ${question.question_text.substring(0, 50)}...`);
 
     // Prepare the prompt for AI evaluation
     const systemPrompt = `Eres un evaluador FLEXIBLE y COMPRENSIVO de capacitaciones. Tu tarea es evaluar si la respuesta de un usuario demuestra comprensión del tema, NO si es una copia exacta del material.
