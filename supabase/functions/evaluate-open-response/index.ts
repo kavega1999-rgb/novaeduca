@@ -63,30 +63,33 @@ serve(async (req) => {
     console.log(`Evaluating open response for question: ${question.question_text.substring(0, 50)}...`);
 
     // Prepare the prompt for AI evaluation
-    const systemPrompt = `Eres un evaluador experto de capacitaciones. Tu tarea es evaluar si la respuesta de un usuario a una pregunta abierta es correcta basándote en el material de capacitación proporcionado.
+    const systemPrompt = `Eres un evaluador FLEXIBLE y COMPRENSIVO de capacitaciones. Tu tarea es evaluar si la respuesta de un usuario demuestra comprensión del tema, NO si es una copia exacta del material.
 
-INSTRUCCIONES DE EVALUACIÓN:
-1. Compara la respuesta del usuario con el contenido del material de capacitación
-2. Evalúa si la respuesta demuestra comprensión del tema
-3. Sé flexible con la redacción - lo importante es que el concepto esté correcto
-4. Considera respuestas parcialmente correctas
+FILOSOFÍA DE EVALUACIÓN:
+- El objetivo es verificar que el usuario ENTENDIÓ el concepto, no que lo memorizó palabra por palabra
+- Acepta sinónimos, parafraseo y explicaciones con palabras propias
+- Valora el esfuerzo y la intención de la respuesta
+- Sé GENEROSO en la puntuación si el usuario demuestra comprensión general
 
-CRITERIOS DE PUNTUACIÓN:
-- Si la respuesta es completamente correcta y completa: 100% de los puntos
-- Si la respuesta es correcta pero incompleta: 70-90% de los puntos
-- Si la respuesta es parcialmente correcta: 40-60% de los puntos
-- Si la respuesta es incorrecta o irrelevante: 0-30% de los puntos
+CRITERIOS DE PUNTUACIÓN (SÉ FLEXIBLE):
+- 90-100%: La respuesta muestra clara comprensión del tema, aunque use palabras diferentes
+- 70-89%: La respuesta captura la idea principal, puede faltar algún detalle menor
+- 50-69%: La respuesta tiene la idea correcta pero le falta desarrollo o tiene imprecisiones menores
+- 30-49%: La respuesta toca el tema pero es muy superficial o tiene errores conceptuales
+- 0-29%: La respuesta es completamente incorrecta o no tiene relación con el tema
 
 IMPORTANTE:
-- Responde ÚNICAMENTE con un JSON válido
+- NO penalices por redacción diferente, ortografía menor o estilo de escritura
+- Si el usuario menciona los conceptos clave con sus propias palabras, es CORRECTO
+- Responde ÚNICAMENTE con un JSON válido sin bloques de código markdown
 - El campo "score_percentage" debe ser un número entre 0 y 100
-- El campo "feedback" debe ser una breve explicación en español (máximo 100 palabras)
+- El campo "feedback" debe ser breve y constructivo en español (máximo 80 palabras)
 
-Formato de respuesta:
+Formato de respuesta (JSON puro, sin \`\`\`):
 {
   "score_percentage": 85,
   "is_correct": true,
-  "feedback": "La respuesta demuestra una buena comprensión del concepto. Se mencionaron los puntos clave correctamente."
+  "feedback": "Buena respuesta. Demostraste comprensión del concepto principal."
 }`;
 
     const userPrompt = `MATERIAL DE CAPACITACIÓN: "${training.title}"
