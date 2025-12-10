@@ -660,6 +660,7 @@ export type Database = {
           id: string
           published_at: string | null
           requires_evaluation: boolean | null
+          requires_pretest: boolean | null
           status: string
           title: string
           total_pages: number | null
@@ -682,6 +683,7 @@ export type Database = {
           id?: string
           published_at?: string | null
           requires_evaluation?: boolean | null
+          requires_pretest?: boolean | null
           status?: string
           title: string
           total_pages?: number | null
@@ -704,6 +706,7 @@ export type Database = {
           id?: string
           published_at?: string | null
           requires_evaluation?: boolean | null
+          requires_pretest?: boolean | null
           status?: string
           title?: string
           total_pages?: number | null
