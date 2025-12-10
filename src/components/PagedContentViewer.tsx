@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { ChevronLeft, ChevronRight, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
+import VideoContentViewer from "./VideoContentViewer";
 
 interface PagedContentViewerProps {
   contentUrl: string;
@@ -14,6 +15,13 @@ interface PagedContentViewerProps {
   requiresEvaluation?: boolean;
 }
 
+// Helper to detect if URL is a video
+const isVideoUrl = (url: string): boolean => {
+  const videoExtensions = ['.mp4', '.webm', '.ogg', '.mov', '.avi', '.mkv'];
+  const lowercaseUrl = url.toLowerCase();
+  return videoExtensions.some(ext => lowercaseUrl.includes(ext));
+};
+
 const PagedContentViewer = ({
   contentUrl,
   userProgressId,
@@ -22,6 +30,22 @@ const PagedContentViewer = ({
   totalPages = 10,
   requiresEvaluation = false,
 }: PagedContentViewerProps) => {
+  // Check if content is video
+  const isVideo = isVideoUrl(contentUrl);
+
+  // If it's a video, render VideoContentViewer
+  if (isVideo) {
+    return (
+      <VideoContentViewer
+        contentUrl={contentUrl}
+        userProgressId={userProgressId}
+        onContentViewed={onContentViewed}
+        contentViewedCompletely={contentViewedCompletely}
+        requiresEvaluation={requiresEvaluation}
+      />
+    );
+  }
+
   const [currentPage, setCurrentPage] = useState(1);
   const [viewedPages, setViewedPages] = useState<Set<number>>(new Set([1]));
   const [allPagesViewed, setAllPagesViewed] = useState(contentViewedCompletely);
