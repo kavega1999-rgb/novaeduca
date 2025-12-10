@@ -83,7 +83,7 @@ export function AdminSidebar() {
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       className={cn(
-        "h-screen flex flex-col transition-all duration-300 ease-in-out",
+        "sticky top-0 h-screen flex flex-col transition-all duration-300 ease-in-out shrink-0",
         "bg-primary text-white",
         isOpen ? "w-64" : "w-16"
       )}
