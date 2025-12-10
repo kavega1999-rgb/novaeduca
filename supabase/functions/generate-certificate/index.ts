@@ -39,10 +39,17 @@ function drawCenteredText(
   page.drawText(text, { x, y, size: fontSize, font, color });
 }
 
+// Generate anonymous request ID for logging (avoids exposing user IDs in logs)
+function generateRequestId(): string {
+  return crypto.randomUUID().split('-')[0];
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const requestId = generateRequestId();
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -51,6 +58,7 @@ serve(async (req) => {
     // Extract and validate the JWT token
     const authHeader = req.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.warn(`[${requestId}] Auth failed: missing token`);
       return new Response(
         JSON.stringify({ error: 'Authentication required' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
@@ -66,7 +74,7 @@ serve(async (req) => {
     const { data: { user }, error: userError } = await supabaseAuth.auth.getUser(token);
     
     if (userError || !user) {
-      console.error('Auth error:', userError?.message);
+      console.warn(`[${requestId}] Auth failed: invalid token`);
       return new Response(
         JSON.stringify({ error: 'Invalid authentication token' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
@@ -74,14 +82,13 @@ serve(async (req) => {
     }
 
     const authenticatedUserId = user.id;
-    console.log('Authenticated user:', authenticatedUserId);
 
     // Parse and validate request body
     const body = await req.json();
     const parseResult = requestSchema.safeParse(body);
     
     if (!parseResult.success) {
-      console.error('Validation error:', parseResult.error.errors);
+      console.warn(`[${requestId}] Validation error`);
       return new Response(
         JSON.stringify({ error: 'Invalid request data' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
@@ -101,7 +108,7 @@ serve(async (req) => {
       .single();
 
     if (attemptError || !attempt) {
-      console.error('Attempt not found:', attemptId);
+      console.warn(`[${requestId}] Attempt not found`);
       return new Response(
         JSON.stringify({ error: 'Evaluation attempt not found' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
@@ -110,10 +117,7 @@ serve(async (req) => {
 
     // CRITICAL: Verify the attempt belongs to the authenticated user
     if (attempt.user_id !== authenticatedUserId) {
-      console.error('Authorization failed: attempt user_id mismatch', { 
-        attemptUserId: attempt.user_id, 
-        authenticatedUserId 
-      });
+      console.warn(`[${requestId}] Authorization failed: ownership mismatch`);
       return new Response(
         JSON.stringify({ error: 'You are not authorized to generate this certificate' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 }
@@ -122,7 +126,7 @@ serve(async (req) => {
 
     // CRITICAL: Verify the attempt was completed and passed
     if (attempt.status !== 'completed') {
-      console.error('Attempt not completed:', attempt.status);
+      console.warn(`[${requestId}] Attempt not completed`);
       return new Response(
         JSON.stringify({ error: 'Cannot generate certificate for incomplete evaluation' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
@@ -130,7 +134,7 @@ serve(async (req) => {
     }
 
     if (!attempt.passed) {
-      console.error('Attempt not passed:', { score: attempt.score, passed: attempt.passed });
+      console.warn(`[${requestId}] Attempt not passed`);
       return new Response(
         JSON.stringify({ error: 'Cannot generate certificate for failed evaluation' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
@@ -145,7 +149,7 @@ serve(async (req) => {
       .single();
 
     if (evalError || !evaluation || evaluation.training_id !== trainingId) {
-      console.error('Training/evaluation mismatch');
+      console.warn(`[${requestId}] Training/evaluation mismatch`);
       return new Response(
         JSON.stringify({ error: 'Invalid training/evaluation combination' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
@@ -161,7 +165,6 @@ serve(async (req) => {
       .single();
 
     if (existingCert) {
-      console.log('Certificate already exists:', existingCert.id);
       return new Response(
         JSON.stringify({ 
           success: true, 
@@ -206,7 +209,7 @@ serve(async (req) => {
     const isCertificate = certificateType === 'certificate';
     
     // Generate PDF with Novasalud design
-    console.log('Generating PDF certificate...');
+    
     const pdfDoc = await PDFDocument.create();
     const page = pdfDoc.addPage([792, 612]); // Letter size landscape
     
@@ -246,7 +249,7 @@ serve(async (req) => {
       try {
         const encodedFileName = encodeURIComponent(logoFileName);
         const logoUrl = `${supabaseUrl}/storage/v1/object/public/certificates/${encodedFileName}`;
-        console.log('Trying to load logo from:', logoUrl);
+        
         const logoResponse = await fetch(logoUrl);
         if (logoResponse.ok) {
           const logoBytes = await logoResponse.arrayBuffer();
@@ -263,16 +266,14 @@ serve(async (req) => {
             height: logoHeight,
           });
           logoEmbedded = true;
-          console.log('Logo embedded successfully');
         }
       } catch (logoError) {
-        console.error('Error loading logo:', logoFileName, logoError);
+        // Logo load failed, will try next format or use text fallback
       }
     }
     
     // Fallback to text if no logo loaded
     if (!logoEmbedded) {
-      console.log('Using text fallback for logo');
       const logoY = height - 90;
       page.drawText('N', { x: 335, y: logoY, size: 28, font: timesRomanBold, color: DARK_BLUE });
       page.drawText('O', { x: 355, y: logoY, size: 28, font: timesRomanBold, color: ORANGE });
@@ -371,7 +372,6 @@ serve(async (req) => {
     });
     
     const pdfBuffer = await pdfDoc.save();
-    console.log('PDF generated, size:', pdfBuffer.length);
 
     // Upload PDF to Storage - using the public certificates bucket
     const fileName = `${certificateType}-${authenticatedUserId}-${trainingId}-${Date.now()}.pdf`;
@@ -383,7 +383,7 @@ serve(async (req) => {
       });
 
     if (uploadError) {
-      console.error('Error uploading PDF:', uploadError);
+      console.error(`[${requestId}] Storage upload failed`);
       return new Response(
         JSON.stringify({ error: 'Failed to save certificate' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
@@ -409,7 +409,7 @@ serve(async (req) => {
       .single();
 
     if (certError) {
-      console.error('Error storing certificate:', certError);
+      console.error(`[${requestId}] Certificate record failed`);
       return new Response(
         JSON.stringify({ error: 'Failed to record certificate' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
@@ -427,7 +427,7 @@ serve(async (req) => {
       .eq('user_id', authenticatedUserId)
       .eq('training_id', trainingId);
 
-    console.log('Certificate generated successfully for user:', authenticatedUserId);
+    console.log(`[${requestId}] Certificate generated successfully`);
 
     return new Response(
       JSON.stringify({ 
@@ -441,7 +441,7 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error('Error generating certificate:', error);
+    console.error(`[${requestId}] Unexpected error:`, error instanceof Error ? error.message : 'Unknown error');
     return new Response(
       JSON.stringify({ error: 'An error occurred while generating the certificate' }),
       {
