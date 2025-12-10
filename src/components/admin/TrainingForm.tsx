@@ -29,6 +29,8 @@ const formSchema = z.object({
   generates_constancia: z.boolean().default(false),
   visible_to_all: z.boolean().default(false),
   target_areas: z.array(z.enum(["medicos", "asistencial", "administrativos"])).default([]),
+  active_from: z.string().optional(),
+  active_until: z.string().optional(),
 });
 
 interface TrainingFormProps {
@@ -58,6 +60,8 @@ const TrainingForm = ({ trainingId, onSuccess }: TrainingFormProps) => {
       generates_constancia: false,
       visible_to_all: false,
       target_areas: [],
+      active_from: "",
+      active_until: "",
     },
   });
 
@@ -103,6 +107,8 @@ const TrainingForm = ({ trainingId, onSuccess }: TrainingFormProps) => {
         generates_constancia: data.generates_constancia || false,
         visible_to_all: data.visible_to_all || false,
         target_areas: targetAreasData?.map(ta => ta.target_area) || [],
+        active_from: data.active_from ? data.active_from.split("T")[0] : "",
+        active_until: data.active_until ? data.active_until.split("T")[0] : "",
       });
       if (data.content_url) {
         setUploadedFileUrl(data.content_url);
@@ -133,6 +139,8 @@ const TrainingForm = ({ trainingId, onSuccess }: TrainingFormProps) => {
           generates_constancia: values.generates_constancia,
           visible_to_all: values.visible_to_all,
           content_url: uploadedFileUrl || null,
+          active_from: values.active_from ? new Date(values.active_from).toISOString() : null,
+          active_until: values.active_until ? new Date(values.active_until).toISOString() : null,
         };
         
         ({ error: trainingError } = await supabase
@@ -155,6 +163,8 @@ const TrainingForm = ({ trainingId, onSuccess }: TrainingFormProps) => {
           visible_to_all: values.visible_to_all,
           content_url: uploadedFileUrl || null,
           created_by: user?.id,
+          active_from: values.active_from ? new Date(values.active_from).toISOString() : null,
+          active_until: values.active_until ? new Date(values.active_until).toISOString() : null,
         };
         
         const { data: newTraining, error } = await supabase
@@ -386,6 +396,38 @@ const TrainingForm = ({ trainingId, onSuccess }: TrainingFormProps) => {
                     ))}
                   </SelectContent>
                 </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+        />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="active_from"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Activo desde (opcional)</FormLabel>
+                <FormControl>
+                  <Input type="date" {...field} />
+                </FormControl>
+                <p className="text-xs text-muted-foreground">Fecha desde la cual la capacitación estará disponible</p>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="active_until"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Activo hasta (opcional)</FormLabel>
+                <FormControl>
+                  <Input type="date" {...field} />
+                </FormControl>
+                <p className="text-xs text-muted-foreground">Fecha hasta la cual la capacitación estará disponible</p>
                 <FormMessage />
               </FormItem>
             )}

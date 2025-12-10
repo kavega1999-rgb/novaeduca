@@ -647,6 +647,8 @@ export type Database = {
       }
       trainings: {
         Row: {
+          active_from: string | null
+          active_until: string | null
           area_id: string
           content_url: string | null
           created_at: string
@@ -667,6 +669,8 @@ export type Database = {
           year: number
         }
         Insert: {
+          active_from?: string | null
+          active_until?: string | null
           area_id: string
           content_url?: string | null
           created_at?: string
@@ -687,6 +691,8 @@ export type Database = {
           year?: number
         }
         Update: {
+          active_from?: string | null
+          active_until?: string | null
           area_id?: string
           content_url?: string | null
           created_at?: string
