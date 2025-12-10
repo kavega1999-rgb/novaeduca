@@ -25,6 +25,7 @@ const formSchema = z.object({
   status: z.enum(["active", "draft", "archived"]),
   year: z.coerce.number().min(2020).max(2100).default(currentYear),
   requires_evaluation: z.boolean().default(false),
+  requires_pretest: z.boolean().default(false),
   generates_certificate: z.boolean().default(false),
   generates_constancia: z.boolean().default(false),
   visible_to_all: z.boolean().default(false),
@@ -56,6 +57,7 @@ const TrainingForm = ({ trainingId, onSuccess }: TrainingFormProps) => {
       status: "active",
       year: currentYear,
       requires_evaluation: false,
+      requires_pretest: false,
       generates_certificate: false,
       generates_constancia: false,
       visible_to_all: false,
@@ -103,6 +105,7 @@ const TrainingForm = ({ trainingId, onSuccess }: TrainingFormProps) => {
         status: data.status as any,
         year: data.year || currentYear,
         requires_evaluation: data.requires_evaluation || false,
+        requires_pretest: data.requires_pretest || false,
         generates_certificate: data.generates_certificate || false,
         generates_constancia: data.generates_constancia || false,
         visible_to_all: data.visible_to_all || false,
@@ -135,6 +138,7 @@ const TrainingForm = ({ trainingId, onSuccess }: TrainingFormProps) => {
           status: values.status,
           year: values.year,
           requires_evaluation: values.requires_evaluation,
+          requires_pretest: values.requires_pretest,
           generates_certificate: values.generates_certificate,
           generates_constancia: values.generates_constancia,
           visible_to_all: values.visible_to_all,
@@ -158,6 +162,7 @@ const TrainingForm = ({ trainingId, onSuccess }: TrainingFormProps) => {
           status: values.status,
           year: values.year,
           requires_evaluation: values.requires_evaluation,
+          requires_pretest: values.requires_pretest,
           generates_certificate: values.generates_certificate,
           generates_constancia: values.generates_constancia,
           visible_to_all: values.visible_to_all,
@@ -448,6 +453,25 @@ const TrainingForm = ({ trainingId, onSuccess }: TrainingFormProps) => {
                 </FormControl>
                 <div className="space-y-1 leading-none">
                   <FormLabel>Requiere evaluación</FormLabel>
+                </div>
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="requires_pretest"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                <FormControl>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <FormLabel>Requiere pretest</FormLabel>
+                  <p className="text-xs text-muted-foreground">El usuario debe completar un pretest antes de ver el contenido</p>
                 </div>
               </FormItem>
             )}
