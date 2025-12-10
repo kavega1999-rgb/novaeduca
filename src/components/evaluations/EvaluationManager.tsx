@@ -642,14 +642,14 @@ const EvaluationManager = ({ trainingId, trainingTitle, contentUrl }: Evaluation
               />
             </div>
 
-            {question.question_type === 'open_ended' ? (
-              <div className="p-4 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground">
-                  Esta es una pregunta de respuesta abierta. El usuario escribirá su respuesta en un campo de texto.
-                  La calificación deberá ser manual.
-                </p>
-              </div>
-            ) : (
+        {question.question_type === 'open_ended' ? (
+          <div className="p-4 bg-muted rounded-lg">
+            <p className="text-sm text-muted-foreground">
+              Esta es una pregunta de respuesta abierta. El usuario escribirá su respuesta en un campo de texto.
+              La calificación será automática mediante IA, comparando la respuesta con el material de capacitación.
+            </p>
+          </div>
+        ) : (
               <>
                 <Separator />
 
