@@ -230,12 +230,12 @@ const AdherenceTabulation = () => {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen">
+      <div className="flex min-h-screen w-full bg-background">
         <AdminSidebar />
-        <main className="flex-1 p-6">
-          <div className="space-y-4">
+        <main className="flex-1 p-6 overflow-auto">
+          <div className="max-w-7xl mx-auto space-y-4">
             <Skeleton className="h-8 w-64" />
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-32" />)}
             </div>
             <Skeleton className="h-96" />
@@ -246,9 +246,9 @@ const AdherenceTabulation = () => {
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen w-full bg-background">
       <AdminSidebar />
-      <main className="flex-1 p-6 overflow-auto">
+      <main className="flex-1 p-6 overflow-auto min-w-0">
         <div className="max-w-7xl mx-auto space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between">

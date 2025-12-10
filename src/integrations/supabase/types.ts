@@ -398,6 +398,7 @@ export type Database = {
           id: string
           max_attempts: number | null
           passing_score: number
+          requires_pretest: boolean
           time_limit_minutes: number | null
           title: string
           training_id: string
@@ -409,6 +410,7 @@ export type Database = {
           id?: string
           max_attempts?: number | null
           passing_score?: number
+          requires_pretest?: boolean
           time_limit_minutes?: number | null
           title: string
           training_id: string
@@ -420,6 +422,7 @@ export type Database = {
           id?: string
           max_attempts?: number | null
           passing_score?: number
+          requires_pretest?: boolean
           time_limit_minutes?: number | null
           title?: string
           training_id?: string

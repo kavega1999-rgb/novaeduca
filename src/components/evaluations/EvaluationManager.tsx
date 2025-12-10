@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { Plus, Trash2, Save, Sparkles, Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -92,6 +93,7 @@ const EvaluationManager = ({ trainingId, trainingTitle, contentUrl }: Evaluation
     } else {
       setEvaluation({
         training_id: trainingId,
+        requires_pretest: false,
         title: "",
         description: "",
         passing_score: 70,
@@ -377,6 +379,7 @@ const EvaluationManager = ({ trainingId, trainingTitle, contentUrl }: Evaluation
             passing_score: evaluation.passing_score,
             max_attempts: evaluation.max_attempts,
             time_limit_minutes: evaluation.time_limit_minutes,
+            requires_pretest: evaluation.requires_pretest || false,
           })
           .select()
           .single();
@@ -393,6 +396,7 @@ const EvaluationManager = ({ trainingId, trainingTitle, contentUrl }: Evaluation
             passing_score: evaluation.passing_score,
             max_attempts: evaluation.max_attempts,
             time_limit_minutes: evaluation.time_limit_minutes,
+            requires_pretest: evaluation.requires_pretest || false,
           })
           .eq("id", evaluationId);
 
@@ -527,6 +531,22 @@ const EvaluationManager = ({ trainingId, trainingTitle, contentUrl }: Evaluation
                 placeholder="Opcional"
               />
             </div>
+          </div>
+
+          <Separator className="my-4" />
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="requires_pretest">Habilitar Pretest</Label>
+              <p className="text-sm text-muted-foreground">
+                Aplicar un diagnóstico inicial antes de la capacitación para medir adherencia
+              </p>
+            </div>
+            <Switch
+              id="requires_pretest"
+              checked={evaluation.requires_pretest || false}
+              onCheckedChange={(checked) => setEvaluation({ ...evaluation, requires_pretest: checked })}
+            />
           </div>
         </CardContent>
       </Card>
