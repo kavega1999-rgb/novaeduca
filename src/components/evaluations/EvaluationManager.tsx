@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, Save, Sparkles, Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -32,6 +34,20 @@ const evaluationSchema = z.object({
   max_attempts: z.number().int().min(1, "Mínimo 1 intento").max(10, "Máximo 10 intentos"),
   time_limit_minutes: z.number().int().min(1, "Mínimo 1 minuto").max(180, "Máximo 180 minutos").optional().nullable(),
 });
+
+type QuestionType = 'multiple_choice' | 'true_false' | 'open_ended';
+
+const questionTypeLabels: Record<QuestionType, string> = {
+  multiple_choice: 'Selección Múltiple',
+  true_false: 'Verdadero/Falso',
+  open_ended: 'Respuesta Abierta',
+};
+
+const questionTypeBadgeVariants: Record<QuestionType, "default" | "secondary" | "outline"> = {
+  multiple_choice: 'default',
+  true_false: 'secondary',
+  open_ended: 'outline',
+};
 
 const EvaluationManager = ({ trainingId, trainingTitle, contentUrl }: EvaluationManagerProps) => {
   const [evaluation, setEvaluation] = useState<any>(null);
@@ -87,18 +103,31 @@ const EvaluationManager = ({ trainingId, trainingTitle, contentUrl }: Evaluation
     setLoading(false);
   };
 
-  const addQuestion = () => {
+  const addQuestion = (type: QuestionType = 'multiple_choice') => {
+    let defaultOptions: any[] = [];
+    
+    if (type === 'multiple_choice') {
+      defaultOptions = [
+        { id: `temp-opt-1-${Date.now()}`, option_text: "", is_correct: false, order_index: 0 },
+        { id: `temp-opt-2-${Date.now()}`, option_text: "", is_correct: false, order_index: 1 },
+      ];
+    } else if (type === 'true_false') {
+      defaultOptions = [
+        { id: `temp-opt-1-${Date.now()}`, option_text: "Verdadero", is_correct: true, order_index: 0 },
+        { id: `temp-opt-2-${Date.now()}`, option_text: "Falso", is_correct: false, order_index: 1 },
+      ];
+    }
+    // open_ended has no options
+
     setQuestions([
       ...questions,
       {
         id: `temp-${Date.now()}`,
         question_text: "",
+        question_type: type,
         points: 1,
         order_index: questions.length,
-        evaluation_question_options: [
-          { id: `temp-opt-1-${Date.now()}`, option_text: "", is_correct: false, order_index: 0 },
-          { id: `temp-opt-2-${Date.now()}`, option_text: "", is_correct: false, order_index: 1 },
-        ],
+        evaluation_question_options: defaultOptions,
       },
     ]);
   };
@@ -129,6 +158,7 @@ const EvaluationManager = ({ trainingId, trainingTitle, contentUrl }: Evaluation
         const newQuestions = data.questions.map((q: any, index: number) => ({
           id: `temp-ai-${Date.now()}-${index}`,
           question_text: q.question_text,
+          question_type: q.question_type || 'multiple_choice',
           points: 1,
           order_index: questions.length + index,
           evaluation_question_options: q.options.map((opt: any, optIndex: number) => ({
@@ -179,21 +209,39 @@ const EvaluationManager = ({ trainingId, trainingTitle, contentUrl }: Evaluation
       }
 
       if (data.questions && Array.isArray(data.questions)) {
-        const newQuestions = data.questions.map((q: any, index: number) => ({
-          id: `temp-pdf-${Date.now()}-${index}`,
-          question_text: q.question_text,
-          points: 1,
-          order_index: questions.length + index,
-          evaluation_question_options: q.options.map((opt: any, optIndex: number) => ({
-            id: `temp-opt-pdf-${Date.now()}-${index}-${optIndex}`,
-            option_text: opt.option_text,
-            is_correct: opt.is_correct,
-            order_index: optIndex,
-          })),
-        }));
+        const newQuestions = data.questions.map((q: any, index: number) => {
+          const questionType = q.question_type || 'multiple_choice';
+          const options = q.options || [];
+          
+          return {
+            id: `temp-pdf-${Date.now()}-${index}`,
+            question_text: q.question_text,
+            question_type: questionType,
+            points: 1,
+            order_index: questions.length + index,
+            evaluation_question_options: options.map((opt: any, optIndex: number) => ({
+              id: `temp-opt-pdf-${Date.now()}-${index}-${optIndex}`,
+              option_text: opt.option_text,
+              is_correct: opt.is_correct,
+              order_index: optIndex,
+            })),
+          };
+        });
 
         setQuestions([...questions, ...newQuestions]);
-        toast.success(`Se extrajeron ${newQuestions.length} preguntas del PDF`);
+        
+        const typeCounts = data.metadata?.question_types_count;
+        let summaryMessage = `Se extrajeron ${newQuestions.length} preguntas del PDF`;
+        if (typeCounts) {
+          const parts = [];
+          if (typeCounts.multiple_choice) parts.push(`${typeCounts.multiple_choice} selección múltiple`);
+          if (typeCounts.true_false) parts.push(`${typeCounts.true_false} verdadero/falso`);
+          if (typeCounts.open_ended) parts.push(`${typeCounts.open_ended} abiertas`);
+          if (parts.length > 0) {
+            summaryMessage += ` (${parts.join(', ')})`;
+          }
+        }
+        toast.success(summaryMessage);
         
         if (data.metadata?.title && !evaluation.title) {
           setEvaluation({ ...evaluation, title: data.metadata.title });
@@ -224,6 +272,24 @@ const EvaluationManager = ({ trainingId, trainingTitle, contentUrl }: Evaluation
   const updateQuestion = (index: number, field: string, value: any) => {
     const updated = [...questions];
     updated[index] = { ...updated[index], [field]: value };
+    
+    // If changing question type, update options accordingly
+    if (field === 'question_type') {
+      if (value === 'open_ended') {
+        updated[index].evaluation_question_options = [];
+      } else if (value === 'true_false') {
+        updated[index].evaluation_question_options = [
+          { id: `temp-opt-1-${Date.now()}`, option_text: "Verdadero", is_correct: true, order_index: 0 },
+          { id: `temp-opt-2-${Date.now()}`, option_text: "Falso", is_correct: false, order_index: 1 },
+        ];
+      } else if (value === 'multiple_choice' && updated[index].evaluation_question_options.length < 2) {
+        updated[index].evaluation_question_options = [
+          { id: `temp-opt-1-${Date.now()}`, option_text: "", is_correct: false, order_index: 0 },
+          { id: `temp-opt-2-${Date.now()}`, option_text: "", is_correct: false, order_index: 1 },
+        ];
+      }
+    }
+    
     setQuestions(updated);
   };
 
@@ -276,19 +342,24 @@ const EvaluationManager = ({ trainingId, trainingTitle, contentUrl }: Evaluation
       for (const question of questions) {
         questionSchema.parse(question);
         
-        if (question.evaluation_question_options.length < 2) {
-          toast.error("Cada pregunta debe tener al menos 2 opciones");
-          return;
-        }
+        const questionType = question.question_type || 'multiple_choice';
+        
+        // For non-open-ended questions, validate options
+        if (questionType !== 'open_ended') {
+          if (question.evaluation_question_options.length < 2) {
+            toast.error("Las preguntas de selección deben tener al menos 2 opciones");
+            return;
+          }
 
-        const hasCorrectOption = question.evaluation_question_options.some((opt: any) => opt.is_correct);
-        if (!hasCorrectOption) {
-          toast.error("Cada pregunta debe tener una opción correcta marcada");
-          return;
-        }
+          const hasCorrectOption = question.evaluation_question_options.some((opt: any) => opt.is_correct);
+          if (!hasCorrectOption) {
+            toast.error("Las preguntas de selección deben tener una opción correcta marcada");
+            return;
+          }
 
-        for (const option of question.evaluation_question_options) {
-          optionSchema.parse(option);
+          for (const option of question.evaluation_question_options) {
+            optionSchema.parse(option);
+          }
         }
       }
 
@@ -341,7 +412,7 @@ const EvaluationManager = ({ trainingId, trainingTitle, contentUrl }: Evaluation
           .insert({
             evaluation_id: evaluationId,
             question_text: question.question_text,
-            question_type: "multiple_choice",
+            question_type: question.question_type || "multiple_choice",
             points: question.points,
             order_index: i,
           })
@@ -350,19 +421,22 @@ const EvaluationManager = ({ trainingId, trainingTitle, contentUrl }: Evaluation
 
         if (questionError) throw questionError;
 
-        for (let j = 0; j < question.evaluation_question_options.length; j++) {
-          const option = question.evaluation_question_options[j];
-          
-          const { error: optionError } = await supabase
-            .from("evaluation_question_options")
-            .insert({
-              question_id: newQuestion.id,
-              option_text: option.option_text,
-              is_correct: option.is_correct,
-              order_index: j,
-            });
+        // Only insert options for non-open-ended questions
+        if (question.question_type !== 'open_ended') {
+          for (let j = 0; j < question.evaluation_question_options.length; j++) {
+            const option = question.evaluation_question_options[j];
+            
+            const { error: optionError } = await supabase
+              .from("evaluation_question_options")
+              .insert({
+                question_id: newQuestion.id,
+                option_text: option.option_text,
+                is_correct: option.is_correct,
+                order_index: j,
+              });
 
-          if (optionError) throw optionError;
+            if (optionError) throw optionError;
+          }
         }
       }
 
@@ -495,10 +569,17 @@ const EvaluationManager = ({ trainingId, trainingTitle, contentUrl }: Evaluation
             )}
             {generatingAI ? "Generando..." : "Generar con IA"}
           </Button>
-          <Button onClick={addQuestion} size="sm">
-            <Plus className="w-4 h-4 mr-2" />
-            Agregar Pregunta
-          </Button>
+          <Select onValueChange={(value) => addQuestion(value as QuestionType)}>
+            <SelectTrigger className="w-[180px]">
+              <Plus className="w-4 h-4 mr-2" />
+              <SelectValue placeholder="Agregar Pregunta" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="multiple_choice">Selección Múltiple</SelectItem>
+              <SelectItem value="true_false">Verdadero/Falso</SelectItem>
+              <SelectItem value="open_ended">Respuesta Abierta</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -506,7 +587,12 @@ const EvaluationManager = ({ trainingId, trainingTitle, contentUrl }: Evaluation
         <Card key={question.id}>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base">Pregunta {qIndex + 1}</CardTitle>
+              <div className="flex items-center gap-3">
+                <CardTitle className="text-base">Pregunta {qIndex + 1}</CardTitle>
+                <Badge variant={questionTypeBadgeVariants[question.question_type as QuestionType] || 'default'}>
+                  {questionTypeLabels[question.question_type as QuestionType] || 'Selección Múltiple'}
+                </Badge>
+              </div>
               <Button
                 variant="ghost"
                 size="sm"
@@ -517,6 +603,35 @@ const EvaluationManager = ({ trainingId, trainingTitle, contentUrl }: Evaluation
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2 md:col-span-1">
+                <Label>Tipo de Pregunta</Label>
+                <Select 
+                  value={question.question_type || 'multiple_choice'}
+                  onValueChange={(value) => updateQuestion(qIndex, "question_type", value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="multiple_choice">Selección Múltiple</SelectItem>
+                    <SelectItem value="true_false">Verdadero/Falso</SelectItem>
+                    <SelectItem value="open_ended">Respuesta Abierta</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="w-32">
+                <Label>Puntos *</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={question.points}
+                  onChange={(e) => updateQuestion(qIndex, "points", parseInt(e.target.value))}
+                />
+              </div>
+            </div>
+
             <div>
               <Label>Texto de la Pregunta *</Label>
               <Textarea
@@ -527,63 +642,66 @@ const EvaluationManager = ({ trainingId, trainingTitle, contentUrl }: Evaluation
               />
             </div>
 
-            <div className="w-32">
-              <Label>Puntos *</Label>
-              <Input
-                type="number"
-                min="1"
-                max="10"
-                value={question.points}
-                onChange={(e) => updateQuestion(qIndex, "points", parseInt(e.target.value))}
-              />
-            </div>
-
-            <Separator />
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>Opciones de Respuesta</Label>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => addOption(qIndex)}
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Agregar Opción
-                </Button>
+            {question.question_type === 'open_ended' ? (
+              <div className="p-4 bg-muted rounded-lg">
+                <p className="text-sm text-muted-foreground">
+                  Esta es una pregunta de respuesta abierta. El usuario escribirá su respuesta en un campo de texto.
+                  La calificación deberá ser manual.
+                </p>
               </div>
+            ) : (
+              <>
+                <Separator />
 
-              {question.evaluation_question_options.map((option: any, oIndex: number) => (
-                <div key={option.id} className="flex items-start gap-2">
-                  <Input
-                    value={option.option_text}
-                    onChange={(e) => updateOption(qIndex, oIndex, "option_text", e.target.value)}
-                    placeholder={`Opción ${oIndex + 1}`}
-                    maxLength={200}
-                    className="flex-1"
-                  />
-                  <Label className="flex items-center gap-2 cursor-pointer whitespace-nowrap">
-                    <input
-                      type="radio"
-                      name={`correct-${qIndex}`}
-                      checked={option.is_correct}
-                      onChange={(e) => updateOption(qIndex, oIndex, "is_correct", e.target.checked)}
-                      className="cursor-pointer"
-                    />
-                    Correcta
-                  </Label>
-                  {question.evaluation_question_options.length > 2 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeOption(qIndex, oIndex)}
-                    >
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </Button>
-                  )}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>Opciones de Respuesta</Label>
+                    {question.question_type !== 'true_false' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => addOption(qIndex)}
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Agregar Opción
+                      </Button>
+                    )}
+                  </div>
+
+                  {question.evaluation_question_options.map((option: any, oIndex: number) => (
+                    <div key={option.id} className="flex items-start gap-2">
+                      <Input
+                        value={option.option_text}
+                        onChange={(e) => updateOption(qIndex, oIndex, "option_text", e.target.value)}
+                        placeholder={`Opción ${oIndex + 1}`}
+                        maxLength={200}
+                        className="flex-1"
+                        disabled={question.question_type === 'true_false'}
+                      />
+                      <Label className="flex items-center gap-2 cursor-pointer whitespace-nowrap">
+                        <input
+                          type="radio"
+                          name={`correct-${qIndex}`}
+                          checked={option.is_correct}
+                          onChange={(e) => updateOption(qIndex, oIndex, "is_correct", e.target.checked)}
+                          className="cursor-pointer"
+                        />
+                        Correcta
+                      </Label>
+                      {question.question_type !== 'true_false' && question.evaluation_question_options.length > 2 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeOption(qIndex, oIndex)}
+                        >
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </>
+            )}
           </CardContent>
         </Card>
       ))}
