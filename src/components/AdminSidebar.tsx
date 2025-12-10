@@ -30,6 +30,7 @@ const menuItems = [
     children: [
       { title: "Progreso", url: "/dashboard/reports" },
       { title: "Adherencia", url: "/dashboard/adherence" },
+      { title: "Tabulación Pre/Post", url: "/dashboard/tabulation" },
       { title: "Asistencia", url: "/dashboard/attendance" },
     ]
   },

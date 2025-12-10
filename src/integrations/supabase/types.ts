@@ -68,6 +68,79 @@ export type Database = {
         }
         Relationships: []
       }
+      adherence_reports: {
+        Row: {
+          conclusion: string | null
+          created_at: string
+          id: string
+          improvement_percentage: number | null
+          postest_attempt_id: string | null
+          postest_category: string | null
+          postest_score: number | null
+          pretest_attempt_id: string | null
+          pretest_category: string | null
+          pretest_score: number | null
+          strategies: string | null
+          training_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          conclusion?: string | null
+          created_at?: string
+          id?: string
+          improvement_percentage?: number | null
+          postest_attempt_id?: string | null
+          postest_category?: string | null
+          postest_score?: number | null
+          pretest_attempt_id?: string | null
+          pretest_category?: string | null
+          pretest_score?: number | null
+          strategies?: string | null
+          training_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          conclusion?: string | null
+          created_at?: string
+          id?: string
+          improvement_percentage?: number | null
+          postest_attempt_id?: string | null
+          postest_category?: string | null
+          postest_score?: number | null
+          pretest_attempt_id?: string | null
+          pretest_category?: string | null
+          pretest_score?: number | null
+          strategies?: string | null
+          training_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "adherence_reports_postest_attempt_id_fkey"
+            columns: ["postest_attempt_id"]
+            isOneToOne: false
+            referencedRelation: "evaluation_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "adherence_reports_pretest_attempt_id_fkey"
+            columns: ["pretest_attempt_id"]
+            isOneToOne: false
+            referencedRelation: "pretest_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "adherence_reports_training_id_fkey"
+            columns: ["training_id"]
+            isOneToOne: false
+            referencedRelation: "trainings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       areas: {
         Row: {
           color: string | null
@@ -401,6 +474,112 @@ export type Database = {
         }
         Relationships: []
       }
+      pretest_answers: {
+        Row: {
+          attempt_id: string
+          created_at: string
+          id: string
+          is_correct: boolean | null
+          points_earned: number | null
+          question_id: string
+          selected_option_id: string | null
+          text_response: string | null
+        }
+        Insert: {
+          attempt_id: string
+          created_at?: string
+          id?: string
+          is_correct?: boolean | null
+          points_earned?: number | null
+          question_id: string
+          selected_option_id?: string | null
+          text_response?: string | null
+        }
+        Update: {
+          attempt_id?: string
+          created_at?: string
+          id?: string
+          is_correct?: boolean | null
+          points_earned?: number | null
+          question_id?: string
+          selected_option_id?: string | null
+          text_response?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pretest_answers_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "pretest_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pretest_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "evaluation_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pretest_answers_selected_option_id_fkey"
+            columns: ["selected_option_id"]
+            isOneToOne: false
+            referencedRelation: "evaluation_question_options"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pretest_attempts: {
+        Row: {
+          completed_at: string | null
+          evaluation_id: string
+          id: string
+          max_score: number
+          score: number | null
+          started_at: string
+          status: string
+          training_id: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          evaluation_id: string
+          id?: string
+          max_score: number
+          score?: number | null
+          started_at?: string
+          status?: string
+          training_id: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          evaluation_id?: string
+          id?: string
+          max_score?: number
+          score?: number | null
+          started_at?: string
+          status?: string
+          training_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pretest_attempts_evaluation_id_fkey"
+            columns: ["evaluation_id"]
+            isOneToOne: false
+            referencedRelation: "evaluations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pretest_attempts_training_id_fkey"
+            columns: ["training_id"]
+            isOneToOne: false
+            referencedRelation: "trainings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           area: Database["public"]["Enums"]["user_area"] | null
@@ -547,6 +726,8 @@ export type Database = {
           content_viewed_completely: boolean | null
           id: string
           last_accessed_at: string | null
+          pretest_completed: boolean | null
+          pretest_score: number | null
           progress_percentage: number | null
           started_at: string | null
           status: string
@@ -558,6 +739,8 @@ export type Database = {
           content_viewed_completely?: boolean | null
           id?: string
           last_accessed_at?: string | null
+          pretest_completed?: boolean | null
+          pretest_score?: number | null
           progress_percentage?: number | null
           started_at?: string | null
           status?: string
@@ -569,6 +752,8 @@ export type Database = {
           content_viewed_completely?: boolean | null
           id?: string
           last_accessed_at?: string | null
+          pretest_completed?: boolean | null
+          pretest_score?: number | null
           progress_percentage?: number | null
           started_at?: string | null
           status?: string
