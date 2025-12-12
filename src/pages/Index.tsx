@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookOpen, Award, Users, TrendingUp, ArrowRight } from "lucide-react";
 import novasaludLogo from "@/assets/novasalud-logo-color.png";
+import novaeducaLogo from "@/assets/novaeduca-logo.png";
 import heroImage from "@/assets/medical-team-hero.jpg";
 
 const Index = () => {
@@ -28,8 +29,13 @@ const Index = () => {
   if (checking) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="animate-pulse">
-          <img src={novasaludLogo} alt="Novasalud" className="h-20 w-auto" />
+        <div className="flex flex-col items-center gap-4">
+          <img src={novaeducaLogo} alt="NovaEduca" className="h-16 w-auto animate-pulse" />
+          <div className="flex gap-1">
+            <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }}></div>
+            <div className="w-2 h-2 rounded-full bg-secondary animate-bounce" style={{ animationDelay: '150ms' }}></div>
+            <div className="w-2 h-2 rounded-full bg-accent animate-bounce" style={{ animationDelay: '300ms' }}></div>
+          </div>
         </div>
       </div>
     );
