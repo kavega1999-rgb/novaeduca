@@ -52,8 +52,12 @@ const Index = () => {
         />
         <div className="absolute inset-0 bg-gradient-to-r from-primary/95 to-primary/80">
           <div className="container mx-auto px-4 h-full flex flex-col justify-center items-center text-center">
-            <img src={novasaludLogo} alt="Novasalud Caribe IPS" className="h-24 w-auto mb-8" />
-            <h1 className="text-5xl md:text-6xl font-bold text-white mb-6">
+            <div className="flex items-center gap-4 mb-6">
+              <img src={novasaludLogo} alt="Novasalud Caribe IPS" className="h-16 md:h-20 w-auto" />
+              <div className="w-px h-12 md:h-16 bg-white/30"></div>
+              <img src={novaeducaLogo} alt="NovaEduca" className="h-14 md:h-18 w-auto" />
+            </div>
+            <h1 className="text-4xl md:text-6xl font-bold text-white mb-6">
               Plataforma de Capacitación
             </h1>
             <p className="text-xl md:text-2xl text-white/90 mb-8 max-w-3xl">
