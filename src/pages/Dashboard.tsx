@@ -14,6 +14,7 @@ import { CertificatesList } from "@/components/profile/CertificatesList";
 
 import FloatingDocumentsButton from "@/components/documents/FloatingDocumentsButton";
 import heroImage from "@/assets/team-celebration.jpg";
+import novaeducaLogo from "@/assets/novaeduca-logo.png";
 
 const iconMap: Record<string, any> = {
   shield: Shield,
@@ -111,10 +112,14 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen">
-        <Navigation userRole={userRole} />
-        <div className="container mx-auto px-4 py-8">
-          <div className="text-center">Cargando...</div>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <img src={novaeducaLogo} alt="NovaEduca" className="h-20 w-auto animate-pulse" />
+          <div className="flex gap-1">
+            <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }}></div>
+            <div className="w-2 h-2 rounded-full bg-secondary animate-bounce" style={{ animationDelay: '150ms' }}></div>
+            <div className="w-2 h-2 rounded-full bg-accent animate-bounce" style={{ animationDelay: '300ms' }}></div>
+          </div>
         </div>
       </div>
     );
