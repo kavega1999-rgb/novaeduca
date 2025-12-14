@@ -78,16 +78,51 @@ serve(async (req) => {
   }
 
   try {
+    // Verify authentication
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.error("Missing or invalid authorization header");
+      return new Response(
+        JSON.stringify({ error: "Authentication required" }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+    // Create client with user's token to verify authentication
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: `Bearer ${token}` } }
+    });
+
+    // Get the authenticated user
+    const { data: { user }, error: userError } = await supabaseAuth.auth.getUser();
+    if (userError || !user) {
+      console.error("Invalid token or user not found:", userError);
+      return new Response(
+        JSON.stringify({ error: "Invalid authentication token" }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const authenticatedUserId = user.id;
+    console.log("Authenticated user:", authenticatedUserId);
+
     const { postestAttemptId, trainingId } = await req.json();
     
     console.log("Generating adherence report for:", { postestAttemptId, trainingId });
 
     if (!postestAttemptId || !trainingId) {
-      throw new Error("postestAttemptId and trainingId are required");
+      return new Response(
+        JSON.stringify({ error: "postestAttemptId and trainingId are required" }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    // Create service role client for data operations
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Get postest attempt
@@ -99,7 +134,19 @@ serve(async (req) => {
 
     if (postestError || !postestAttempt) {
       console.error("Error fetching postest:", postestError);
-      throw new Error("Postest attempt not found");
+      return new Response(
+        JSON.stringify({ error: "Postest attempt not found" }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Verify the authenticated user owns this attempt
+    if (postestAttempt.user_id !== authenticatedUserId) {
+      console.error("User does not own this attempt:", { attemptUserId: postestAttempt.user_id, authenticatedUserId });
+      return new Response(
+        JSON.stringify({ error: "You can only generate reports for your own attempts" }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const userId = postestAttempt.user_id;
