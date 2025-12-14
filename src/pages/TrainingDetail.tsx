@@ -271,20 +271,23 @@ const TrainingDetail = () => {
                     .maybeSingle();
                   
                   if (latestAttempt) {
-                    await fetch(
-                      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-adherence-report`,
-                      {
-                        method: 'POST',
-                        headers: {
-                          'Content-Type': 'application/json',
-                          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-                        },
-                        body: JSON.stringify({
-                          postestAttemptId: latestAttempt.id,
-                          trainingId: id,
-                        }),
-                      }
-                    );
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (session?.access_token) {
+                      await fetch(
+                        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-adherence-report`,
+                        {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${session.access_token}`,
+                          },
+                          body: JSON.stringify({
+                            postestAttemptId: latestAttempt.id,
+                            trainingId: id,
+                          }),
+                        }
+                      );
+                    }
                   }
                 } catch (err) {
                   console.error("Error generating adherence report:", err);
