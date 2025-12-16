@@ -312,21 +312,12 @@ const AdherenceEvaluations = () => {
       );
       const attemptNumber = userAttempts.indexOf(attempt) + 1;
       
-      const percentage = attempt.score !== null && attempt.max_score > 0
-        ? Math.round((attempt.score / attempt.max_score) * 100)
-        : null;
-      
       return {
         'Usuario': profile?.full_name || 'N/A',
         'Área': profile?.area || 'N/A',
         'Capacitación': training?.title || 'N/A',
-        'Evaluación': evaluation?.title || 'N/A',
-        'Puntos': attempt.score !== null ? Math.round(attempt.score) : 'N/A',
-        'Puntos Máx': attempt.max_score,
-        'Porcentaje': percentage !== null ? `${percentage}%` : 'N/A',
-        'Mínimo Aprobación': evaluation?.passing_score ? `${evaluation.passing_score}%` : 'N/A',
-        'Resultado': attempt.passed ? 'Aprobado' : 'No Aprobado',
-        'Intento #': attemptNumber,
+        'Puntaje': attempt.score !== null ? Math.round(attempt.score) : 'N/A',
+        'Estado': attempt.passed ? 'Aprobado' : 'No Aprobado',
         'Fecha': attempt.completed_at ? format(new Date(attempt.completed_at), 'dd/MM/yyyy HH:mm') : 'N/A',
       };
     });
