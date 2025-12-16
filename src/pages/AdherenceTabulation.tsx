@@ -51,6 +51,15 @@ interface Training {
   id: string;
   title: string;
   area_id: string;
+  target_user_count: number | null;
+  is_finished: boolean | null;
+  active_from: string | null;
+  active_until: string | null;
+}
+
+interface TargetArea {
+  training_id: string;
+  target_area: string;
 }
 
 interface Area {
@@ -116,7 +125,7 @@ const AdherenceTabulation = () => {
           .from("adherence_reports")
           .select("*")
           .order("created_at", { ascending: false }),
-        supabase.from("trainings").select("id, title, area_id"),
+        supabase.from("trainings").select("id, title, area_id, target_user_count, is_finished, active_from, active_until"),
         supabase.from("areas").select("*"),
         supabase.from("profiles").select("id, full_name, area"),
       ]);

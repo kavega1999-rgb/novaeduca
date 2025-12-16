@@ -655,13 +655,17 @@ export type Database = {
           created_by: string | null
           description: string | null
           duration_minutes: number | null
+          finished_at: string | null
+          finished_by: string | null
           generates_certificate: boolean | null
           generates_constancia: boolean | null
           id: string
+          is_finished: boolean | null
           published_at: string | null
           requires_evaluation: boolean | null
           requires_pretest: boolean | null
           status: string
+          target_user_count: number | null
           title: string
           total_pages: number | null
           type: string
@@ -678,13 +682,17 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           duration_minutes?: number | null
+          finished_at?: string | null
+          finished_by?: string | null
           generates_certificate?: boolean | null
           generates_constancia?: boolean | null
           id?: string
+          is_finished?: boolean | null
           published_at?: string | null
           requires_evaluation?: boolean | null
           requires_pretest?: boolean | null
           status?: string
+          target_user_count?: number | null
           title: string
           total_pages?: number | null
           type: string
@@ -701,13 +709,17 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           duration_minutes?: number | null
+          finished_at?: string | null
+          finished_by?: string | null
           generates_certificate?: boolean | null
           generates_constancia?: boolean | null
           id?: string
+          is_finished?: boolean | null
           published_at?: string | null
           requires_evaluation?: boolean | null
           requires_pretest?: boolean | null
           status?: string
+          target_user_count?: number | null
           title?: string
           total_pages?: number | null
           type?: string
@@ -726,6 +738,13 @@ export type Database = {
           {
             foreignKeyName: "trainings_created_by_fkey"
             columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trainings_finished_by_fkey"
+            columns: ["finished_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
