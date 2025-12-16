@@ -11,6 +11,7 @@ import { Loader2, Power, ArrowLeft, Mail } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { logAccess } from "@/hooks/useAccessLog";
 import heroImage from "@/assets/team-celebration.jpg";
+import { formatUserName } from "@/lib/text-utils";
 
 type AuthView = "main" | "otp-verify" | "forgot-password" | "reset-password";
 
@@ -126,12 +127,13 @@ const Auth = () => {
     setIsLoading(true);
     
     try {
+      const formattedName = formatUserName(fullName);
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
-            full_name: fullName
+            full_name: formattedName
           },
           emailRedirectTo: `${window.location.origin}/dashboard`
         }
@@ -164,7 +166,7 @@ const Auth = () => {
       // Log successful registration
       await logAccess({
         userId: authData.user?.id,
-        userName: fullName,
+        userName: formattedName,
         userEmail: email,
         userRole: 'user',
         eventType: 'registro',
@@ -258,7 +260,7 @@ const Auth = () => {
           await supabase
             .from('profiles')
             .update({
-              full_name: fullName,
+              full_name: formatUserName(fullName),
               area: area as "medicos" | "asistencial" | "administrativos"
             })
             .eq('id', data.user.id);

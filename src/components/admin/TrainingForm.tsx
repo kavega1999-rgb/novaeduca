@@ -11,6 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import FileUploader from "./FileUploader";
+import { formatTrainingTitle, toSentenceCase } from "@/lib/text-utils";
 
 const currentYear = new Date().getFullYear();
 const yearOptions = Array.from({ length: 10 }, (_, i) => currentYear - 5 + i);
@@ -127,13 +128,17 @@ const TrainingForm = ({ trainingId, onSuccess }: TrainingFormProps) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
+      // Format text fields
+      const formattedTitle = formatTrainingTitle(values.title);
+      const formattedDescription = toSentenceCase(values.description);
+      
       let trainingError;
       let savedTrainingId = trainingId;
       
       if (trainingId) {
         const updateData: any = {
-          title: values.title,
-          description: values.description,
+          title: formattedTitle,
+          description: formattedDescription,
           type: values.type,
           area_id: values.area_id,
           duration_minutes: values.duration_minutes,
@@ -157,8 +162,8 @@ const TrainingForm = ({ trainingId, onSuccess }: TrainingFormProps) => {
           .eq("id", trainingId));
       } else {
         const insertData: any = {
-          title: values.title,
-          description: values.description,
+          title: formattedTitle,
+          description: formattedDescription,
           type: values.type,
           area_id: values.area_id,
           duration_minutes: values.duration_minutes,
