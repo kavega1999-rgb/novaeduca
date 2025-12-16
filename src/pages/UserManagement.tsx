@@ -7,16 +7,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Users, Shield, UserCog } from "lucide-react";
+import { Search, Users, Shield, UserCog, MapPin } from "lucide-react";
 import { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
+type UserArea = Database["public"]["Enums"]["user_area"];
 
 interface UserWithRole {
   id: string;
   full_name: string;
   email: string;
-  area: string | null;
+  area: UserArea | null;
   position: string | null;
   status: string;
   role: AppRole;
@@ -34,6 +35,12 @@ const roleBadgeVariants: Record<AppRole, "default" | "secondary" | "outline"> = 
   user: "outline",
 };
 
+const areaLabels: Record<UserArea, string> = {
+  medicos: "Médicos",
+  asistencial: "Asistencial",
+  administrativos: "Administrativos",
+};
+
 const UserManagement = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -42,6 +49,7 @@ const UserManagement = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
+  const [updatingAreaUserId, setUpdatingAreaUserId] = useState<string | null>(null);
 
   useEffect(() => {
     checkAccessAndFetchUsers();
@@ -204,13 +212,44 @@ const UserManagement = () => {
     }
   };
 
-  const getAreaLabel = (area: string | null) => {
-    const areaLabels: Record<string, string> = {
-      medicos: "Médicos",
-      asistencial: "Asistencial",
-      administrativos: "Administrativos",
-    };
-    return area ? areaLabels[area] || area : "Sin área";
+  const handleAreaChange = async (userId: string, newArea: UserArea | "none") => {
+    setUpdatingAreaUserId(userId);
+
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ area: newArea === "none" ? null : newArea })
+        .eq("id", userId);
+
+      if (error) throw error;
+
+      // Update local state
+      setUsers((prev) =>
+        prev.map((user) =>
+          user.id === userId ? { ...user, area: newArea === "none" ? null : newArea } : user
+        )
+      );
+
+      toast({
+        title: "Área actualizada",
+        description: newArea === "none" 
+          ? "Se ha removido el área del usuario"
+          : `El área ha sido cambiada a ${areaLabels[newArea]}`,
+      });
+    } catch (error) {
+      console.error("Error updating area:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar el área",
+        variant: "destructive",
+      });
+    } finally {
+      setUpdatingAreaUserId(null);
+    }
+  };
+
+  const getAreaLabel = (area: UserArea | null) => {
+    return area ? areaLabels[area] : "Sin área";
   };
 
   if (isLoading) {
@@ -329,7 +368,28 @@ const UserManagement = () => {
                         {user.email}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">{getAreaLabel(user.area)}</Badge>
+                        <Select
+                          value={user.area || "none"}
+                          onValueChange={(value) =>
+                            handleAreaChange(user.id, value as UserArea | "none")
+                          }
+                          disabled={updatingAreaUserId === user.id}
+                        >
+                          <SelectTrigger className="w-[150px]">
+                            <SelectValue>
+                              <div className="flex items-center gap-2">
+                                <MapPin className="h-3 w-3" />
+                                {getAreaLabel(user.area)}
+                              </div>
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Sin área</SelectItem>
+                            <SelectItem value="medicos">Médicos</SelectItem>
+                            <SelectItem value="asistencial">Asistencial</SelectItem>
+                            <SelectItem value="administrativos">Administrativos</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </TableCell>
                       <TableCell>
                         <Badge

@@ -42,6 +42,8 @@ const TrainingsTable = ({ onRefresh }: TrainingsTableProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [userAreaId, setUserAreaId] = useState<string | null>(null);
 
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
@@ -53,16 +55,66 @@ const TrainingsTable = ({ onRefresh }: TrainingsTableProps) => {
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
-    fetchData();
+    fetchUserRoleAndData();
   }, []);
 
   useEffect(() => {
     applyFilters();
-  }, [trainings, searchTerm, selectedArea, selectedStatus, selectedType]);
+  }, [trainings, searchTerm, selectedArea, selectedStatus, selectedType, userRole, userAreaId]);
 
-  const fetchData = async () => {
+  const fetchUserRoleAndData = async () => {
     setIsLoading(true);
     
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Get user role
+    const { data: roles } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id);
+
+    const isAdmin = roles?.some((r) => r.role === "admin");
+    const isLeader = roles?.some((r) => r.role === "leader");
+    
+    setUserRole(isAdmin ? "admin" : isLeader ? "leader" : "user");
+
+    // Get user profile area (for leaders)
+    if (isLeader && !isAdmin) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("area")
+        .eq("id", user.id)
+        .single();
+
+      if (profile?.area) {
+        // Find the area_id that matches the user's area
+        const { data: areasData } = await supabase
+          .from("areas")
+          .select("id, name")
+          .order("name");
+
+        const areaNameMap: Record<string, string> = {
+          medicos: "Médicos",
+          asistencial: "Asistencial", 
+          administrativos: "Administrativos",
+        };
+
+        const matchingArea = areasData?.find(
+          (a) => a.name.toLowerCase() === areaNameMap[profile.area]?.toLowerCase() ||
+                 a.name.toLowerCase().includes(profile.area.toLowerCase())
+        );
+
+        if (matchingArea) {
+          setUserAreaId(matchingArea.id);
+        }
+      }
+    }
+
+    await fetchData();
+  };
+
+  const fetchData = async () => {
     // Fetch trainings
     const { data: trainingsData, error } = await supabase
       .from("trainings")
@@ -101,6 +153,11 @@ const TrainingsTable = ({ onRefresh }: TrainingsTableProps) => {
   const applyFilters = () => {
     let result = [...trainings];
 
+    // For leaders (not admins), filter by their assigned area
+    if (userRole === "leader" && userAreaId) {
+      result = result.filter(t => t.areas?.id === userAreaId);
+    }
+
     // Search filter
     if (searchTerm) {
       result = result.filter(t =>
@@ -109,8 +166,8 @@ const TrainingsTable = ({ onRefresh }: TrainingsTableProps) => {
       );
     }
 
-    // Area filter
-    if (selectedArea !== "all") {
+    // Area filter (only for admins, leaders already filtered)
+    if (selectedArea !== "all" && userRole === "admin") {
       result = result.filter(t => t.areas?.id === selectedArea);
     }
 
@@ -224,18 +281,20 @@ const TrainingsTable = ({ onRefresh }: TrainingsTableProps) => {
             />
           </div>
 
-          {/* Area filter */}
-          <Select value={selectedArea} onValueChange={setSelectedArea}>
-            <SelectTrigger>
-              <SelectValue placeholder="Todas las áreas" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas las áreas</SelectItem>
-              {areas.map(area => (
-                <SelectItem key={area.id} value={area.id}>{area.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {/* Area filter - only for admins */}
+          {userRole === "admin" && (
+            <Select value={selectedArea} onValueChange={setSelectedArea}>
+              <SelectTrigger>
+                <SelectValue placeholder="Todas las áreas" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas las áreas</SelectItem>
+                {areas.map(area => (
+                  <SelectItem key={area.id} value={area.id}>{area.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
 
           {/* Status filter */}
           <Select value={selectedStatus} onValueChange={setSelectedStatus}>
