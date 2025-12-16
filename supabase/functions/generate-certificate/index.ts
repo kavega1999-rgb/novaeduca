@@ -336,20 +336,25 @@ serve(async (req) => {
     });
     drawCenteredText(page, completedDate, height - 445, 14, timesRomanBold, rgb(0.3, 0.3, 0.3));
     
-    // Signature lines
+    // Signature lines - centered
     const signatureY = 100;
-    const leftSignatureX = 130;
-    const rightSignatureX = 520;
+    const leftSignatureCenterX = width / 4;       // 25% from left
+    const rightSignatureCenterX = (3 * width) / 4; // 75% from left
+    const lineWidth = 120;
     
     // Left signature line
     page.drawLine({
-      start: { x: leftSignatureX - 60, y: signatureY },
-      end: { x: leftSignatureX + 60, y: signatureY },
+      start: { x: leftSignatureCenterX - lineWidth / 2, y: signatureY },
+      end: { x: leftSignatureCenterX + lineWidth / 2, y: signatureY },
       thickness: 1,
       color: rgb(0.4, 0.4, 0.4),
     });
-    page.drawText('Gerente', {
-      x: leftSignatureX - 25,
+    
+    // Center "Gerente" text under left line
+    const gerenteText = 'Gerente';
+    const gerenteTextWidth = timesRomanBold.widthOfTextAtSize(gerenteText, 12);
+    page.drawText(gerenteText, {
+      x: leftSignatureCenterX - gerenteTextWidth / 2,
       y: signatureY - 20,
       size: 12,
       font: timesRomanBold,
@@ -358,13 +363,17 @@ serve(async (req) => {
     
     // Right signature line
     page.drawLine({
-      start: { x: rightSignatureX - 80, y: signatureY },
-      end: { x: rightSignatureX + 80, y: signatureY },
+      start: { x: rightSignatureCenterX - lineWidth / 2, y: signatureY },
+      end: { x: rightSignatureCenterX + lineWidth / 2, y: signatureY },
       thickness: 1,
       color: rgb(0.4, 0.4, 0.4),
     });
-    page.drawText('Jefe de Gestión Humana', {
-      x: rightSignatureX - 70,
+    
+    // Center "Jefe de Gestión Humana" text under right line
+    const jefeText = 'Jefe de Gestión Humana';
+    const jefeTextWidth = timesRomanBold.widthOfTextAtSize(jefeText, 12);
+    page.drawText(jefeText, {
+      x: rightSignatureCenterX - jefeTextWidth / 2,
       y: signatureY - 20,
       size: 12,
       font: timesRomanBold,
