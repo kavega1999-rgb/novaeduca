@@ -28,9 +28,10 @@ const TrainingDetail = () => {
   const [evaluation, setEvaluation] = useState<any>(null);
   const [isAdminOrLeader, setIsAdminOrLeader] = useState(false);
   const [certificates, setCertificates] = useState<any[]>([]);
-  const [showEvaluation, setShowEvaluation] = useState(false);
+const [showEvaluation, setShowEvaluation] = useState(false);
   const [showPretest, setShowPretest] = useState(false);
   const [pretestCompleted, setPretestCompleted] = useState(false);
+  const [evaluationPassed, setEvaluationPassed] = useState(false);
 
   const loadTraining = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -83,7 +84,7 @@ const TrainingDetail = () => {
 
       setTraining(trainingData);
 
-      // Fetch evaluation
+// Fetch evaluation
       const { data: evalData } = await supabase
         .from("evaluations")
         .select("*")
@@ -92,6 +93,18 @@ const TrainingDetail = () => {
 
       if (evalData) {
         setEvaluation(evalData);
+        
+        // Check if user has passed the evaluation
+        const { data: passedAttempt } = await supabase
+          .from("evaluation_attempts")
+          .select("id, passed")
+          .eq("evaluation_id", evalData.id)
+          .eq("user_id", session.user.id)
+          .eq("passed", true)
+          .limit(1)
+          .maybeSingle();
+        
+        setEvaluationPassed(!!passedAttempt);
       }
 
       // Fetch or create user progress
@@ -552,7 +565,7 @@ const TrainingDetail = () => {
               </CardContent>
             </Card>
 
-            {training.requires_evaluation && evaluation && (
+{training.requires_evaluation && evaluation && !evaluationPassed && (
               <Card style={{ boxShadow: "var(--shadow-card)" }}>
                 <CardHeader>
                   <CardTitle className="text-lg">Evaluación</CardTitle>
@@ -585,6 +598,25 @@ const TrainingDetail = () => {
                       </Button>
                     </>
                   )}
+                </CardContent>
+              </Card>
+            )}
+
+            {training.requires_evaluation && evaluation && evaluationPassed && (
+              <Card style={{ boxShadow: "var(--shadow-card)" }} className="border-green-500/50">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                    Evaluación
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-2">
+                    <p className="font-medium text-green-600">¡Evaluación aprobada!</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Has completado exitosamente esta evaluación.
+                    </p>
+                  </div>
                 </CardContent>
               </Card>
             )}
