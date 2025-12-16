@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Clock, BookOpen, Award, PlayCircle, Folder, ChevronDown, ChevronRight } from "lucide-react";
+import { Clock, BookOpen, Award, PlayCircle, Folder, ChevronDown, ChevronRight, Settings } from "lucide-react";
 
 const Trainings = () => {
   const navigate = useNavigate();
@@ -230,20 +230,33 @@ const Trainings = () => {
             <p className="text-muted-foreground">Explora y completa tus programas de formación</p>
           </div>
           
-          <div className="w-full md:w-64">
-            <Select value={selectedArea} onValueChange={setSelectedArea}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filtrar por área" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas las áreas</SelectItem>
-                {areas.map((area) => (
-                  <SelectItem key={area.id} value={area.id}>
-                    {area.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="flex items-center gap-3">
+            <div className="w-full md:w-64">
+              <Select value={selectedArea} onValueChange={setSelectedArea}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filtrar por área" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas las áreas</SelectItem>
+                  {areas.map((area) => (
+                    <SelectItem key={area.id} value={area.id}>
+                      {area.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {(userRole === "admin" || userRole === "leader") && (
+              <Button 
+                onClick={() => navigate("/dashboard/trainings")}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <Settings className="w-4 h-4" />
+                <span className="hidden sm:inline">Gestionar</span>
+              </Button>
+            )}
           </div>
         </div>
 
