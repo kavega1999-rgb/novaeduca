@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,7 +20,8 @@ import {
   AlertTriangle,
   TrendingUp,
   TrendingDown,
-  Filter
+  Filter,
+  Download
 } from "lucide-react";
 import {
   BarChart,
@@ -35,6 +37,7 @@ import {
   Legend,
 } from "recharts";
 import { format, subDays } from "date-fns";
+import * as XLSX from "xlsx";
 
 interface Evaluation {
   id: string;
@@ -285,6 +288,50 @@ const AdherenceEvaluations = () => {
     .sort((a, b) => a.percentage - b.percentage)
     .slice(0, 4);
 
+  // Export to XLSX
+  const exportToXLSX = () => {
+    const exportData = filteredAttempts.map(attempt => {
+      const evaluation = evaluations.find(e => e.id === attempt.evaluation_id);
+      const training = evaluation ? trainings.find(t => t.id === evaluation.training_id) : null;
+      const profile = profiles.find(p => p.id === attempt.user_id);
+      const area = areas.find(a => a.id === training?.area_id);
+      
+      const userAttempts = attempts.filter(a => 
+        a.user_id === attempt.user_id && a.evaluation_id === attempt.evaluation_id
+      );
+      const attemptNumber = userAttempts.indexOf(attempt) + 1;
+      
+      return {
+        'Usuario': profile?.full_name || 'N/A',
+        'Área Usuario': profile?.area || 'N/A',
+        'Capacitación': training?.title || 'N/A',
+        'Área Capacitación': area?.name || 'N/A',
+        'Evaluación': evaluation?.title || 'N/A',
+        'Puntaje Obtenido': attempt.score !== null ? `${attempt.score}/${attempt.max_score}` : 'N/A',
+        'Porcentaje': attempt.score !== null ? `${((attempt.score / attempt.max_score) * 100).toFixed(1)}%` : 'N/A',
+        'Puntaje Aprobación': evaluation?.passing_score ? `${evaluation.passing_score}%` : 'N/A',
+        'Estado': attempt.status === 'completed' ? (attempt.passed ? 'Aprobado' : 'No Aprobado') : 'En Curso',
+        'Intento #': attemptNumber,
+        'Fecha Inicio': attempt.started_at ? format(new Date(attempt.started_at), 'dd/MM/yyyy HH:mm') : 'N/A',
+        'Fecha Finalización': attempt.completed_at ? format(new Date(attempt.completed_at), 'dd/MM/yyyy HH:mm') : 'N/A',
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Evaluaciones");
+    
+    // Auto-size columns
+    const maxWidth = 40;
+    const colWidths = Object.keys(exportData[0] || {}).map(key => ({
+      wch: Math.min(maxWidth, Math.max(key.length, ...exportData.map(row => String(row[key as keyof typeof row]).length)))
+    }));
+    worksheet['!cols'] = colWidths;
+
+    XLSX.writeFile(workbook, `registro_evaluaciones_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+    toast({ title: "Archivo exportado", description: "El registro de evaluaciones ha sido descargado." });
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -300,9 +347,15 @@ const AdherenceEvaluations = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Adherencia de Evaluaciones</h1>
-        <p className="text-muted-foreground text-sm">Aprobados, reprobados, intentos, % de adherencia y filtros por capacitación</p>
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Adherencia de Evaluaciones</h1>
+          <p className="text-muted-foreground text-sm">Aprobados, reprobados, intentos, % de adherencia y filtros por capacitación</p>
+        </div>
+        <Button onClick={exportToXLSX} variant="outline" disabled={filteredAttempts.length === 0}>
+          <Download className="w-4 h-4 mr-2" />
+          Exportar XLSX
+        </Button>
       </div>
 
       {/* Filters - simplified */}
