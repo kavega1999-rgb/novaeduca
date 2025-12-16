@@ -10,7 +10,7 @@ import { Edit, Trash2, Search, Filter, ChevronLeft, ChevronRight, BookOpen, Grad
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import TrainingForm from "./TrainingForm";
-
+import { TrainingReminderButton } from "./TrainingReminderButton";
 interface Training {
   id: string;
   title: string;
@@ -19,6 +19,7 @@ interface Training {
   status: string;
   duration_minutes: number;
   created_at: string;
+  active_until: string | null;
   areas: { id: string; name: string; color: string } | null;
 }
 
@@ -73,6 +74,7 @@ const TrainingsTable = ({ onRefresh }: TrainingsTableProps) => {
         status,
         duration_minutes,
         created_at,
+        active_until,
         areas:area_id (id, name, color)
       `)
       .order("created_at", { ascending: false });
@@ -327,6 +329,11 @@ const TrainingsTable = ({ onRefresh }: TrainingsTableProps) => {
                   <TableCell>{getStatusBadge(training.status)}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
+                      <TrainingReminderButton
+                        trainingId={training.id}
+                        trainingTitle={training.title}
+                        activeUntil={training.active_until}
+                      />
                       <Button
                         variant="ghost"
                         size="icon"
