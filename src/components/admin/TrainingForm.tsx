@@ -32,6 +32,7 @@ const formSchema = z.object({
   target_areas: z.array(z.enum(["medicos", "asistencial", "administrativos"])).default([]),
   active_from: z.string().optional(),
   active_until: z.string().optional(),
+  target_user_count: z.coerce.number().min(0).optional(),
 });
 
 interface TrainingFormProps {
@@ -64,6 +65,7 @@ const TrainingForm = ({ trainingId, onSuccess }: TrainingFormProps) => {
       target_areas: [],
       active_from: "",
       active_until: "",
+      target_user_count: undefined,
     },
   });
 
@@ -112,6 +114,7 @@ const TrainingForm = ({ trainingId, onSuccess }: TrainingFormProps) => {
         target_areas: targetAreasData?.map(ta => ta.target_area) || [],
         active_from: data.active_from ? data.active_from.split("T")[0] : "",
         active_until: data.active_until ? data.active_until.split("T")[0] : "",
+        target_user_count: data.target_user_count || undefined,
       });
       if (data.content_url) {
         setUploadedFileUrl(data.content_url);
@@ -145,6 +148,7 @@ const TrainingForm = ({ trainingId, onSuccess }: TrainingFormProps) => {
           content_url: uploadedFileUrl || null,
           active_from: values.active_from ? new Date(values.active_from).toISOString() : null,
           active_until: values.active_until ? new Date(values.active_until).toISOString() : null,
+          target_user_count: values.target_user_count || null,
         };
         
         ({ error: trainingError } = await supabase
@@ -170,6 +174,7 @@ const TrainingForm = ({ trainingId, onSuccess }: TrainingFormProps) => {
           created_by: user?.id,
           active_from: values.active_from ? new Date(values.active_from).toISOString() : null,
           active_until: values.active_until ? new Date(values.active_until).toISOString() : null,
+          target_user_count: values.target_user_count || null,
         };
         
         const { data: newTraining, error } = await supabase
@@ -438,6 +443,30 @@ const TrainingForm = ({ trainingId, onSuccess }: TrainingFormProps) => {
             )}
           />
         </div>
+
+        <FormField
+          control={form.control}
+          name="target_user_count"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Cantidad de usuarios objetivo (opcional)</FormLabel>
+              <FormControl>
+                <Input 
+                  type="number" 
+                  min="0" 
+                  placeholder="Ej: 10" 
+                  {...field} 
+                  value={field.value || ""}
+                  onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                />
+              </FormControl>
+              <p className="text-xs text-muted-foreground">
+                Número de usuarios del área que deben completar esta capacitación. Deja vacío si no hay límite.
+              </p>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <div className="space-y-4">
           <FormField

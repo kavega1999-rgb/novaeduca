@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Clock, Award, CheckCircle, PlayCircle, Download, AlertCircle, ClipboardCheck } from "lucide-react";
+import { ArrowLeft, Clock, Award, CheckCircle, PlayCircle, Download, AlertCircle, ClipboardCheck, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -196,6 +196,31 @@ const [showEvaluation, setShowEvaluation] = useState(false);
       });
       toast.success("¡Capacitación completada exitosamente!");
     }
+  };
+
+  const finishTraining = async () => {
+    if (!training || !isAdminOrLeader) return;
+
+    const { error } = await supabase
+      .from("trainings")
+      .update({
+        is_finished: true,
+        finished_at: new Date().toISOString(),
+        finished_by: userId,
+      })
+      .eq("id", training.id);
+
+    if (error) {
+      toast.error("Error al finalizar la capacitación");
+      return;
+    }
+
+    setTraining({
+      ...training,
+      is_finished: true,
+      finished_at: new Date().toISOString(),
+    });
+    toast.success("Capacitación marcada como finalizada. Las evaluaciones están bloqueadas.");
   };
 
   const getTypeLabel = (type: string) => {
@@ -565,7 +590,7 @@ const [showEvaluation, setShowEvaluation] = useState(false);
               </CardContent>
             </Card>
 
-{training.requires_evaluation && evaluation && !evaluationPassed && (
+{training.requires_evaluation && evaluation && !evaluationPassed && !training.is_finished && (
               <Card style={{ boxShadow: "var(--shadow-card)" }}>
                 <CardHeader>
                   <CardTitle className="text-lg">Evaluación</CardTitle>
@@ -620,6 +645,26 @@ const [showEvaluation, setShowEvaluation] = useState(false);
                 </CardContent>
               </Card>
             )}
+
+            {/* Training finished - evaluation blocked */}
+            {training.requires_evaluation && evaluation && training.is_finished && !evaluationPassed && (
+              <Card style={{ boxShadow: "var(--shadow-card)" }} className="border-amber-500/50">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Lock className="w-5 h-5 text-amber-500" />
+                    Evaluación Bloqueada
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Alert className="border-amber-500 bg-amber-50 dark:bg-amber-950/20">
+                    <Lock className="h-4 w-4 text-amber-600" />
+                    <AlertDescription className="text-amber-800 dark:text-amber-200">
+                      Esta capacitación ha sido finalizada por un administrador. Ya no es posible realizar la evaluación.
+                    </AlertDescription>
+                  </Alert>
+                </CardContent>
+              </Card>
+            )}
             
             {training.requires_evaluation && !evaluation && isAdminOrLeader && (
               <Card style={{ boxShadow: "var(--shadow-card)" }}>
@@ -632,6 +677,44 @@ const [showEvaluation, setShowEvaluation] = useState(false);
                   </p>
                   <p className="text-sm text-muted-foreground">
                     Ve a la pestaña "Configurar Evaluación" para crearla.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Admin: Finish Training Button */}
+            {isAdminOrLeader && !training.is_finished && (
+              <Card style={{ boxShadow: "var(--shadow-card)" }} className="border-orange-500/30">
+                <CardHeader>
+                  <CardTitle className="text-lg text-orange-600">Administración</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Al finalizar la capacitación, los usuarios ya no podrán realizar evaluaciones. El contenido seguirá disponible en modo lectura.
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    className="w-full border-orange-500 text-orange-600 hover:bg-orange-50"
+                    onClick={finishTraining}
+                  >
+                    <Lock className="w-4 h-4 mr-2" />
+                    Finalizar Capacitación
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
+            {isAdminOrLeader && training.is_finished && (
+              <Card style={{ boxShadow: "var(--shadow-card)" }} className="border-green-500/30">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2 text-green-600">
+                    <CheckCircle className="w-5 h-5" />
+                    Capacitación Finalizada
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">
+                    Esta capacitación fue finalizada el {training.finished_at ? new Date(training.finished_at).toLocaleDateString() : 'N/A'}. Las evaluaciones están bloqueadas.
                   </p>
                 </CardContent>
               </Card>
