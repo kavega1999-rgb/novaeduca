@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { User, Mail, Briefcase, Building2, Save, Award, BookOpen } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { formatUserName, toSentenceCase } from "@/lib/text-utils";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -92,8 +93,8 @@ const Profile = () => {
       const { error } = await supabase
         .from("profiles")
         .update({
-          full_name: profile.full_name,
-          position: profile.position,
+          full_name: formatUserName(profile.full_name),
+          position: toSentenceCase(profile.position),
           area: profile.area || null,
         })
         .eq("id", session.user.id);
