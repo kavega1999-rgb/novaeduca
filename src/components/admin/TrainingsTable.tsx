@@ -79,35 +79,16 @@ const TrainingsTable = ({ onRefresh }: TrainingsTableProps) => {
     
     setUserRole(isAdmin ? "admin" : isLeader ? "leader" : "user");
 
-    // Get user profile area (for leaders)
+    // Get leader_area_id directly from profile (for leaders)
     if (isLeader && !isAdmin) {
       const { data: profile } = await supabase
         .from("profiles")
-        .select("area")
+        .select("leader_area_id")
         .eq("id", user.id)
         .single();
 
-      if (profile?.area) {
-        // Find the area_id that matches the user's area
-        const { data: areasData } = await supabase
-          .from("areas")
-          .select("id, name")
-          .order("name");
-
-        const areaNameMap: Record<string, string> = {
-          medicos: "Médicos",
-          asistencial: "Asistencial", 
-          administrativos: "Administrativos",
-        };
-
-        const matchingArea = areasData?.find(
-          (a) => a.name.toLowerCase() === areaNameMap[profile.area]?.toLowerCase() ||
-                 a.name.toLowerCase().includes(profile.area.toLowerCase())
-        );
-
-        if (matchingArea) {
-          setUserAreaId(matchingArea.id);
-        }
+      if (profile?.leader_area_id) {
+        setUserAreaId(profile.leader_area_id);
       }
     }
 

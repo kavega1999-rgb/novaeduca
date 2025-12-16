@@ -589,6 +589,7 @@ export type Database = {
           created_at: string
           full_name: string
           id: string
+          leader_area_id: string | null
           position: string | null
           role: Database["public"]["Enums"]["app_role"]
           status: string
@@ -599,6 +600,7 @@ export type Database = {
           created_at?: string
           full_name: string
           id: string
+          leader_area_id?: string | null
           position?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           status?: string
@@ -609,12 +611,21 @@ export type Database = {
           created_at?: string
           full_name?: string
           id?: string
+          leader_area_id?: string | null
           position?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           status?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_leader_area_id_fkey"
+            columns: ["leader_area_id"]
+            isOneToOne: false
+            referencedRelation: "areas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       training_target_areas: {
         Row: {
