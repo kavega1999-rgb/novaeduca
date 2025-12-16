@@ -14,6 +14,7 @@ import { Download, Search, TrendingUp, TrendingDown, Minus, Users, BookOpen, Bar
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
+import * as XLSX from "xlsx";
 import AdherenceReportCard from "@/components/adherence/AdherenceReportCard";
 import { getScoreCategory, getCategoryColor } from "@/lib/adherence-utils";
 import {
@@ -212,28 +213,34 @@ const AdherenceTabulation = () => {
     };
   }).filter(Boolean);
 
-  const exportCSV = () => {
-    const headers = ['Fecha', 'Usuario', 'Capacitación', 'Área', 'Pretest (%)', 'Categoría Pretest', 'Postest (%)', 'Categoría Postest', 'Mejora (%)', 'Conclusión'];
-    const rows = filteredReports.map(r => [
-      format(new Date(r.created_at), 'dd/MM/yyyy'),
-      r.user_name,
-      r.training_title,
-      r.area_name,
-      r.pretest_score?.toFixed(1) || 'N/A',
-      r.pretest_category || 'N/A',
-      r.postest_score?.toFixed(1) || 'N/A',
-      r.postest_category || 'N/A',
-      r.improvement_percentage?.toFixed(1) || 'N/A',
-      r.conclusion?.replace(/"/g, '""') || '',
-    ]);
+  const exportXLSX = () => {
+    const exportData = filteredReports.map(r => ({
+      'Fecha': format(new Date(r.created_at), 'dd/MM/yyyy'),
+      'Usuario': r.user_name,
+      'Capacitación': r.training_title,
+      'Área': r.area_name,
+      'Pretest (%)': r.pretest_score?.toFixed(1) || 'N/A',
+      'Categoría Pretest': r.pretest_category || 'N/A',
+      'Postest (%)': r.postest_score?.toFixed(1) || 'N/A',
+      'Categoría Postest': r.postest_category || 'N/A',
+      'Mejora (%)': r.improvement_percentage?.toFixed(1) || 'N/A',
+      'Conclusión': r.conclusion || '',
+      'Estrategias': r.strategies || '',
+    }));
 
-    const csvContent = [headers.join(','), ...rows.map(row => row.map(cell => `"${cell}"`).join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `tabulacion_adherencia_${format(new Date(), 'yyyy-MM-dd')}.csv`;
-    link.click();
-    toast.success("Archivo CSV exportado");
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Tabulación Pre-Post");
+    
+    // Auto-size columns
+    const maxWidth = 50;
+    const colWidths = Object.keys(exportData[0] || {}).map(key => ({
+      wch: Math.min(maxWidth, Math.max(key.length, ...exportData.map(row => String(row[key as keyof typeof row]).length)))
+    }));
+    worksheet['!cols'] = colWidths;
+
+    XLSX.writeFile(workbook, `tabulacion_adherencia_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+    toast.success("Archivo XLSX exportado");
   };
 
   if (loading) {
@@ -256,9 +263,9 @@ const AdherenceTabulation = () => {
           <h1 className="text-2xl font-bold">Tabulación de Adherencia</h1>
           <p className="text-muted-foreground">Comparación Pretest vs Postest por usuario y capacitación</p>
         </div>
-        <Button onClick={exportCSV} variant="outline">
+        <Button onClick={exportXLSX} variant="outline">
           <Download className="w-4 h-4 mr-2" />
-          Exportar CSV
+          Exportar XLSX
         </Button>
       </div>
 
