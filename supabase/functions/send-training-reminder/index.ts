@@ -11,7 +11,11 @@ const corsHeaders = {
 interface ReminderRequest {
   training_id: string;
   reminder_type: "new_training" | "deadline_approaching";
+  user_ids?: string[]; // Optional: specific users to send to
 }
+
+// Helper to delay between requests (rate limiting)
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 async function sendEmail(to: string, subject: string, html: string) {
   const response = await fetch("https://api.resend.com/emails", {
@@ -77,7 +81,7 @@ serve(async (req: Request): Promise<Response> => {
       throw new Error("Insufficient permissions");
     }
 
-    const { training_id, reminder_type }: ReminderRequest = await req.json();
+    const { training_id, reminder_type, user_ids }: ReminderRequest = await req.json();
 
     if (!training_id || !reminder_type) {
       throw new Error("Missing required fields: training_id and reminder_type");
@@ -110,52 +114,47 @@ serve(async (req: Request): Promise<Response> => {
       throw new Error("Training not found");
     }
 
-    // Get target areas for this training
-    const { data: targetAreas } = await supabaseAdmin
-      .from("training_target_areas")
-      .select("target_area")
-      .eq("training_id", training_id);
+    // Get users to send reminders to
+    let targetUserIds: string[] = [];
 
-    // Get users who should receive the reminder
-    let usersQuery = supabaseAdmin
-      .from("profiles")
-      .select(`
-        id,
-        full_name,
-        area
-      `)
-      .eq("status", "active");
+    if (user_ids && user_ids.length > 0) {
+      // Use specific user IDs provided
+      targetUserIds = user_ids;
+    } else {
+      // Get all pending users (original behavior)
+      const { data: targetAreas } = await supabaseAdmin
+        .from("training_target_areas")
+        .select("target_area")
+        .eq("training_id", training_id);
 
-    // Filter by target areas if training is not visible to all
-    if (!training.visible_to_all && targetAreas && targetAreas.length > 0) {
-      const areas = targetAreas.map(ta => ta.target_area);
-      usersQuery = usersQuery.in("area", areas);
+      let usersQuery = supabaseAdmin
+        .from("profiles")
+        .select("id")
+        .eq("status", "active");
+
+      if (!training.visible_to_all && targetAreas && targetAreas.length > 0) {
+        const areas = targetAreas.map(ta => ta.target_area);
+        usersQuery = usersQuery.in("area", areas);
+      }
+
+      const { data: allUsers } = await usersQuery;
+
+      // Get users who have completed the training
+      const { data: completedProgress } = await supabaseAdmin
+        .from("user_progress")
+        .select("user_id")
+        .eq("training_id", training_id)
+        .eq("status", "completed");
+
+      const completedUserIds = new Set(completedProgress?.map(p => p.user_id) || []);
+      targetUserIds = allUsers?.filter(u => !completedUserIds.has(u.id)).map(u => u.id) || [];
     }
 
-    const { data: allUsers, error: usersError } = await usersQuery;
-
-    if (usersError) {
-      console.error("Users fetch error:", usersError);
-      throw new Error("Failed to fetch users");
-    }
-
-    // Get users who have already completed the training
-    const { data: completedProgress } = await supabaseAdmin
-      .from("user_progress")
-      .select("user_id")
-      .eq("training_id", training_id)
-      .eq("status", "completed");
-
-    const completedUserIds = new Set(completedProgress?.map(p => p.user_id) || []);
-
-    // Filter out users who have completed the training
-    const pendingUsers = allUsers?.filter(u => !completedUserIds.has(u.id)) || [];
-
-    if (pendingUsers.length === 0) {
+    if (targetUserIds.length === 0) {
       return new Response(
         JSON.stringify({ 
           success: true, 
-          message: "No hay usuarios pendientes para esta capacitación",
+          message: "No hay usuarios seleccionados para esta capacitación",
           sent_count: 0 
         }),
         {
@@ -165,7 +164,13 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    // Get emails for pending users
+    // Get user details
+    const { data: profiles } = await supabaseAdmin
+      .from("profiles")
+      .select("id, full_name")
+      .in("id", targetUserIds);
+
+    // Get emails for users
     const { data: authUsers, error: authUsersError } = await supabaseAdmin.auth.admin.listUsers();
     
     if (authUsersError) {
@@ -175,6 +180,10 @@ serve(async (req: Request): Promise<Response> => {
 
     const userEmailMap = new Map(
       authUsers.users.map(u => [u.id, u.email])
+    );
+
+    const profileMap = new Map(
+      profiles?.map(p => [p.id, p.full_name]) || []
     );
 
     // Prepare email content based on reminder type
@@ -194,15 +203,21 @@ serve(async (req: Request): Promise<Response> => {
     let successCount = 0;
     let errorCount = 0;
 
-    for (const pendingUser of pendingUsers) {
-      const email = userEmailMap.get(pendingUser.id);
-      if (!email) continue;
+    // Send emails with rate limiting (1 per second to be safe)
+    for (const userId of targetUserIds) {
+      const email = userEmailMap.get(userId);
+      const fullName = profileMap.get(userId) || "Usuario";
+      
+      if (!email) {
+        console.log(`No email found for user ${userId}`);
+        continue;
+      }
 
       const htmlContent = reminder_type === "new_training"
         ? `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h1 style="color: #1e3a5f;">Nueva Capacitación Disponible</h1>
-            <p>Hola ${pendingUser.full_name},</p>
+            <p>Hola ${fullName},</p>
             <p>Te informamos que hay una nueva capacitación disponible para ti:</p>
             <div style="background-color: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
               <h2 style="color: #1e3a5f; margin-top: 0;">${training.title}</h2>
@@ -216,7 +231,7 @@ serve(async (req: Request): Promise<Response> => {
         : `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h1 style="color: #e65100;">⚠️ Recordatorio Importante</h1>
-            <p>Hola ${pendingUser.full_name},</p>
+            <p>Hola ${fullName},</p>
             <p>Te recordamos que la siguiente capacitación está próxima a vencer y aún no la has completado:</p>
             <div style="background-color: #fff3e0; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #e65100;">
               <h2 style="color: #1e3a5f; margin-top: 0;">${training.title}</h2>
@@ -237,6 +252,11 @@ serve(async (req: Request): Promise<Response> => {
         console.error(`Failed to send email to ${email}:`, emailError);
         emailResults.push({ email, status: "error", error: emailError.message });
         errorCount++;
+      }
+
+      // Rate limiting: wait 600ms between emails (allows ~1.6 per second, safely under 2/sec limit)
+      if (targetUserIds.indexOf(userId) < targetUserIds.length - 1) {
+        await delay(600);
       }
     }
 
