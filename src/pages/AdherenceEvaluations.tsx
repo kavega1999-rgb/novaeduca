@@ -288,9 +288,20 @@ const AdherenceEvaluations = () => {
     .sort((a, b) => a.percentage - b.percentage)
     .slice(0, 4);
 
-  // Export to XLSX
+  // Export to XLSX - only completed evaluations
   const exportToXLSX = () => {
-    const exportData = filteredAttempts.map(attempt => {
+    const completedForExport = filteredAttempts.filter(a => a.status === 'completed');
+    
+    if (completedForExport.length === 0) {
+      toast({ 
+        title: "Sin datos", 
+        description: "No hay evaluaciones finalizadas para exportar.", 
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    const exportData = completedForExport.map(attempt => {
       const evaluation = evaluations.find(e => e.id === attempt.evaluation_id);
       const training = evaluation ? trainings.find(t => t.id === evaluation.training_id) : null;
       const profile = profiles.find(p => p.id === attempt.user_id);
@@ -301,25 +312,28 @@ const AdherenceEvaluations = () => {
       );
       const attemptNumber = userAttempts.indexOf(attempt) + 1;
       
+      const percentage = attempt.score !== null && attempt.max_score > 0
+        ? Math.round((attempt.score / attempt.max_score) * 100)
+        : null;
+      
       return {
         'Usuario': profile?.full_name || 'N/A',
-        'Área Usuario': profile?.area || 'N/A',
+        'Área': profile?.area || 'N/A',
         'Capacitación': training?.title || 'N/A',
-        'Área Capacitación': area?.name || 'N/A',
         'Evaluación': evaluation?.title || 'N/A',
-        'Puntaje Obtenido': attempt.score !== null ? `${attempt.score}/${attempt.max_score}` : 'N/A',
-        'Porcentaje': attempt.score !== null ? `${((attempt.score / attempt.max_score) * 100).toFixed(1)}%` : 'N/A',
-        'Puntaje Aprobación': evaluation?.passing_score ? `${evaluation.passing_score}%` : 'N/A',
-        'Estado': attempt.status === 'completed' ? (attempt.passed ? 'Aprobado' : 'No Aprobado') : 'En Curso',
+        'Puntos': attempt.score !== null ? Math.round(attempt.score) : 'N/A',
+        'Puntos Máx': attempt.max_score,
+        'Porcentaje': percentage !== null ? `${percentage}%` : 'N/A',
+        'Mínimo Aprobación': evaluation?.passing_score ? `${evaluation.passing_score}%` : 'N/A',
+        'Resultado': attempt.passed ? 'Aprobado' : 'No Aprobado',
         'Intento #': attemptNumber,
-        'Fecha Inicio': attempt.started_at ? format(new Date(attempt.started_at), 'dd/MM/yyyy HH:mm') : 'N/A',
-        'Fecha Finalización': attempt.completed_at ? format(new Date(attempt.completed_at), 'dd/MM/yyyy HH:mm') : 'N/A',
+        'Fecha': attempt.completed_at ? format(new Date(attempt.completed_at), 'dd/MM/yyyy HH:mm') : 'N/A',
       };
     });
 
     const worksheet = XLSX.utils.json_to_sheet(exportData);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Evaluaciones");
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Evaluaciones Finalizadas");
     
     // Auto-size columns
     const maxWidth = 40;
@@ -328,8 +342,8 @@ const AdherenceEvaluations = () => {
     }));
     worksheet['!cols'] = colWidths;
 
-    XLSX.writeFile(workbook, `registro_evaluaciones_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
-    toast({ title: "Archivo exportado", description: "El registro de evaluaciones ha sido descargado." });
+    XLSX.writeFile(workbook, `evaluaciones_finalizadas_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+    toast({ title: "Archivo exportado", description: `${completedForExport.length} evaluaciones finalizadas descargadas.` });
   };
 
   if (isLoading) {
@@ -352,9 +366,9 @@ const AdherenceEvaluations = () => {
           <h1 className="text-2xl font-bold text-foreground">Adherencia de Evaluaciones</h1>
           <p className="text-muted-foreground text-sm">Aprobados, reprobados, intentos, % de adherencia y filtros por capacitación</p>
         </div>
-        <Button onClick={exportToXLSX} variant="outline" disabled={filteredAttempts.length === 0}>
+        <Button onClick={exportToXLSX} variant="outline" disabled={completedAttempts.length === 0}>
           <Download className="w-4 h-4 mr-2" />
-          Exportar XLSX
+          Exportar Finalizadas
         </Button>
       </div>
 
