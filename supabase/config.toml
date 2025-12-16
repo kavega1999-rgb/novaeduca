@@ -17,3 +17,6 @@ verify_jwt = true
 
 [functions.generate-adherence-report]
 verify_jwt = false
+
+[functions.send-training-reminder]
+verify_jwt = true
