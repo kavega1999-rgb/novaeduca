@@ -57,6 +57,7 @@ const EvaluationManager = ({ trainingId, trainingTitle, contentUrl }: Evaluation
   const [saving, setSaving] = useState(false);
   const [generatingAI, setGeneratingAI] = useState(false);
   const [extractingPDF, setExtractingPDF] = useState(false);
+  const [extractionStep, setExtractionStep] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -189,9 +190,12 @@ const EvaluationManager = ({ trainingId, trainingTitle, contentUrl }: Evaluation
     }
 
     setExtractingPDF(true);
+    setExtractionStep("Preparando archivo...");
     try {
       const formData = new FormData();
       formData.append('file', file);
+
+      setExtractionStep("Enviando PDF al analizador...");
 
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/extract-evaluation-from-pdf`,
@@ -203,6 +207,8 @@ const EvaluationManager = ({ trainingId, trainingTitle, contentUrl }: Evaluation
           body: formData,
         }
       );
+
+      setExtractionStep("Procesando respuesta de la IA...");
 
       const data = await response.json();
 
@@ -254,6 +260,7 @@ const EvaluationManager = ({ trainingId, trainingTitle, contentUrl }: Evaluation
       toast.error(error instanceof Error ? error.message : "Error al extraer preguntas del PDF");
     } finally {
       setExtractingPDF(false);
+      setExtractionStep("");
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -573,7 +580,7 @@ const EvaluationManager = ({ trainingId, trainingTitle, contentUrl }: Evaluation
             ) : (
               <Upload className="w-4 h-4 mr-2" />
             )}
-            {extractingPDF ? "Extrayendo..." : "Importar desde PDF"}
+            {extractingPDF ? extractionStep || "Extrayendo..." : "Importar desde PDF"}
           </Button>
           <Button 
             onClick={generateQuestionsWithAI} 

@@ -158,7 +158,7 @@ Responde ÚNICAMENTE con un JSON válido con la siguiente estructura (sin markdo
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-2.5-flash-lite",
         messages: [
           { role: "system", content: systemPrompt },
           { 
@@ -172,6 +172,7 @@ Responde ÚNICAMENTE con un JSON válido con la siguiente estructura (sin markdo
             ]
           }
         ],
+        max_tokens: 8192,
       }),
     });
 
