@@ -22,6 +22,13 @@ const isVideoUrl = (url: string): boolean => {
   return videoExtensions.some(ext => lowercaseUrl.includes(ext));
 };
 
+// Helper to detect if URL is a PowerPoint/Office file (non-PDF)
+const isOfficeUrl = (url: string): boolean => {
+  const officeExtensions = ['.ppt', '.pptx', '.doc', '.docx', '.xls', '.xlsx'];
+  const lowercaseUrl = url.toLowerCase();
+  return officeExtensions.some(ext => lowercaseUrl.includes(ext));
+};
+
 const PagedContentViewer = ({
   contentUrl,
   userProgressId,
@@ -30,37 +37,32 @@ const PagedContentViewer = ({
   totalPages = 10,
   requiresEvaluation = false,
 }: PagedContentViewerProps) => {
-  // Check if content is video
   const isVideo = isVideoUrl(contentUrl);
-
-  // If it's a video, render VideoContentViewer
-  if (isVideo) {
-    return (
-      <VideoContentViewer
-        contentUrl={contentUrl}
-        userProgressId={userProgressId}
-        onContentViewed={onContentViewed}
-        contentViewedCompletely={contentViewedCompletely}
-        requiresEvaluation={requiresEvaluation}
-      />
-    );
-  }
+  const isOffice = isOfficeUrl(contentUrl);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [viewedPages, setViewedPages] = useState<Set<number>>(new Set([1]));
   const [allPagesViewed, setAllPagesViewed] = useState(contentViewedCompletely);
 
   useEffect(() => {
-    // Mark first page as viewed on mount
     setViewedPages(new Set([1]));
   }, []);
 
   useEffect(() => {
-    // Check if all pages have been viewed
     if (viewedPages.size === totalPages && !allPagesViewed) {
       markContentAsViewed();
     }
   }, [viewedPages, totalPages, allPagesViewed]);
+
+  // For office files viewed as a single page, auto-mark as viewed after mount
+  useEffect(() => {
+    if (isOffice && !allPagesViewed) {
+      const timer = setTimeout(() => {
+        markContentAsViewed();
+      }, 5000); // Mark as viewed after 5 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [isOffice]);
 
   const markContentAsViewed = async () => {
     if (!userProgressId) {
@@ -78,7 +80,7 @@ const PagedContentViewer = ({
 
     if (!error) {
       setAllPagesViewed(true);
-      const message = requiresEvaluation 
+      const message = requiresEvaluation
         ? "¡Has completado la visualización del contenido! Ahora puedes realizar la evaluación."
         : "¡Has completado la visualización del contenido!";
       toast.success(message);
@@ -88,6 +90,58 @@ const PagedContentViewer = ({
     }
   };
 
+  // If it's a video, render VideoContentViewer
+  if (isVideo) {
+    return (
+      <VideoContentViewer
+        contentUrl={contentUrl}
+        userProgressId={userProgressId}
+        onContentViewed={onContentViewed}
+        contentViewedCompletely={contentViewedCompletely}
+        requiresEvaluation={requiresEvaluation}
+      />
+    );
+  }
+
+  // If it's an Office file (PowerPoint, Word, Excel), use Google Docs Viewer
+  if (isOffice) {
+    const googleViewerUrl = `https://docs.google.com/gview?url=${encodeURIComponent(contentUrl)}&embedded=true`;
+
+    return (
+      <div className="space-y-4">
+        {/* Completion status */}
+        <div className="bg-card border rounded-lg p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium">
+              Progreso de visualización
+            </span>
+            <span className="text-sm font-bold">{allPagesViewed ? "100%" : "En progreso..."}</span>
+          </div>
+          <Progress value={allPagesViewed ? 100 : 50} className="h-3" />
+          {allPagesViewed && (
+            <div className="flex items-center gap-2 mt-2 text-green-600">
+              <CheckCircle className="w-4 h-4" />
+              <span className="text-sm font-medium">¡Contenido completado!</span>
+            </div>
+          )}
+        </div>
+
+        {/* Office File Viewer via Google Docs */}
+        <div className="bg-card border rounded-lg overflow-hidden" style={{ boxShadow: "var(--shadow-card)" }}>
+          <div className="w-full h-[750px] bg-muted relative">
+            <iframe
+              src={googleViewerUrl}
+              className="w-full h-full border-0"
+              title="Contenido de capacitación"
+              style={{ display: 'block' }}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // PDF viewer with page navigation
   const handleNextPage = () => {
     if (currentPage < totalPages) {
       const nextPage = currentPage + 1;
@@ -109,7 +163,7 @@ const PagedContentViewer = ({
 
   const progressPercentage = Math.round((viewedPages.size / totalPages) * 100);
 
-  // Build PDF URL to show single page only - force single page mode
+  // Build PDF URL to show single page only
   const pdfUrl = `${contentUrl}#page=${currentPage}&pagemode=none&toolbar=0&navpanes=0&scrollbar=0&view=Fit`;
 
   return (
@@ -176,7 +230,7 @@ const PagedContentViewer = ({
             src={pdfUrl}
             className="w-full h-full border-0"
             title={`Contenido de capacitación - Página ${currentPage}`}
-            style={{ 
+            style={{
               overflow: 'hidden',
               display: 'block'
             }}
@@ -192,7 +246,7 @@ const PagedContentViewer = ({
             {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
               const isViewed = viewedPages.has(page);
               const isCurrent = currentPage === page;
-              
+
               return (
                 <Button
                   key={page}
