@@ -168,6 +168,27 @@ export type Database = {
         }
         Relationships: []
       }
+      authorized_employees: {
+        Row: {
+          created_at: string
+          document_number: string
+          full_name: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          document_number: string
+          full_name: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          document_number?: string
+          full_name?: string
+          id?: string
+        }
+        Relationships: []
+      }
       certificates: {
         Row: {
           attempt_id: string | null
@@ -589,6 +610,8 @@ export type Database = {
           created_at: string
           full_name: string
           id: string
+          id_number: string | null
+          id_type: string | null
           leader_area_id: string | null
           position: string | null
           role: Database["public"]["Enums"]["app_role"]
@@ -600,6 +623,8 @@ export type Database = {
           created_at?: string
           full_name: string
           id: string
+          id_number?: string | null
+          id_type?: string | null
           leader_area_id?: string | null
           position?: string | null
           role?: Database["public"]["Enums"]["app_role"]
@@ -611,6 +636,8 @@ export type Database = {
           created_at?: string
           full_name?: string
           id?: string
+          id_number?: string | null
+          id_type?: string | null
           leader_area_id?: string | null
           position?: string | null
           role?: Database["public"]["Enums"]["app_role"]
