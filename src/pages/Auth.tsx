@@ -14,6 +14,7 @@ import heroImage from "@/assets/team-celebration.jpg";
 import { formatUserName } from "@/lib/text-utils";
 
 type AuthView = "main" | "otp-verify" | "forgot-password" | "reset-password";
+type IdType = "CC" | "CE" | "PA" | "TI" | "";
 
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -23,6 +24,8 @@ const Auth = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [area, setArea] = useState<"medicos" | "asistencial" | "administrativos" | "">("");
+  const [idType, setIdType] = useState<IdType>("");
+  const [idNumber, setIdNumber] = useState("");
   const [otpCode, setOtpCode] = useState("");
   const [view, setView] = useState<AuthView>("main");
   const [otpPurpose, setOtpPurpose] = useState<"login" | "signup" | "reset">("login");
@@ -124,9 +127,43 @@ const Auth = () => {
       });
       return;
     }
+    if (!idType || !idNumber) {
+      toast({
+        title: "Identificación requerida",
+        description: "Por favor ingresa tu tipo y número de identificación.",
+        variant: "destructive"
+      });
+      return;
+    }
     setIsLoading(true);
     
     try {
+      // Verificar si el empleado está en la base autorizada
+      const { data: employee, error: empError } = await supabase
+        .from('authorized_employees')
+        .select('document_number, full_name')
+        .eq('document_number', idNumber.trim())
+        .maybeSingle();
+
+      if (empError) throw empError;
+
+      if (!employee) {
+        await logAccess({
+          userEmail: email,
+          userName: fullName,
+          eventType: 'registro',
+          status: 'fallido',
+          details: `Documento ${idNumber} no encontrado en la base de empleados`
+        });
+        toast({
+          title: "Acceso no autorizado",
+          description: "Tu número de identificación no se encuentra registrado como empleado de Novasalud Caribe IPS. Por favor comunícate con el área de Recursos Humanos.",
+          variant: "destructive"
+        });
+        setIsLoading(false);
+        return;
+      }
+
       const formattedName = formatUserName(fullName);
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
@@ -140,7 +177,6 @@ const Auth = () => {
       });
 
       if (authError) {
-        // Log failed registration
         await logAccess({
           userEmail: email,
           userName: fullName,
@@ -151,19 +187,20 @@ const Auth = () => {
         throw authError;
       }
 
-      // Update profile with area
+      // Update profile with area and id info
       if (authData.user && area) {
         const { error: profileError } = await supabase
           .from('profiles')
           .update({
-            area: area as "medicos" | "asistencial" | "administrativos"
+            area: area as "medicos" | "asistencial" | "administrativos",
+            id_type: idType,
+            id_number: idNumber.trim()
           })
           .eq('id', authData.user.id);
         
         if (profileError) throw profileError;
       }
 
-      // Log successful registration
       await logAccess({
         userId: authData.user?.id,
         userName: formattedName,
@@ -638,6 +675,36 @@ const Auth = () => {
                       />
                     </div>
                     <div className="space-y-2">
+                      <Label>Tipo de identificación</Label>
+                      <Select
+                        value={idType}
+                        onValueChange={value => setIdType(value as IdType)}
+                        required
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecciona el tipo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="CC">Cédula de Ciudadanía (CC)</SelectItem>
+                          <SelectItem value="CE">Cédula de Extranjería (CE)</SelectItem>
+                          <SelectItem value="PA">Pasaporte (PA)</SelectItem>
+                          <SelectItem value="TI">Tarjeta de Identidad (TI)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="id-number">Número de identificación</Label>
+                      <Input 
+                        id="id-number" 
+                        type="text" 
+                        placeholder="Ej: 1045718751" 
+                        value={idNumber} 
+                        onChange={e => setIdNumber(e.target.value.replace(/\D/g, ''))} 
+                        required 
+                      />
+                      <p className="text-xs text-muted-foreground">Solo empleados de Novasalud Caribe IPS pueden registrarse.</p>
+                    </div>
+                    <div className="space-y-2">
                       <Label htmlFor="signup-email">Correo electrónico</Label>
                       <Input 
                         id="signup-email" 
@@ -680,7 +747,7 @@ const Auth = () => {
                       {isLoading ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Creando cuenta...
+                          Verificando...
                         </>
                       ) : "Crear Cuenta"}
                     </Button>
@@ -700,7 +767,7 @@ const Auth = () => {
                     variant="outline" 
                     className="w-full"
                     onClick={() => handleSendOTP("signup")}
-                    disabled={isLoading || !email || !fullName || !area}
+                    disabled={isLoading || !email || !fullName || !area || !idType || !idNumber}
                   >
                     <Mail className="mr-2 h-4 w-4" />
                     Registrarse con código por email
