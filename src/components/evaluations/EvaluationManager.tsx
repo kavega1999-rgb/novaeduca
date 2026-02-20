@@ -197,12 +197,17 @@ const EvaluationManager = ({ trainingId, trainingTitle, contentUrl }: Evaluation
 
       setExtractionStep("Enviando PDF al analizador...");
 
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('No hay sesión activa. Por favor inicia sesión.');
+      }
+
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/extract-evaluation-from-pdf`,
         {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            'Authorization': `Bearer ${session.access_token}`,
           },
           body: formData,
         }
