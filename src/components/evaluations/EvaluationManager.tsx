@@ -9,7 +9,8 @@ import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, Save, Sparkles, Loader2, Upload } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Plus, Trash2, Save, Sparkles, Loader2, Upload, ChevronDown, CheckSquare, ToggleLeft, AlignLeft } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -601,17 +602,29 @@ const EvaluationManager = ({ trainingId, trainingTitle, contentUrl }: Evaluation
             )}
             {generatingAI ? "Generando..." : "Generar con IA"}
           </Button>
-          <Select onValueChange={(value) => addQuestion(value as QuestionType)}>
-            <SelectTrigger className="w-[180px]">
-              <Plus className="w-4 h-4 mr-2" />
-              <SelectValue placeholder="Agregar Pregunta" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="multiple_choice">Selección Múltiple</SelectItem>
-              <SelectItem value="true_false">Verdadero/Falso</SelectItem>
-              <SelectItem value="open_ended">Respuesta Abierta</SelectItem>
-            </SelectContent>
-          </Select>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <Plus className="w-4 h-4" />
+                Nueva Pregunta
+                <ChevronDown className="w-3 h-3 opacity-60" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuItem onClick={() => addQuestion('multiple_choice')} className="gap-2 cursor-pointer">
+                <CheckSquare className="w-4 h-4 text-primary" />
+                Selección Múltiple
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => addQuestion('true_false')} className="gap-2 cursor-pointer">
+                <ToggleLeft className="w-4 h-4 text-primary" />
+                Verdadero / Falso
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => addQuestion('open_ended')} className="gap-2 cursor-pointer">
+                <AlignLeft className="w-4 h-4 text-muted-foreground" />
+                Respuesta Abierta
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
