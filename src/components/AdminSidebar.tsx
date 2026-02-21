@@ -81,6 +81,7 @@ export function AdminSidebar() {
 
   return (
     <div
+      data-tour="admin-sidebar"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       className={cn(

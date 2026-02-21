@@ -1,99 +1,118 @@
-import { useState } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
-import { 
-  BookOpen, Users, BarChart3, Award, Settings, ClipboardCheck, 
-  ArrowRight, ArrowLeft, CheckCircle2, Sparkles 
-} from "lucide-react";
+import { ArrowRight, ArrowLeft, CheckCircle2, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
-interface TutorialStep {
-  icon: React.ReactNode;
+interface TourStep {
+  target: string; // data-tour attribute value
   title: string;
   description: string;
+  position?: "top" | "bottom" | "left" | "right";
 }
 
-const userSteps: TutorialStep[] = [
+const userSteps: TourStep[] = [
   {
-    icon: <Sparkles className="w-10 h-10 text-secondary" />,
-    title: "¡Bienvenido a NovaEduca!",
-    description: "Esta es tu plataforma de capacitación profesional. Aquí podrás acceder a entrenamientos, evaluaciones y certificaciones diseñados para tu crecimiento.",
+    target: "nav-bar",
+    title: "Barra de Navegación",
+    description: "Desde aquí puedes acceder a tu perfil, tus capacitaciones y cerrar sesión.",
+    position: "bottom",
   },
   {
-    icon: <BookOpen className="w-10 h-10 text-primary" />,
-    title: "Capacitaciones",
-    description: "Explora las capacitaciones disponibles en tu área. Cada una incluye contenido interactivo que puedes revisar a tu ritmo.",
+    target: "hero-section",
+    title: "Tu Centro de Aprendizaje",
+    description: "Esta es tu plataforma de capacitación profesional. Aquí encontrarás todo lo necesario para tu desarrollo.",
+    position: "bottom",
   },
   {
-    icon: <ClipboardCheck className="w-10 h-10 text-primary" />,
-    title: "Evaluaciones",
-    description: "Algunas capacitaciones incluyen pre-test y post-test para medir tu aprendizaje. ¡Prepárate bien y demuestra lo aprendido!",
+    target: "stats-section",
+    title: "Tu Progreso",
+    description: "Aquí puedes ver tus estadísticas: capacitaciones totales, completadas, en progreso y tu avance promedio.",
+    position: "bottom",
   },
   {
-    icon: <Award className="w-10 h-10 text-secondary" />,
-    title: "Certificados",
-    description: "Al completar exitosamente una capacitación y su evaluación, recibirás un certificado digital que podrás descargar desde tu perfil.",
+    target: "certificates-section",
+    title: "Tus Certificados",
+    description: "Al completar capacitaciones y evaluaciones exitosamente, tus certificados aparecerán aquí para descargar.",
+    position: "top",
+  },
+  {
+    target: "areas-section",
+    title: "Áreas de Capacitación",
+    description: "Explora las diferentes áreas de capacitación disponibles. Haz clic en cualquiera para ver sus entrenamientos.",
+    position: "top",
   },
 ];
 
-const leaderSteps: TutorialStep[] = [
+const leaderSteps: TourStep[] = [
   {
-    icon: <Sparkles className="w-10 h-10 text-secondary" />,
-    title: "¡Bienvenido, Líder!",
-    description: "Como líder de área, tienes acceso a herramientas avanzadas para gestionar capacitaciones y hacer seguimiento del progreso de tu equipo.",
+    target: "nav-bar",
+    title: "Navegación Principal",
+    description: "Accede rápidamente a tu perfil, capacitaciones y opciones de sesión.",
+    position: "bottom",
   },
   {
-    icon: <BookOpen className="w-10 h-10 text-primary" />,
-    title: "Gestión de Capacitaciones",
-    description: "Puedes crear, editar y publicar capacitaciones para tu equipo desde el panel de administración. Define contenido, evaluaciones y fechas.",
+    target: "admin-sidebar",
+    title: "Panel de Administración",
+    description: "Como líder, tienes acceso a este menú lateral con herramientas de gestión: capacitaciones, analítica, usuarios y más.",
+    position: "right",
   },
   {
-    icon: <Users className="w-10 h-10 text-primary" />,
-    title: "Seguimiento de Equipo",
-    description: "Revisa el progreso de los miembros de tu área, sus resultados en evaluaciones y tasas de completamiento.",
+    target: "stats-section",
+    title: "Estadísticas Generales",
+    description: "Revisa el progreso general de las capacitaciones, completadas y en curso.",
+    position: "bottom",
   },
   {
-    icon: <BarChart3 className="w-10 h-10 text-primary" />,
-    title: "Reportes",
-    description: "Accede a reportes detallados de adherencia y desempeño. Genera informes para tomar decisiones informadas.",
-  },
-  {
-    icon: <Award className="w-10 h-10 text-secondary" />,
+    target: "certificates-section",
     title: "Certificados",
     description: "Gestiona y visualiza los certificados emitidos a los miembros de tu equipo.",
+    position: "top",
+  },
+  {
+    target: "areas-section",
+    title: "Áreas de Capacitación",
+    description: "Accede a las capacitaciones de cada área y haz seguimiento del progreso de tu equipo.",
+    position: "top",
   },
 ];
 
-const adminSteps: TutorialStep[] = [
+const adminSteps: TourStep[] = [
   {
-    icon: <Sparkles className="w-10 h-10 text-secondary" />,
-    title: "¡Bienvenido, Administrador!",
-    description: "Tienes acceso total a la plataforma NovaEduca. Desde aquí puedes gestionar todas las capacitaciones, usuarios y reportes de la organización.",
+    target: "nav-bar",
+    title: "Navegación Principal",
+    description: "Accede a tu perfil, capacitaciones y gestiona tu sesión desde aquí.",
+    position: "bottom",
   },
   {
-    icon: <Settings className="w-10 h-10 text-primary" />,
+    target: "admin-sidebar",
     title: "Panel de Administración",
-    description: "Tu panel lateral te da acceso rápido a todas las herramientas: capacitaciones, usuarios, reportes, certificados y más.",
+    description: "Tu menú completo de gestión: capacitaciones, analítica (progreso, adherencia, tabulación, asistencia), usuarios, certificados y auditoría.",
+    position: "right",
   },
   {
-    icon: <BookOpen className="w-10 h-10 text-primary" />,
-    title: "Capacitaciones",
-    description: "Crea y gestiona capacitaciones para todas las áreas. Define contenido PDF o video, evaluaciones, pre-tests y fechas de activación.",
+    target: "hero-section",
+    title: "Panel Principal",
+    description: "Vista general de tu plataforma. Desde aquí puedes monitorear el estado general de NovaEduca.",
+    position: "bottom",
   },
   {
-    icon: <Users className="w-10 h-10 text-primary" />,
-    title: "Gestión de Usuarios",
-    description: "Administra los usuarios de la plataforma, asigna roles (admin, líder, usuario) y gestiona la base de empleados autorizados.",
+    target: "stats-section",
+    title: "Métricas Clave",
+    description: "Visualiza el total de capacitaciones, completadas, en progreso y el promedio de avance de toda la organización.",
+    position: "bottom",
   },
   {
-    icon: <BarChart3 className="w-10 h-10 text-primary" />,
-    title: "Reportes y Adherencia",
-    description: "Accede a reportes completos de asistencia, evaluaciones y adherencia. Exporta datos y genera informes para auditorías.",
+    target: "certificates-section",
+    title: "Certificados Emitidos",
+    description: "Revisa y gestiona todos los certificados y constancias generados por la plataforma.",
+    position: "top",
   },
   {
-    icon: <Award className="w-10 h-10 text-secondary" />,
-    title: "¡Estás listo!",
-    description: "Explora la plataforma y comienza a gestionar las capacitaciones de tu organización. Si necesitas ayuda, usa el chat flotante de preguntas frecuentes.",
+    target: "areas-section",
+    title: "Áreas de Capacitación",
+    description: "Administra las capacitaciones por área. Crea nuevos entrenamientos, evaluaciones y configura fechas de activación.",
+    position: "top",
   },
 ];
 
@@ -104,13 +123,90 @@ interface OnboardingTutorialProps {
   userId: string;
 }
 
+interface SpotlightRect {
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+}
+
+const PADDING = 12;
+
 const OnboardingTutorial = ({ isOpen, onComplete, userRole, userId }: OnboardingTutorialProps) => {
   const [currentStep, setCurrentStep] = useState(0);
+  const [spotlight, setSpotlight] = useState<SpotlightRect | null>(null);
+  const [tooltipStyle, setTooltipStyle] = useState<React.CSSProperties>({});
+  const [ready, setReady] = useState(false);
+  const tooltipRef = useRef<HTMLDivElement>(null);
 
   const steps = userRole === "admin" ? adminSteps : userRole === "leader" ? leaderSteps : userSteps;
   const totalSteps = steps.length;
   const step = steps[currentStep];
   const isLastStep = currentStep === totalSteps - 1;
+
+  const updateSpotlight = useCallback(() => {
+    if (!isOpen || !step) return;
+    const el = document.querySelector(`[data-tour="${step.target}"]`);
+    if (!el) {
+      setSpotlight(null);
+      setReady(true);
+      return;
+    }
+
+    const rect = el.getBoundingClientRect();
+    const s: SpotlightRect = {
+      top: rect.top - PADDING,
+      left: rect.left - PADDING,
+      width: rect.width + PADDING * 2,
+      height: rect.height + PADDING * 2,
+    };
+    setSpotlight(s);
+
+    // Scroll element into view
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+
+    // Calculate tooltip position after a tick
+    requestAnimationFrame(() => {
+      const pos = step.position || "bottom";
+      const tooltip: React.CSSProperties = { position: "fixed" };
+      const tooltipWidth = 340;
+      const tooltipHeight = 180;
+
+      if (pos === "bottom") {
+        tooltip.top = s.top + s.height + 16;
+        tooltip.left = Math.max(16, Math.min(s.left + s.width / 2 - tooltipWidth / 2, window.innerWidth - tooltipWidth - 16));
+      } else if (pos === "top") {
+        tooltip.top = s.top - tooltipHeight - 16;
+        tooltip.left = Math.max(16, Math.min(s.left + s.width / 2 - tooltipWidth / 2, window.innerWidth - tooltipWidth - 16));
+      } else if (pos === "right") {
+        tooltip.top = Math.max(16, s.top + s.height / 2 - tooltipHeight / 2);
+        tooltip.left = s.left + s.width + 16;
+      } else if (pos === "left") {
+        tooltip.top = Math.max(16, s.top + s.height / 2 - tooltipHeight / 2);
+        tooltip.left = s.left - tooltipWidth - 16;
+      }
+
+      // Clamp vertical
+      if ((tooltip.top as number) < 16) tooltip.top = 16;
+      if ((tooltip.top as number) + tooltipHeight > window.innerHeight - 16) {
+        tooltip.top = window.innerHeight - tooltipHeight - 16;
+      }
+
+      setTooltipStyle(tooltip);
+      setReady(true);
+    });
+  }, [isOpen, step]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setReady(false);
+    const timer = setTimeout(updateSpotlight, 300);
+    window.addEventListener("resize", updateSpotlight);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("resize", updateSpotlight);
+    };
+  }, [isOpen, currentStep, updateSpotlight]);
 
   const handleComplete = async () => {
     try {
@@ -124,77 +220,106 @@ const OnboardingTutorial = ({ isOpen, onComplete, userRole, userId }: Onboarding
     onComplete();
   };
 
-  return (
-    <Dialog open={isOpen} onOpenChange={() => {}}>
-      <DialogContent className="sm:max-w-lg p-0 overflow-hidden border-0 [&>button]:hidden" style={{ boxShadow: "var(--shadow-hover)" }}>
-        {/* Progress bar */}
-        <div className="h-1.5 bg-muted w-full">
-          <div
-            className="h-full bg-primary transition-all duration-500 ease-out rounded-r-full"
-            style={{ width: `${((currentStep + 1) / totalSteps) * 100}%` }}
-          />
-        </div>
+  if (!isOpen) return null;
 
-        <div className="px-6 pt-6 pb-8 flex flex-col items-center text-center">
-          {/* Step indicator */}
-          <span className="text-xs text-muted-foreground mb-4">
-            {currentStep + 1} de {totalSteps}
-          </span>
+  const overlayClipPath = spotlight
+    ? `polygon(
+        0% 0%, 0% 100%, 
+        ${spotlight.left}px 100%, 
+        ${spotlight.left}px ${spotlight.top}px, 
+        ${spotlight.left + spotlight.width}px ${spotlight.top}px, 
+        ${spotlight.left + spotlight.width}px ${spotlight.top + spotlight.height}px, 
+        ${spotlight.left}px ${spotlight.top + spotlight.height}px, 
+        ${spotlight.left}px 100%, 
+        100% 100%, 100% 0%
+      )`
+    : undefined;
 
-          {/* Icon */}
-          <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mb-5">
-            {step.icon}
+  return createPortal(
+    <div className="fixed inset-0 z-[9999]" style={{ pointerEvents: "auto" }}>
+      {/* Dark overlay with hole */}
+      <div
+        className="fixed inset-0 bg-foreground/70 transition-all duration-500"
+        style={{ clipPath: overlayClipPath }}
+        onClick={(e) => e.stopPropagation()}
+      />
+
+      {/* Spotlight border glow */}
+      {spotlight && (
+        <div
+          className="fixed rounded-xl border-2 border-primary shadow-[0_0_30px_hsl(var(--primary)/0.4)] transition-all duration-500 pointer-events-none"
+          style={{
+            top: spotlight.top,
+            left: spotlight.left,
+            width: spotlight.width,
+            height: spotlight.height,
+          }}
+        />
+      )}
+
+      {/* Tooltip card */}
+      {ready && (
+        <div
+          ref={tooltipRef}
+          className="fixed z-[10000] w-[340px] bg-card border border-border rounded-xl p-5 animate-in fade-in-0 slide-in-from-bottom-2 duration-300"
+          style={{ ...tooltipStyle, boxShadow: "var(--shadow-hover)" }}
+        >
+          {/* Close button */}
+          <button
+            onClick={handleComplete}
+            className="absolute top-3 right-3 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+
+          {/* Step count */}
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+              {currentStep + 1} / {totalSteps}
+            </span>
           </div>
 
           {/* Content */}
-          <h2 className="text-xl font-bold text-foreground mb-3">{step.title}</h2>
-          <p className="text-muted-foreground text-sm leading-relaxed max-w-sm">{step.description}</p>
+          <h3 className="text-base font-bold text-foreground mb-2">{step.title}</h3>
+          <p className="text-sm text-muted-foreground leading-relaxed mb-4">{step.description}</p>
 
-          {/* Step dots */}
-          <div className="flex gap-1.5 my-6">
+          {/* Progress dots */}
+          <div className="flex gap-1 mb-4">
             {steps.map((_, i) => (
               <div
                 key={i}
-                className={`h-2 rounded-full transition-all duration-300 ${
-                  i === currentStep ? "w-6 bg-primary" : i < currentStep ? "w-2 bg-primary/40" : "w-2 bg-muted"
+                className={`h-1.5 rounded-full transition-all duration-300 ${
+                  i === currentStep ? "w-5 bg-primary" : i < currentStep ? "w-1.5 bg-primary/40" : "w-1.5 bg-muted"
                 }`}
               />
             ))}
           </div>
 
           {/* Navigation */}
-          <div className="flex gap-3 w-full max-w-xs">
+          <div className="flex gap-2">
             {currentStep > 0 && (
-              <Button variant="outline" className="flex-1" onClick={() => setCurrentStep(s => s - 1)}>
-                <ArrowLeft className="w-4 h-4 mr-1" />
+              <Button variant="outline" size="sm" onClick={() => setCurrentStep(s => s - 1)}>
+                <ArrowLeft className="w-3.5 h-3.5 mr-1" />
                 Atrás
               </Button>
             )}
+            <div className="flex-1" />
             {isLastStep ? (
-              <Button className="flex-1" onClick={handleComplete}>
-                <CheckCircle2 className="w-4 h-4 mr-1" />
-                ¡Comenzar!
+              <Button size="sm" onClick={handleComplete}>
+                <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
+                ¡Entendido!
               </Button>
             ) : (
-              <Button className="flex-1" onClick={() => setCurrentStep(s => s + 1)}>
+              <Button size="sm" onClick={() => setCurrentStep(s => s + 1)}>
                 Siguiente
-                <ArrowRight className="w-4 h-4 ml-1" />
+                <ArrowRight className="w-3.5 h-3.5 ml-1" />
               </Button>
             )}
           </div>
-
-          {/* Skip */}
-          {!isLastStep && (
-            <button
-              onClick={handleComplete}
-              className="mt-3 text-xs text-muted-foreground hover:text-foreground transition-colors underline"
-            >
-              Omitir tutorial
-            </button>
-          )}
         </div>
-      </DialogContent>
-    </Dialog>
+      )}
+    </div>,
+    document.body
   );
 };
 

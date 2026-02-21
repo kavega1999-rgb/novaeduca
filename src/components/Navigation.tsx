@@ -69,7 +69,7 @@ const Navigation = ({ userRole }: NavigationProps) => {
   };
 
   return (
-    <nav className="border-b bg-card sticky top-0 z-50" style={{ boxShadow: "var(--shadow-card)" }}>
+    <nav data-tour="nav-bar" className="border-b bg-card sticky top-0 z-50" style={{ boxShadow: "var(--shadow-card)" }}>
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-14 md:h-16">
           <div className="flex items-center gap-4 md:gap-8">
