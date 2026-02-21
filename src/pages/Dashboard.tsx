@@ -173,7 +173,7 @@ const Dashboard = () => {
               <h1 className="text-lg md:text-2xl font-bold mb-4 md:mb-6">Panel Principal</h1>
               
                 {/* Hero Section */}
-                <div className="mb-6 md:mb-8 rounded-xl md:rounded-2xl overflow-hidden relative h-[200px] md:h-[400px] shadow-lg">
+                <div data-tour="hero-section" className="mb-6 md:mb-8 rounded-xl md:rounded-2xl overflow-hidden relative h-[200px] md:h-[400px] shadow-lg">
                   <img 
                     src={heroImage} 
                     alt="Equipo médico Novasalud" 
@@ -192,7 +192,7 @@ const Dashboard = () => {
                 </div>
 
                 {/* Stats Cards */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mb-6 md:mb-8">
+                <div data-tour="stats-section" className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mb-6 md:mb-8">
                   <Card className="bg-gradient-to-br from-card to-primary/5 border-primary/20" style={{ boxShadow: "var(--shadow-card)" }}>
                     <CardHeader className="pb-2 md:pb-3 p-3 md:p-6">
                       <CardDescription className="text-xs md:text-sm">Total Capacitaciones</CardDescription>
@@ -249,12 +249,12 @@ const Dashboard = () => {
                 </div>
 
                 {/* Certificates Section */}
-                <div className="mb-6 md:mb-8">
+                <div data-tour="certificates-section" className="mb-6 md:mb-8">
                   <CertificatesList />
                 </div>
 
                 {/* Areas Section */}
-                <div className="mb-4 md:mb-6">
+                <div data-tour="areas-section" className="mb-4 md:mb-6">
                   <h2 className="text-lg md:text-2xl font-bold text-foreground mb-4 md:mb-6">Áreas de Capacitación</h2>
                 </div>
 
@@ -301,7 +301,7 @@ const Dashboard = () => {
         <>
         <div className="container mx-auto px-4 py-4 md:py-8">
           {/* Hero Section */}
-          <div className="mb-6 md:mb-8 rounded-xl md:rounded-2xl overflow-hidden relative h-[200px] md:h-[400px]">
+          <div data-tour="hero-section" className="mb-6 md:mb-8 rounded-xl md:rounded-2xl overflow-hidden relative h-[200px] md:h-[400px]">
             <img 
               src={heroImage} 
               alt="Equipo médico Novasalud" 
@@ -320,7 +320,7 @@ const Dashboard = () => {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
+          <div data-tour="stats-section" className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
             <Card className="bg-gradient-to-br from-card to-primary/5 border-primary/20" style={{ boxShadow: "var(--shadow-card)" }}>
               <CardHeader className="pb-2 md:pb-3 p-3 md:p-6">
                 <CardDescription className="text-xs md:text-sm">Total Capacitaciones</CardDescription>
@@ -371,12 +371,12 @@ const Dashboard = () => {
           </div>
 
           {/* Certificates Section */}
-          <div className="mb-6 md:mb-8">
+          <div data-tour="certificates-section" className="mb-6 md:mb-8">
             <CertificatesList />
           </div>
 
           {/* Areas Section */}
-          <div className="mb-4">
+          <div data-tour="areas-section" className="mb-4">
             <h2 className="text-lg md:text-2xl font-bold text-foreground mb-4 md:mb-6">Áreas de Capacitación</h2>
           </div>
 
