@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { CertificatesList } from "@/components/profile/CertificatesList";
 
 import FloatingDocumentsButton from "@/components/documents/FloatingDocumentsButton";
+import OnboardingTutorial from "@/components/OnboardingTutorial";
 import heroImage from "@/assets/team-celebration.jpg";
 import novaeducaLogo from "@/assets/novaeduca-logo.png";
 
@@ -32,6 +33,8 @@ const Dashboard = () => {
   const [areas, setAreas] = useState<any[]>([]);
   const [userRole, setUserRole] = useState<string>("");
   const [isAdminOrLeader, setIsAdminOrLeader] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string>("");
   const [stats, setStats] = useState({
     totalTrainings: 0,
     completedTrainings: 0,
@@ -49,6 +52,8 @@ const Dashboard = () => {
         navigate("/auth");
         return;
       }
+
+      setCurrentUserId(session.user.id);
 
       // Fetch user roles
       const { data: roles } = await supabase
@@ -93,6 +98,17 @@ const Dashboard = () => {
           inProgress,
           averageProgress: Math.round(avgProgress),
         });
+      }
+
+      // Check onboarding status
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("onboarding_completed")
+        .eq("id", session.user.id)
+        .single();
+
+      if (profileData && !profileData.onboarding_completed) {
+        setShowOnboarding(true);
       }
 
       setLoading(false);
@@ -402,6 +418,12 @@ const Dashboard = () => {
       )}
 
       <FloatingFAQChat />
+      <OnboardingTutorial
+        isOpen={showOnboarding}
+        onComplete={() => setShowOnboarding(false)}
+        userRole={userRole}
+        userId={currentUserId}
+      />
     </div>
   );
 };
