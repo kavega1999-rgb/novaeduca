@@ -613,6 +613,7 @@ export type Database = {
           id_number: string | null
           id_type: string | null
           leader_area_id: string | null
+          onboarding_completed: boolean
           position: string | null
           role: Database["public"]["Enums"]["app_role"]
           status: string
@@ -626,6 +627,7 @@ export type Database = {
           id_number?: string | null
           id_type?: string | null
           leader_area_id?: string | null
+          onboarding_completed?: boolean
           position?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           status?: string
@@ -639,6 +641,7 @@ export type Database = {
           id_number?: string | null
           id_type?: string | null
           leader_area_id?: string | null
+          onboarding_completed?: boolean
           position?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           status?: string
