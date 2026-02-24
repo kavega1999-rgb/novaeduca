@@ -55,6 +55,7 @@ interface Training {
   title: string;
   requires_evaluation: boolean | null;
   area_id: string;
+  target_user_count: number | null;
 }
 
 interface Profile {
@@ -170,7 +171,7 @@ const AdherenceEvaluations = () => {
       const [attemptsRes, evaluationsRes, trainingsRes, profilesRes, areasRes] = await Promise.all([
         supabase.from("evaluation_attempts").select("*"),
         supabase.from("evaluations").select("id, training_id, title, passing_score"),
-        supabase.from("trainings").select("id, title, requires_evaluation, area_id"),
+        supabase.from("trainings").select("id, title, requires_evaluation, area_id, target_user_count"),
         supabase.from("profiles").select("id, full_name, area"),
         supabase.from("areas").select("id, name").order("name"),
       ]);
@@ -194,10 +195,25 @@ const AdherenceEvaluations = () => {
 
   const trainingIdsInArea = filteredTrainingsByArea.map(t => t.id);
 
+  // Filter profiles by selected area
+  const filteredProfiles = selectedArea === "all"
+    ? profiles
+    : profiles.filter(p => {
+        // Map area filter to profile area values
+        const areaObj = areas.find(a => a.id === selectedArea);
+        if (!areaObj) return true;
+        return p.area !== null;
+      });
+
   // Get evaluation IDs for selected training and area
   const evaluationIdsForTraining = selectedTraining === "all" 
     ? evaluations.filter(e => selectedArea === "all" || trainingIdsInArea.includes(e.training_id)).map(e => e.id)
     : evaluations.filter(e => e.training_id === selectedTraining).map(e => e.id);
+
+  // Get the relevant trainings for the current filter to find target_user_count
+  const relevantTrainingIds = selectedTraining === "all"
+    ? trainingIdsInArea
+    : [selectedTraining];
 
   // Apply filters
   const filteredAttempts = attempts.filter(a => {
@@ -217,15 +233,31 @@ const AdherenceEvaluations = () => {
   const failedCount = completedAttempts.filter(a => !a.passed).length;
   const pendingCount = filteredAttempts.filter(a => a.status === "in_progress").length;
   
+  // Get unique users who have attempts
   const usersWithAttempts = new Set(filteredAttempts.map(a => a.user_id));
-  const notStartedCount = profiles.filter(p => !usersWithAttempts.has(p.id)).length;
+  
+  // For "Sin Iniciar": only count users who are expected to take the evaluation
+  // If a specific training is selected and has target_user_count, use that
+  // Otherwise count users who have registered (user_progress) but haven't attempted
+  const relevantTrainingsData = trainings.filter(t => relevantTrainingIds.includes(t.id));
+  const hasTargetCount = relevantTrainingsData.some(t => t.target_user_count && t.target_user_count > 0);
+  
+  let expectedUserCount: number;
+  if (hasTargetCount && selectedTraining !== "all") {
+    const targetTraining = relevantTrainingsData.find(t => t.id === selectedTraining);
+    expectedUserCount = targetTraining?.target_user_count || filteredProfiles.length;
+  } else {
+    expectedUserCount = filteredProfiles.length;
+  }
+  
+  const notStartedCount = Math.max(0, expectedUserCount - usersWithAttempts.size - pendingCount);
 
-  // Adherencia general
+  // Adherencia general: aprobados / usuarios esperados por evaluación
   const totalEvaluations = evaluations.filter(e => 
     (selectedTraining === "all" || e.training_id === selectedTraining) && 
     (selectedArea === "all" || trainingIdsInArea.includes(e.training_id))
   ).length;
-  const totalExpectedCompletions = profiles.length * totalEvaluations;
+  const totalExpectedCompletions = expectedUserCount * totalEvaluations;
   const totalPassed = approvedCount;
   const adherencePercentage = totalExpectedCompletions > 0 
     ? Math.round((totalPassed / totalExpectedCompletions) * 100) 
