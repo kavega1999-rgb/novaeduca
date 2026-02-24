@@ -159,20 +159,20 @@ const OnboardingTutorial = ({ isOpen, onComplete, userRole, userId }: Onboarding
       return;
     }
 
-    const rect = el.getBoundingClientRect();
-    const s: SpotlightRect = {
-      top: rect.top - PADDING,
-      left: rect.left - PADDING,
-      width: rect.width + PADDING * 2,
-      height: rect.height + PADDING * 2,
-    };
-    setSpotlight(s);
-
-    // Scroll element into view
+    // Scroll element into view first, then calculate position after scroll settles
     el.scrollIntoView({ behavior: "smooth", block: "center" });
 
-    // Calculate tooltip position after a tick
-    requestAnimationFrame(() => {
+    setTimeout(() => {
+      const rect = el.getBoundingClientRect();
+      const s: SpotlightRect = {
+        top: rect.top - PADDING,
+        left: rect.left - PADDING,
+        width: rect.width + PADDING * 2,
+        height: rect.height + PADDING * 2,
+      };
+      setSpotlight(s);
+
+      // Calculate tooltip position
       const pos = step.position || "bottom";
       const tooltip: React.CSSProperties = { position: "fixed" };
       const tooltipWidth = 340;
@@ -215,7 +215,7 @@ const OnboardingTutorial = ({ isOpen, onComplete, userRole, userId }: Onboarding
       setArrowOffset(aOffset);
       setTooltipStyle(tooltip);
       setReady(true);
-    });
+    }, 500); // Wait for scroll to settle
   }, [isOpen, step]);
 
   useEffect(() => {
