@@ -264,6 +264,31 @@ const OnboardingTutorial = ({ isOpen, onComplete, userRole, userId }: Onboarding
           className="fixed z-[10000] w-[340px] bg-card border border-border rounded-xl p-5 animate-in fade-in-0 slide-in-from-bottom-2 duration-300"
           style={{ ...tooltipStyle, boxShadow: "var(--shadow-hover)" }}
         >
+          {/* Arrow pointing to target */}
+          <div
+            className="absolute w-0 h-0"
+            style={{
+              ...(step.position === "bottom" || !step.position
+                ? { top: -8, left: "50%", marginLeft: -8, borderLeft: "8px solid transparent", borderRight: "8px solid transparent", borderBottom: "8px solid hsl(var(--border))" }
+                : step.position === "top"
+                ? { bottom: -8, left: "50%", marginLeft: -8, borderLeft: "8px solid transparent", borderRight: "8px solid transparent", borderTop: "8px solid hsl(var(--border))" }
+                : step.position === "right"
+                ? { left: -8, top: "50%", marginTop: -8, borderTop: "8px solid transparent", borderBottom: "8px solid transparent", borderRight: "8px solid hsl(var(--border))" }
+                : { right: -8, top: "50%", marginTop: -8, borderTop: "8px solid transparent", borderBottom: "8px solid transparent", borderLeft: "8px solid hsl(var(--border))" }),
+            }}
+          />
+          <div
+            className="absolute w-0 h-0"
+            style={{
+              ...(step.position === "bottom" || !step.position
+                ? { top: -7, left: "50%", marginLeft: -7, borderLeft: "7px solid transparent", borderRight: "7px solid transparent", borderBottom: "7px solid hsl(var(--card))" }
+                : step.position === "top"
+                ? { bottom: -7, left: "50%", marginLeft: -7, borderLeft: "7px solid transparent", borderRight: "7px solid transparent", borderTop: "7px solid hsl(var(--card))" }
+                : step.position === "right"
+                ? { left: -7, top: "50%", marginTop: -7, borderTop: "7px solid transparent", borderBottom: "7px solid transparent", borderRight: "7px solid hsl(var(--card))" }
+                : { right: -7, top: "50%", marginTop: -7, borderTop: "7px solid transparent", borderBottom: "7px solid transparent", borderLeft: "7px solid hsl(var(--card))" }),
+            }}
+          />
           {/* Close button */}
           <button
             onClick={handleComplete}
