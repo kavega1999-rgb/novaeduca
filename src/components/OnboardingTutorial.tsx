@@ -130,12 +130,18 @@ interface SpotlightRect {
   height: number;
 }
 
+interface ArrowOffset {
+  x?: number;
+  y?: number;
+}
+
 const PADDING = 12;
 
 const OnboardingTutorial = ({ isOpen, onComplete, userRole, userId }: OnboardingTutorialProps) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [spotlight, setSpotlight] = useState<SpotlightRect | null>(null);
   const [tooltipStyle, setTooltipStyle] = useState<React.CSSProperties>({});
+  const [arrowOffset, setArrowOffset] = useState<ArrowOffset>({});
   const [ready, setReady] = useState(false);
   const tooltipRef = useRef<HTMLDivElement>(null);
 
@@ -172,17 +178,20 @@ const OnboardingTutorial = ({ isOpen, onComplete, userRole, userId }: Onboarding
       const tooltipWidth = 340;
       const tooltipHeight = 180;
 
+      const targetCenterX = s.left + s.width / 2;
+      const targetCenterY = s.top + s.height / 2;
+
       if (pos === "bottom") {
         tooltip.top = s.top + s.height + 16;
-        tooltip.left = Math.max(16, Math.min(s.left + s.width / 2 - tooltipWidth / 2, window.innerWidth - tooltipWidth - 16));
+        tooltip.left = Math.max(16, Math.min(targetCenterX - tooltipWidth / 2, window.innerWidth - tooltipWidth - 16));
       } else if (pos === "top") {
         tooltip.top = s.top - tooltipHeight - 16;
-        tooltip.left = Math.max(16, Math.min(s.left + s.width / 2 - tooltipWidth / 2, window.innerWidth - tooltipWidth - 16));
+        tooltip.left = Math.max(16, Math.min(targetCenterX - tooltipWidth / 2, window.innerWidth - tooltipWidth - 16));
       } else if (pos === "right") {
-        tooltip.top = Math.max(16, s.top + s.height / 2 - tooltipHeight / 2);
+        tooltip.top = Math.max(16, targetCenterY - tooltipHeight / 2);
         tooltip.left = s.left + s.width + 16;
       } else if (pos === "left") {
-        tooltip.top = Math.max(16, s.top + s.height / 2 - tooltipHeight / 2);
+        tooltip.top = Math.max(16, targetCenterY - tooltipHeight / 2);
         tooltip.left = s.left - tooltipWidth - 16;
       }
 
@@ -192,6 +201,18 @@ const OnboardingTutorial = ({ isOpen, onComplete, userRole, userId }: Onboarding
         tooltip.top = window.innerHeight - tooltipHeight - 16;
       }
 
+      // Calculate arrow offset relative to tooltip
+      const tooltipLeft = tooltip.left as number;
+      const tooltipTop = tooltip.top as number;
+      const aOffset: ArrowOffset = {};
+
+      if (pos === "bottom" || pos === "top") {
+        aOffset.x = Math.max(20, Math.min(targetCenterX - tooltipLeft, tooltipWidth - 20));
+      } else {
+        aOffset.y = Math.max(20, Math.min(targetCenterY - tooltipTop, tooltipHeight - 20));
+      }
+
+      setArrowOffset(aOffset);
       setTooltipStyle(tooltip);
       setReady(true);
     });
@@ -269,24 +290,24 @@ const OnboardingTutorial = ({ isOpen, onComplete, userRole, userId }: Onboarding
             className="absolute w-0 h-0"
             style={{
               ...(step.position === "bottom" || !step.position
-                ? { top: -8, left: "50%", marginLeft: -8, borderLeft: "8px solid transparent", borderRight: "8px solid transparent", borderBottom: "8px solid hsl(var(--border))" }
+                ? { top: -8, left: arrowOffset.x ?? 170, marginLeft: -8, borderLeft: "8px solid transparent", borderRight: "8px solid transparent", borderBottom: "8px solid hsl(var(--border))" }
                 : step.position === "top"
-                ? { bottom: -8, left: "50%", marginLeft: -8, borderLeft: "8px solid transparent", borderRight: "8px solid transparent", borderTop: "8px solid hsl(var(--border))" }
+                ? { bottom: -8, left: arrowOffset.x ?? 170, marginLeft: -8, borderLeft: "8px solid transparent", borderRight: "8px solid transparent", borderTop: "8px solid hsl(var(--border))" }
                 : step.position === "right"
-                ? { left: -8, top: "50%", marginTop: -8, borderTop: "8px solid transparent", borderBottom: "8px solid transparent", borderRight: "8px solid hsl(var(--border))" }
-                : { right: -8, top: "50%", marginTop: -8, borderTop: "8px solid transparent", borderBottom: "8px solid transparent", borderLeft: "8px solid hsl(var(--border))" }),
+                ? { left: -8, top: arrowOffset.y ?? 90, marginTop: -8, borderTop: "8px solid transparent", borderBottom: "8px solid transparent", borderRight: "8px solid hsl(var(--border))" }
+                : { right: -8, top: arrowOffset.y ?? 90, marginTop: -8, borderTop: "8px solid transparent", borderBottom: "8px solid transparent", borderLeft: "8px solid hsl(var(--border))" }),
             }}
           />
           <div
             className="absolute w-0 h-0"
             style={{
               ...(step.position === "bottom" || !step.position
-                ? { top: -7, left: "50%", marginLeft: -7, borderLeft: "7px solid transparent", borderRight: "7px solid transparent", borderBottom: "7px solid hsl(var(--card))" }
+                ? { top: -7, left: arrowOffset.x ?? 170, marginLeft: -7, borderLeft: "7px solid transparent", borderRight: "7px solid transparent", borderBottom: "7px solid hsl(var(--card))" }
                 : step.position === "top"
-                ? { bottom: -7, left: "50%", marginLeft: -7, borderLeft: "7px solid transparent", borderRight: "7px solid transparent", borderTop: "7px solid hsl(var(--card))" }
+                ? { bottom: -7, left: arrowOffset.x ?? 170, marginLeft: -7, borderLeft: "7px solid transparent", borderRight: "7px solid transparent", borderTop: "7px solid hsl(var(--card))" }
                 : step.position === "right"
-                ? { left: -7, top: "50%", marginTop: -7, borderTop: "7px solid transparent", borderBottom: "7px solid transparent", borderRight: "7px solid hsl(var(--card))" }
-                : { right: -7, top: "50%", marginTop: -7, borderTop: "7px solid transparent", borderBottom: "7px solid transparent", borderLeft: "7px solid hsl(var(--card))" }),
+                ? { left: -7, top: arrowOffset.y ?? 90, marginTop: -7, borderTop: "7px solid transparent", borderBottom: "7px solid transparent", borderRight: "7px solid hsl(var(--card))" }
+                : { right: -7, top: arrowOffset.y ?? 90, marginTop: -7, borderTop: "7px solid transparent", borderBottom: "7px solid transparent", borderLeft: "7px solid hsl(var(--card))" }),
             }}
           />
           {/* Close button */}
