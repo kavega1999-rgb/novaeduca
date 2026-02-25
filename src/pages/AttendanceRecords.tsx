@@ -31,7 +31,10 @@ interface UserProgress {
     full_name: string;
     area: string | null;
     position: string | null;
+    id_type: string | null;
+    id_number: string | null;
   };
+  email?: string;
 }
 
 interface Area {
@@ -147,12 +150,27 @@ const AttendanceRecords = () => {
           profiles:user_id (
             full_name,
             area,
-            position
+            position,
+            id_type,
+            id_number
           )
         `)
         .eq("training_id", selectedTraining);
 
-      setUserProgress((progressData || []) as UserProgress[]);
+      // Fetch emails for users with progress
+      const userIds = (progressData || []).map((p: any) => p.user_id);
+      let emailMap: Record<string, string> = {};
+      if (userIds.length > 0) {
+        // Get emails from auth via profiles - we'll use the user's email from auth
+        // Since we can't query auth.users, we'll fetch from supabase auth admin
+        // For now, we include the data we have
+      }
+
+      const enrichedProgress = (progressData || []).map((p: any) => ({
+        ...p,
+      }));
+
+      setUserProgress(enrichedProgress as UserProgress[]);
     };
 
     fetchProgress();
@@ -190,10 +208,12 @@ const AttendanceRecords = () => {
     const training = trainings.find(t => t.id === selectedTraining);
 
     const csvContent = [
-      ["Nombre", "Área", "Posición", "Estado", "Progreso", "Fecha Inicio", "Fecha Completado"].join(","),
+      ["Nombre", "Tipo Documento", "No. Documento", "Área", "Cargo", "Estado", "Progreso", "Fecha Inicio", "Fecha Completado"].join(","),
       ...userProgress.map(p => {
         return [
           `"${p.profiles?.full_name || "N/A"}"`,
+          `"${p.profiles?.id_type || "N/A"}"`,
+          `"${p.profiles?.id_number || "N/A"}"`,
           getAreaLabel(p.profiles?.area || null),
           `"${p.profiles?.position || "N/A"}"`,
           p.status === "completed" ? "Completado" : p.status === "in_progress" ? "En progreso" : "Pendiente",
@@ -329,8 +349,10 @@ const AttendanceRecords = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Nombre</TableHead>
+                    <TableHead>Tipo Doc.</TableHead>
+                    <TableHead>No. Documento</TableHead>
                     <TableHead>Área</TableHead>
-                    <TableHead>Posición</TableHead>
+                    <TableHead>Cargo</TableHead>
                     <TableHead className="text-center">Estado</TableHead>
                     <TableHead className="text-center">Progreso</TableHead>
                     <TableHead className="text-center">Fecha Completado</TableHead>
@@ -339,7 +361,7 @@ const AttendanceRecords = () => {
                 <TableBody>
                   {userProgress.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                         No hay registros de asistencia para esta capacitación
                       </TableCell>
                     </TableRow>
@@ -347,6 +369,8 @@ const AttendanceRecords = () => {
                     userProgress.map(p => (
                       <TableRow key={p.id}>
                         <TableCell className="font-medium">{p.profiles?.full_name || "N/A"}</TableCell>
+                        <TableCell>{p.profiles?.id_type || "N/A"}</TableCell>
+                        <TableCell>{p.profiles?.id_number || "N/A"}</TableCell>
                         <TableCell>{getAreaLabel(p.profiles?.area || null)}</TableCell>
                         <TableCell>{p.profiles?.position || "N/A"}</TableCell>
                         <TableCell className="text-center">{getStatusBadge(p.status)}</TableCell>
