@@ -165,6 +165,28 @@ const AdherenceEvaluations = () => {
     checkAccess();
   }, [navigate, toast]);
 
+  // Realtime subscription: refresh data when evaluation_attempts change
+  useEffect(() => {
+    const channel = supabase
+      .channel('adherence-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'evaluation_attempts',
+        },
+        () => {
+          fetchData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   const fetchData = async () => {
     setIsLoading(true);
     try {
