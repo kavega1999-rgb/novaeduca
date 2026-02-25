@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Download, FileSpreadsheet, Users, Filter } from "lucide-react";
 import { format } from "date-fns";
+import * as XLSX from "xlsx";
 
 interface Training {
   id: string;
@@ -207,32 +208,29 @@ const AttendanceRecords = () => {
 
     const training = trainings.find(t => t.id === selectedTraining);
 
-    const csvContent = [
-      ["Nombre", "Tipo Documento", "No. Documento", "Área", "Cargo", "Estado", "Progreso", "Fecha Inicio", "Fecha Completado"].join(","),
-      ...userProgress.map(p => {
-        return [
-          `"${p.profiles?.full_name || "N/A"}"`,
-          `"${p.profiles?.id_type || "N/A"}"`,
-          `"${p.profiles?.id_number || "N/A"}"`,
-          getAreaLabel(p.profiles?.area || null),
-          `"${p.profiles?.position || "N/A"}"`,
-          p.status === "completed" ? "Completado" : p.status === "in_progress" ? "En progreso" : "Pendiente",
-          `${p.progress_percentage || 0}%`,
-          p.started_at ? format(new Date(p.started_at), "dd/MM/yyyy") : "N/A",
-          p.completed_at ? format(new Date(p.completed_at), "dd/MM/yyyy") : "N/A"
-        ].join(",");
-      })
-    ].join("\n");
+    const rows = userProgress.map(p => ({
+      "Nombre": p.profiles?.full_name || "N/A",
+      "Tipo Documento": p.profiles?.id_type || "N/A",
+      "No. Documento": p.profiles?.id_number || "N/A",
+      "Área": getAreaLabel(p.profiles?.area || null),
+      "Cargo": p.profiles?.position || "N/A",
+      "Estado": p.status === "completed" ? "Completado" : p.status === "in_progress" ? "En progreso" : "Pendiente",
+      "Progreso": `${p.progress_percentage || 0}%`,
+      "Fecha Inicio": p.started_at ? format(new Date(p.started_at), "dd/MM/yyyy") : "N/A",
+      "Fecha Completado": p.completed_at ? format(new Date(p.completed_at), "dd/MM/yyyy") : "N/A",
+    }));
 
-    const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", `asistencia_${training?.title.replace(/\s+/g, "_") || "capacitacion"}_${format(new Date(), "yyyy-MM-dd")}.csv`);
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Asistencia");
+
+    // Auto-size columns
+    const colWidths = Object.keys(rows[0]).map(key => ({
+      wch: Math.max(key.length, ...rows.map(r => String((r as any)[key]).length)) + 2,
+    }));
+    ws["!cols"] = colWidths;
+
+    XLSX.writeFile(wb, `asistencia_${training?.title.replace(/\s+/g, "_") || "capacitacion"}_${format(new Date(), "yyyy-MM-dd")}.xlsx`);
 
     toast({
       title: "Exportado",
