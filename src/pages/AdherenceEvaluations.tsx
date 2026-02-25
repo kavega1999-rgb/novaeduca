@@ -240,9 +240,8 @@ const AdherenceEvaluations = () => {
   // Apply filters
   const filteredAttempts = attempts.filter(a => {
     const attemptDate = new Date(a.started_at);
-    const fromDate = new Date(dateFrom);
-    const toDate = new Date(dateTo);
-    toDate.setHours(23, 59, 59);
+    const fromDate = new Date(dateFrom + 'T00:00:00');
+    const toDate = new Date(dateTo + 'T23:59:59');
 
     if (!evaluationIdsForTraining.includes(a.evaluation_id)) return false;
     if (attemptDate < fromDate || attemptDate > toDate) return false;
