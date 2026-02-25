@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { User, Mail, Briefcase, Building2, Save, Award, BookOpen } from "lucide-react";
+import { User, Mail, Briefcase, Building2, Save, Award, BookOpen, FileText, Hash } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatUserName, toSentenceCase } from "@/lib/text-utils";
 
@@ -24,11 +24,15 @@ const Profile = () => {
     position: string;
     area: "medicos" | "asistencial" | "administrativos" | "";
     email: string;
+    id_type: string;
+    id_number: string;
   }>({
     full_name: "",
     position: "",
     area: "",
     email: "",
+    id_type: "",
+    id_number: "",
   });
   const [stats, setStats] = useState({
     totalCompleted: 0,
@@ -58,6 +62,8 @@ const Profile = () => {
           position: profileData.position || "",
           area: profileData.area || "",
           email: session.user.email || "",
+          id_type: profileData.id_type || "",
+          id_number: profileData.id_number || "",
         });
       }
 
@@ -96,6 +102,8 @@ const Profile = () => {
           full_name: formatUserName(profile.full_name),
           position: toSentenceCase(profile.position),
           area: profile.area || null,
+          id_type: profile.id_type || null,
+          id_number: profile.id_number || null,
         })
         .eq("id", session.user.id);
 
@@ -171,6 +179,40 @@ const Profile = () => {
                   value={profile.email}
                   disabled
                   className="bg-muted"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="id_type">
+                  <FileText className="w-4 h-4 inline mr-2" />
+                  Tipo de documento
+                </Label>
+                <Select 
+                  value={profile.id_type} 
+                  onValueChange={(value) => setProfile({ ...profile, id_type: value })}
+                >
+                  <SelectTrigger id="id_type">
+                    <SelectValue placeholder="Selecciona tipo de documento" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="CC">Cédula de Ciudadanía</SelectItem>
+                    <SelectItem value="CE">Cédula de Extranjería</SelectItem>
+                    <SelectItem value="TI">Tarjeta de Identidad</SelectItem>
+                    <SelectItem value="PA">Pasaporte</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="id_number">
+                  <Hash className="w-4 h-4 inline mr-2" />
+                  Número de documento
+                </Label>
+                <Input
+                  id="id_number"
+                  value={profile.id_number}
+                  onChange={(e) => setProfile({ ...profile, id_number: e.target.value })}
+                  placeholder="1234567890"
                 />
               </div>
 
