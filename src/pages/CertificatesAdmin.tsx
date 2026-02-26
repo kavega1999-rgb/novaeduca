@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Download, Award, FileText, Search, Filter } from "lucide-react";
+import { Download, Award, FileText, Search, Filter, RefreshCw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
 
@@ -41,6 +41,7 @@ const CertificatesAdmin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
+  const [isRegenerating, setIsRegenerating] = useState(false);
 
   const [trainings, setTrainings] = useState<Training[]>([]);
   const [certificates, setCertificates] = useState<Certificate[]>([]);
@@ -177,12 +178,45 @@ const CertificatesAdmin = () => {
     );
   }
 
+  const handleRegenerateCertificates = async () => {
+    setIsRegenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('regenerate-certificates');
+      if (error) throw error;
+      toast({
+        title: "Certificados regenerados",
+        description: `Se regeneraron ${data.regenerated} de ${data.total} certificados${data.failed > 0 ? ` (${data.failed} fallidos)` : ''}`,
+      });
+      fetchData();
+    } catch (error) {
+      console.error("Regeneration error:", error);
+      toast({
+        title: "Error",
+        description: "No se pudieron regenerar los certificados",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRegenerating(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Gestión de Certificados</h1>
-        <p className="text-muted-foreground text-sm">Descarga certificados y constancias por capacitación</p>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Gestión de Certificados</h1>
+          <p className="text-muted-foreground text-sm">Descarga certificados y constancias por capacitación</p>
+        </div>
+        <Button
+          onClick={handleRegenerateCertificates}
+          disabled={isRegenerating}
+          variant="outline"
+          className="flex items-center gap-2"
+        >
+          <RefreshCw className={`h-4 w-4 ${isRegenerating ? 'animate-spin' : ''}`} />
+          {isRegenerating ? 'Regenerando...' : 'Regenerar Certificados'}
+        </Button>
       </div>
 
       {/* Stats */}
