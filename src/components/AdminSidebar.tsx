@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { LayoutDashboard, BarChart3, BookOpen, Shield, UserCog, ChevronRight, TrendingUp, ClipboardCheck, FileSpreadsheet, Award, Home, Menu } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, Link } from "react-router-dom";
@@ -10,16 +10,22 @@ import {
 } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 
-const menuItems = [
+interface AdminSidebarProps {
+  userRole?: string;
+}
+
+const allMenuItems = [
   { 
     title: "Panel Principal", 
     icon: LayoutDashboard,
     url: "/dashboard",
-    children: [] 
+    children: [],
+    adminOnly: false,
   },
   { 
     title: "Capacitaciones", 
     icon: BookOpen,
+    adminOnly: false,
     children: [
       { title: "Gestionar", url: "/dashboard/trainings" },
     ]
@@ -27,6 +33,7 @@ const menuItems = [
   { 
     title: "Analítica", 
     icon: BarChart3,
+    adminOnly: false,
     children: [
       { title: "Progreso", url: "/dashboard/reports" },
       { title: "Adherencia", url: "/dashboard/adherence" },
@@ -37,25 +44,39 @@ const menuItems = [
   { 
     title: "Administración", 
     icon: UserCog,
+    adminOnly: false,
     children: [
-      { title: "Usuarios", url: "/dashboard/users" },
+      { title: "Usuarios", url: "/dashboard/users", adminOnly: true },
       { title: "Certificados", url: "/dashboard/certificates" },
     ]
   },
   { 
     title: "Auditoría", 
     icon: Shield,
+    adminOnly: true,
     children: [
       { title: "Registro de Accesos", url: "/access-logs" },
     ]
   },
 ];
 
-export function AdminSidebar() {
+export function AdminSidebar({ userRole = "" }: AdminSidebarProps) {
   const location = useLocation();
   const currentPath = location.pathname;
   const [isOpen, setIsOpen] = useState(true);
   const [openMenus, setOpenMenus] = useState<string[]>(["Analítica"]);
+  const isAdmin = userRole === "admin";
+
+  // Filter menu items based on role
+  const menuItems = useMemo(() => {
+    return allMenuItems
+      .filter(item => !item.adminOnly || isAdmin)
+      .map(item => ({
+        ...item,
+        children: item.children.filter(child => !(child as any).adminOnly || isAdmin),
+      }))
+      .filter(item => item.url || item.children.length > 0);
+  }, [isAdmin]);
 
   const isActive = (path: string) => currentPath === path;
   const isMenuActive = (item: typeof menuItems[0]) => {
