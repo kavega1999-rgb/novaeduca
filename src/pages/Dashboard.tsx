@@ -147,7 +147,7 @@ const Dashboard = () => {
       <div className="min-h-screen bg-background">
         <Navigation userRole={userRole} />
         <div className="flex min-h-[calc(100vh-56px)] md:min-h-[calc(100vh-64px)]">
-          <AdminSidebar />
+          <AdminSidebar userRole={userRole} />
           <main className="flex-1 overflow-auto">
             <div className="container mx-auto px-4 md:px-6 py-4 md:py-8">
               <h1 className="text-lg md:text-2xl font-bold mb-4 md:mb-6">Panel de Administración</h1>
@@ -167,7 +167,7 @@ const Dashboard = () => {
       {isAdminOrLeader && (
         <>
         <div className="flex min-h-[calc(100vh-56px)] md:min-h-[calc(100vh-64px)]">
-          <AdminSidebar />
+          <AdminSidebar userRole={userRole} />
           <main className="flex-1 overflow-auto">
             <div className="container mx-auto px-4 md:px-6 py-4 md:py-8">
               <h1 className="text-lg md:text-2xl font-bold mb-4 md:mb-6">Panel Principal</h1>
