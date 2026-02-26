@@ -340,7 +340,35 @@ serve(async (req) => {
     const signatureY = 100;
     const leftSignatureCenterX = width / 4;       // 25% from left
     const rightSignatureCenterX = (3 * width) / 4; // 75% from left
-    const lineWidth = 120;
+    const lineWidth = 150;
+    
+    // --- Handwritten-style signatures above the lines ---
+    
+    // Left signature: Nathalia Figueroa (Gerente)
+    const leftSignatureName = 'Nathalia Figueroa';
+    const leftSigFontSize = 22;
+    const leftSigWidth = timesRomanBoldItalic.widthOfTextAtSize(leftSignatureName, leftSigFontSize);
+    page.drawText(leftSignatureName, {
+      x: leftSignatureCenterX - leftSigWidth / 2,
+      y: signatureY + 12,
+      size: leftSigFontSize,
+      font: timesRomanBoldItalic,
+      color: rgb(0.1, 0.1, 0.35),
+    });
+    
+    // Right signature: Lorena Montes Beltran (Jefe de Gestión Humana)
+    const rightSignatureName = 'Lorena Montes Beltran';
+    const rightSigFontSize = 20;
+    const rightSigWidth = timesRomanBoldItalic.widthOfTextAtSize(rightSignatureName, rightSigFontSize);
+    page.drawText(rightSignatureName, {
+      x: rightSignatureCenterX - rightSigWidth / 2,
+      y: signatureY + 12,
+      size: rightSigFontSize,
+      font: timesRomanBoldItalic,
+      color: rgb(0.1, 0.1, 0.35),
+    });
+    
+    // --- Signature lines ---
     
     // Left signature line
     page.drawLine({
