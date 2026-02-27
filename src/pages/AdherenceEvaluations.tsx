@@ -483,54 +483,103 @@ const AdherenceEvaluations = () => {
         />
       </div>
 
-      {/* Chart - simplified to just one */}
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Card className="cursor-help">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2">
-                  Distribución de Estados
-                  <HelpCircle className="h-4 w-4 text-muted-foreground" />
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {statusPieData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={250}>
-                    <PieChart>
-                      <Pie
-                        data={statusPieData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={90}
-                        paddingAngle={3}
-                        dataKey="value"
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                        labelLine={false}
-                      >
-                        {statusPieData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <RechartsTooltip />
-                      <Legend iconSize={12} wrapperStyle={{ fontSize: "13px" }} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <p className="text-muted-foreground text-center py-12">No hay datos para mostrar</p>
-                )}
-              </CardContent>
-            </Card>
-          </TooltipTrigger>
-          <TooltipContent side="top" className="max-w-[280px]">
-            <p className="font-medium mb-1">Distribución de Estados</p>
-            <p className="text-sm text-muted-foreground">
-              Gráfico que muestra la proporción de evaluaciones según su estado actual: aprobadas, no aprobadas, en curso y sin iniciar.
-            </p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      {/* Chart */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Distribución de Estados</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {statusPieData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={250}>
+              <PieChart>
+                <Pie
+                  data={statusPieData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={90}
+                  paddingAngle={3}
+                  dataKey="value"
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  labelLine={false}
+                >
+                  {statusPieData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <RechartsTooltip />
+                <Legend iconSize={12} wrapperStyle={{ fontSize: "13px" }} />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="text-muted-foreground text-center py-12">No hay datos para mostrar</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Tabla de usuarios reprobados */}
+      {(() => {
+        const failedAttempts = filteredAttempts
+          .filter(a => a.status === "completed" && !a.passed)
+          .sort((a, b) => new Date(b.completed_at || b.started_at).getTime() - new Date(a.completed_at || a.started_at).getTime());
+
+        return (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <XCircle className="h-4 w-4 text-destructive" />
+                Usuarios Reprobados ({failedAttempts.length})
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">Usuarios que iniciaron la capacitación y no aprobaron la evaluación</p>
+            </CardHeader>
+            <CardContent>
+              {failedAttempts.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b text-left">
+                        <th className="pb-2 font-medium text-muted-foreground">Usuario</th>
+                        <th className="pb-2 font-medium text-muted-foreground">Área</th>
+                        <th className="pb-2 font-medium text-muted-foreground">Capacitación</th>
+                        <th className="pb-2 font-medium text-muted-foreground text-center">Puntaje</th>
+                        <th className="pb-2 font-medium text-muted-foreground text-center">Mín. Requerido</th>
+                        <th className="pb-2 font-medium text-muted-foreground">Fecha</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {failedAttempts.map(attempt => {
+                        const evaluation = evaluations.find(e => e.id === attempt.evaluation_id);
+                        const training = evaluation ? trainings.find(t => t.id === evaluation.training_id) : null;
+                        const profile = profiles.find(p => p.id === attempt.user_id);
+                        return (
+                          <tr key={attempt.id} className="border-b last:border-0 hover:bg-muted/50">
+                            <td className="py-2 font-medium">{profile?.full_name || 'N/A'}</td>
+                            <td className="py-2 text-muted-foreground">{profile?.area || 'N/A'}</td>
+                            <td className="py-2">{training?.title || 'N/A'}</td>
+                            <td className="py-2 text-center">
+                              <span className="text-destructive font-semibold">
+                                {attempt.score !== null ? Math.round(attempt.score) : 0}%
+                              </span>
+                            </td>
+                            <td className="py-2 text-center text-muted-foreground">
+                              {evaluation?.passing_score || 70}%
+                            </td>
+                            <td className="py-2 text-muted-foreground">
+                              {attempt.completed_at ? format(new Date(attempt.completed_at), 'dd/MM/yyyy') : 'N/A'}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-muted-foreground text-center py-8">No hay usuarios reprobados en el período seleccionado 🎉</p>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })()}
     </div>
   );
 };
