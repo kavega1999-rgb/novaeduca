@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -18,7 +18,8 @@ import {
   Target, 
   Filter,
   Download,
-  HelpCircle
+  HelpCircle,
+  ChevronDown
 } from "lucide-react";
 import {
   PieChart,
@@ -30,6 +31,7 @@ import {
 } from "recharts";
 import { format, subDays } from "date-fns";
 import * as XLSX from "xlsx";
+import UserDetailPanel, { type PanelType } from "@/components/adherence/UserDetailPanel";
 
 interface Evaluation {
   id: string;
@@ -76,7 +78,7 @@ const COLORS = {
   notStarted: "hsl(210, 40%, 75%)",
 };
 
-// Componente de tarjeta KPI con tooltip
+// Componente de tarjeta KPI clickable
 const KPICard = ({ 
   icon: Icon, 
   label, 
@@ -84,7 +86,9 @@ const KPICard = ({
   tooltip, 
   bgColor, 
   iconColor, 
-  textColor 
+  textColor,
+  isActive,
+  onClick,
 }: { 
   icon: React.ElementType; 
   label: string; 
@@ -93,20 +97,26 @@ const KPICard = ({
   bgColor: string;
   iconColor: string;
   textColor: string;
+  isActive?: boolean;
+  onClick?: () => void;
 }) => (
   <TooltipProvider>
     <Tooltip>
       <TooltipTrigger asChild>
-        <Card className={`${bgColor} border-none cursor-help transition-transform hover:scale-[1.02]`}>
+        <Card 
+          className={`${bgColor} border-none cursor-pointer transition-all hover:scale-[1.02] ${isActive ? 'ring-2 ring-white ring-offset-2 ring-offset-background scale-[1.03]' : ''}`}
+          onClick={onClick}
+        >
           <CardContent className="p-4 flex items-center gap-3">
             <Icon className={`h-8 w-8 ${iconColor}`} />
-            <div>
+            <div className="flex-1">
               <p className={`${textColor} text-xs flex items-center gap-1`}>
                 {label}
                 <HelpCircle className="h-3 w-3 opacity-60" />
               </p>
               <p className="text-2xl font-bold text-white">{value}</p>
             </div>
+            <ChevronDown className={`h-4 w-4 text-white/60 transition-transform ${isActive ? 'rotate-180' : ''}`} />
           </CardContent>
         </Card>
       </TooltipTrigger>
@@ -132,6 +142,7 @@ const AdherenceEvaluations = () => {
   const [selectedArea, setSelectedArea] = useState<string>("all");
   const [dateFrom, setDateFrom] = useState<string>(format(subDays(new Date(), 30), "yyyy-MM-dd"));
   const [dateTo, setDateTo] = useState<string>(format(new Date(), "yyyy-MM-dd"));
+  const [activePanel, setActivePanel] = useState<PanelType>(null);
 
   useEffect(() => {
     const checkAccess = async () => {
@@ -273,6 +284,18 @@ const AdherenceEvaluations = () => {
   
   const notStartedCount = Math.max(0, expectedUserCount - usersWithAttempts.size - pendingCount);
 
+  // Compute not-started user IDs for the detail panel
+  const notStartedUserIds = useMemo(() => {
+    const allUserIds = filteredProfiles.map(p => p.id);
+    const attemptedOrInProgress = new Set([
+      ...filteredAttempts.map(a => a.user_id),
+    ]);
+    return allUserIds.filter(id => !attemptedOrInProgress.has(id));
+  }, [filteredProfiles, filteredAttempts]);
+
+  const togglePanel = (panel: PanelType) => {
+    setActivePanel(prev => prev === panel ? null : panel);
+  };
   // Adherencia general: aprobados / usuarios esperados por evaluación
   const totalEvaluations = evaluations.filter(e => 
     (selectedTraining === "all" || e.training_id === selectedTraining) && 
@@ -443,45 +466,67 @@ const AdherenceEvaluations = () => {
         </Tooltip>
       </TooltipProvider>
 
-      {/* Status KPIs with tooltips */}
+      {/* Status KPIs - clickable */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard
           icon={CheckCircle}
           label="Aprobados"
           value={approvedCount}
-          tooltip="Número de usuarios que completaron y aprobaron la evaluación con el puntaje mínimo requerido."
+          tooltip="Haz clic para ver la lista de usuarios aprobados."
           bgColor="bg-[hsl(152,55%,42%)]"
           iconColor="text-green-200"
           textColor="text-green-100"
+          isActive={activePanel === "approved"}
+          onClick={() => togglePanel("approved")}
         />
         <KPICard
           icon={XCircle}
           label="No Aprobados"
           value={failedCount}
-          tooltip="Usuarios que completaron la evaluación pero no alcanzaron el puntaje mínimo de aprobación."
+          tooltip="Haz clic para ver usuarios reprobados y habilitar reevaluación."
           bgColor="bg-[hsl(0,60%,50%)]"
           iconColor="text-red-200"
           textColor="text-red-100"
+          isActive={activePanel === "failed"}
+          onClick={() => togglePanel("failed")}
         />
         <KPICard
           icon={Clock}
           label="En Curso"
           value={pendingCount}
-          tooltip="Evaluaciones iniciadas que aún no han sido finalizadas por los usuarios."
+          tooltip="Haz clic para ver usuarios con evaluación en curso."
           bgColor="bg-[hsl(45,70%,48%)]"
           iconColor="text-yellow-200"
           textColor="text-yellow-100"
+          isActive={activePanel === "inProgress"}
+          onClick={() => togglePanel("inProgress")}
         />
         <KPICard
           icon={Users}
           label="Sin Iniciar"
           value={notStartedCount}
-          tooltip="Usuarios que aún no han comenzado ninguna evaluación en el período seleccionado."
+          tooltip="Haz clic para ver usuarios que no han iniciado la evaluación."
           bgColor="bg-[hsl(210,50%,55%)]"
           iconColor="text-blue-200"
           textColor="text-blue-100"
+          isActive={activePanel === "notStarted"}
+          onClick={() => togglePanel("notStarted")}
         />
       </div>
+
+      {/* Expandable user detail panel */}
+      {activePanel && (
+        <UserDetailPanel
+          panelType={activePanel}
+          onClose={() => setActivePanel(null)}
+          filteredAttempts={filteredAttempts}
+          evaluations={evaluations}
+          trainings={trainings}
+          profiles={profiles}
+          notStartedUserIds={notStartedUserIds}
+          onDataRefresh={fetchData}
+        />
+      )}
 
       {/* Chart */}
       <Card>
@@ -516,70 +561,6 @@ const AdherenceEvaluations = () => {
           )}
         </CardContent>
       </Card>
-
-      {/* Tabla de usuarios reprobados */}
-      {(() => {
-        const failedAttempts = filteredAttempts
-          .filter(a => a.status === "completed" && !a.passed)
-          .sort((a, b) => new Date(b.completed_at || b.started_at).getTime() - new Date(a.completed_at || a.started_at).getTime());
-
-        return (
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <XCircle className="h-4 w-4 text-destructive" />
-                Usuarios Reprobados ({failedAttempts.length})
-              </CardTitle>
-              <p className="text-xs text-muted-foreground">Usuarios que iniciaron la capacitación y no aprobaron la evaluación</p>
-            </CardHeader>
-            <CardContent>
-              {failedAttempts.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b text-left">
-                        <th className="pb-2 font-medium text-muted-foreground">Usuario</th>
-                        <th className="pb-2 font-medium text-muted-foreground">Área</th>
-                        <th className="pb-2 font-medium text-muted-foreground">Capacitación</th>
-                        <th className="pb-2 font-medium text-muted-foreground text-center">Puntaje</th>
-                        <th className="pb-2 font-medium text-muted-foreground text-center">Mín. Requerido</th>
-                        <th className="pb-2 font-medium text-muted-foreground">Fecha</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {failedAttempts.map(attempt => {
-                        const evaluation = evaluations.find(e => e.id === attempt.evaluation_id);
-                        const training = evaluation ? trainings.find(t => t.id === evaluation.training_id) : null;
-                        const profile = profiles.find(p => p.id === attempt.user_id);
-                        return (
-                          <tr key={attempt.id} className="border-b last:border-0 hover:bg-muted/50">
-                            <td className="py-2 font-medium">{profile?.full_name || 'N/A'}</td>
-                            <td className="py-2 text-muted-foreground">{profile?.area || 'N/A'}</td>
-                            <td className="py-2">{training?.title || 'N/A'}</td>
-                            <td className="py-2 text-center">
-                              <span className="text-destructive font-semibold">
-                                {attempt.score !== null ? Math.round(attempt.score) : 0}%
-                              </span>
-                            </td>
-                            <td className="py-2 text-center text-muted-foreground">
-                              {evaluation?.passing_score || 70}%
-                            </td>
-                            <td className="py-2 text-muted-foreground">
-                              {attempt.completed_at ? format(new Date(attempt.completed_at), 'dd/MM/yyyy') : 'N/A'}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <p className="text-muted-foreground text-center py-8">No hay usuarios reprobados en el período seleccionado 🎉</p>
-              )}
-            </CardContent>
-          </Card>
-        );
-      })()}
     </div>
   );
 };
