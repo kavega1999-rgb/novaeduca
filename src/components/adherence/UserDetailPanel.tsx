@@ -66,6 +66,7 @@ interface UserDetailPanelProps {
   trainings: Training[];
   profiles: Profile[];
   notStartedUserIds: string[];
+  inProgressUserIds: string[];
   onDataRefresh: () => void;
 }
 
@@ -85,7 +86,7 @@ const panelConfig = {
     badgeClass: "",
   },
   inProgress: {
-    title: "Evaluaciones En Curso",
+    title: "Usuarios En Proceso",
     icon: Clock,
     iconColor: "text-yellow-600",
     badgeVariant: "secondary" as const,
@@ -108,6 +109,7 @@ const UserDetailPanel = ({
   trainings,
   profiles,
   notStartedUserIds,
+  inProgressUserIds,
   onDataRefresh,
 }: UserDetailPanelProps) => {
   const { toast } = useToast();
@@ -192,7 +194,7 @@ const UserDetailPanel = ({
               <Icon className={`h-5 w-5 ${config.iconColor}`} />
               {config.title}
               <Badge variant={config.badgeVariant} className={config.badgeClass}>
-                {panelType === "notStarted" ? notStartedUserIds.length : attempts.length}
+                {panelType === "notStarted" ? notStartedUserIds.length : panelType === "inProgress" ? attempts.length + inProgressUserIds.length : attempts.length}
               </Badge>
             </CardTitle>
             <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
@@ -227,7 +229,7 @@ const UserDetailPanel = ({
             ) : (
               <p className="text-muted-foreground text-center py-6">Todos los usuarios han iniciado 🎉</p>
             )
-          ) : attempts.length > 0 ? (
+          ) : (attempts.length > 0 || (panelType === "inProgress" && inProgressUserIds.length > 0)) ? (
             <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
               <table className="w-full text-sm">
                 <thead className="sticky top-0 bg-background">
@@ -236,13 +238,14 @@ const UserDetailPanel = ({
                     <th className="pb-2 font-medium text-muted-foreground">Área</th>
                     <th className="pb-2 font-medium text-muted-foreground">Capacitación</th>
                     <th className="pb-2 font-medium text-muted-foreground text-center">Puntaje</th>
-                    <th className="pb-2 font-medium text-muted-foreground">Fecha</th>
+                    <th className="pb-2 font-medium text-muted-foreground">Estado</th>
                     {panelType === "failed" && (
                       <th className="pb-2 font-medium text-muted-foreground text-center">Acción</th>
                     )}
                   </tr>
                 </thead>
                 <tbody>
+                  {/* Users with evaluation attempts */}
                   {attempts.map(attempt => {
                     const evaluation = evaluations.find(e => e.id === attempt.evaluation_id);
                     const training = evaluation ? trainings.find(t => t.id === evaluation.training_id) : null;
@@ -262,9 +265,10 @@ const UserDetailPanel = ({
                           )}
                         </td>
                         <td className="py-2 text-muted-foreground">
-                          {attempt.completed_at
-                            ? format(new Date(attempt.completed_at), "dd/MM/yyyy")
-                            : format(new Date(attempt.started_at), "dd/MM/yyyy")}
+                          {panelType === "inProgress" ? "Evaluación en proceso" : 
+                            attempt.completed_at
+                              ? format(new Date(attempt.completed_at), "dd/MM/yyyy")
+                              : format(new Date(attempt.started_at), "dd/MM/yyyy")}
                         </td>
                         {panelType === "failed" && (
                           <td className="py-2 text-center">
@@ -279,6 +283,19 @@ const UserDetailPanel = ({
                             </Button>
                           </td>
                         )}
+                      </tr>
+                    );
+                  })}
+                  {/* Users in training progress but no eval attempt */}
+                  {panelType === "inProgress" && inProgressUserIds.map(userId => {
+                    const profile = profiles.find(p => p.id === userId);
+                    return (
+                      <tr key={userId} className="border-b last:border-0 hover:bg-muted/50">
+                        <td className="py-2 font-medium">{profile?.full_name || "N/A"}</td>
+                        <td className="py-2 text-muted-foreground">{profile?.area || "N/A"}</td>
+                        <td className="py-2">—</td>
+                        <td className="py-2 text-center"><span className="text-muted-foreground">—</span></td>
+                        <td className="py-2 text-muted-foreground">Capacitación en proceso</td>
                       </tr>
                     );
                   })}

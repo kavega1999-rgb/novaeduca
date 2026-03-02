@@ -189,7 +189,7 @@ const AttendanceRecords = () => {
   const getStatusBadge = (status: string) => {
     const config: Record<string, { label: string; variant: "default" | "secondary" | "outline" }> = {
       completed: { label: "Completado", variant: "default" },
-      in_progress: { label: "En progreso", variant: "secondary" },
+      in_progress: { label: "En Proceso", variant: "secondary" },
       pending: { label: "Pendiente", variant: "outline" },
     };
     const { label, variant } = config[status] || { label: status, variant: "outline" };
@@ -214,7 +214,7 @@ const AttendanceRecords = () => {
       "No. Documento": p.profiles?.id_number || "N/A",
       "Área": getAreaLabel(p.profiles?.area || null),
       "Cargo": p.profiles?.position || "N/A",
-      "Estado": p.status === "completed" ? "Completado" : p.status === "in_progress" ? "En progreso" : "Pendiente",
+      "Estado": p.status === "completed" ? "Completado" : p.status === "in_progress" ? "En Proceso" : "Pendiente",
       "Progreso": `${p.progress_percentage || 0}%`,
       "Fecha Inicio": p.started_at ? format(new Date(p.started_at), "dd/MM/yyyy") : "N/A",
       "Fecha Completado": p.completed_at ? format(new Date(p.completed_at), "dd/MM/yyyy") : "N/A",

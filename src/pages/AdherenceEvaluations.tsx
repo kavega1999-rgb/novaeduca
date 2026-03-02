@@ -137,6 +137,7 @@ const AdherenceEvaluations = () => {
   const [trainings, setTrainings] = useState<Training[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [areas, setAreas] = useState<Area[]>([]);
+  const [userProgress, setUserProgress] = useState<{ user_id: string; training_id: string; status: string }[]>([]);
 
   const [selectedTraining, setSelectedTraining] = useState<string>("all");
   const [selectedArea, setSelectedArea] = useState<string>("all");
@@ -201,12 +202,13 @@ const AdherenceEvaluations = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [attemptsRes, evaluationsRes, trainingsRes, profilesRes, areasRes] = await Promise.all([
+      const [attemptsRes, evaluationsRes, trainingsRes, profilesRes, areasRes, progressRes] = await Promise.all([
         supabase.from("evaluation_attempts").select("*"),
         supabase.from("evaluations").select("id, training_id, title, passing_score"),
         supabase.from("trainings").select("id, title, requires_evaluation, area_id, target_user_count"),
         supabase.from("profiles").select("id, full_name, area"),
         supabase.from("areas").select("id, name").order("name"),
+        supabase.from("user_progress").select("user_id, training_id, status"),
       ]);
 
       setAttempts(attemptsRes.data || []);
@@ -214,6 +216,7 @@ const AdherenceEvaluations = () => {
       setTrainings(trainingsRes.data || []);
       setProfiles(profilesRes.data || []);
       setAreas(areasRes.data || []);
+      setUserProgress(progressRes.data || []);
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -263,10 +266,33 @@ const AdherenceEvaluations = () => {
   const completedAttempts = filteredAttempts.filter(a => a.status === "completed");
   const approvedCount = completedAttempts.filter(a => a.passed).length;
   const failedCount = completedAttempts.filter(a => !a.passed).length;
-  const pendingCount = filteredAttempts.filter(a => a.status === "in_progress").length;
+  // Users with evaluation attempts in_progress
+  const evalInProgressUserIds = new Set(
+    filteredAttempts.filter(a => a.status === "in_progress").map(a => a.user_id)
+  );
   
-  // Get unique users who have attempts
+  // Users who started the training (user_progress in_progress) but haven't started the evaluation
+  const trainingInProgressUserIds = useMemo(() => {
+    const relevantProgress = userProgress.filter(up => {
+      if (selectedTraining !== "all") {
+        return up.training_id === selectedTraining && up.status === "in_progress";
+      }
+      return relevantTrainingIds.includes(up.training_id) && up.status === "in_progress";
+    });
+    // Only include users who don't already have an evaluation attempt
+    const usersWithEvalAttempts = new Set(filteredAttempts.map(a => a.user_id));
+    return new Set(
+      relevantProgress
+        .filter(up => !usersWithEvalAttempts.has(up.user_id))
+        .map(up => up.user_id)
+    );
+  }, [userProgress, selectedTraining, relevantTrainingIds, filteredAttempts]);
+
+  const pendingCount = evalInProgressUserIds.size + trainingInProgressUserIds.size;
+  
+  // Get unique users who have attempts or are in training progress
   const usersWithAttempts = new Set(filteredAttempts.map(a => a.user_id));
+  const allActiveUserIds = new Set([...usersWithAttempts, ...trainingInProgressUserIds]);
   
   // For "Sin Iniciar": only count users who are expected to take the evaluation
   // If a specific training is selected and has target_user_count, use that
@@ -282,16 +308,18 @@ const AdherenceEvaluations = () => {
     expectedUserCount = filteredProfiles.length;
   }
   
-  const notStartedCount = Math.max(0, expectedUserCount - usersWithAttempts.size - pendingCount);
+  const notStartedCount = Math.max(0, expectedUserCount - allActiveUserIds.size);
 
   // Compute not-started user IDs for the detail panel
   const notStartedUserIds = useMemo(() => {
     const allUserIds = filteredProfiles.map(p => p.id);
-    const attemptedOrInProgress = new Set([
-      ...filteredAttempts.map(a => a.user_id),
-    ]);
-    return allUserIds.filter(id => !attemptedOrInProgress.has(id));
-  }, [filteredProfiles, filteredAttempts]);
+    return allUserIds.filter(id => !allActiveUserIds.has(id));
+  }, [filteredProfiles, allActiveUserIds]);
+  
+  // Compute in-progress user IDs for the detail panel (training started but no eval attempt)
+  const inProgressUserIds = useMemo(() => {
+    return [...trainingInProgressUserIds];
+  }, [trainingInProgressUserIds]);
 
   const togglePanel = (panel: PanelType) => {
     setActivePanel(prev => prev === panel ? null : panel);
@@ -311,7 +339,7 @@ const AdherenceEvaluations = () => {
   const statusPieData = [
     { name: "Aprobados", value: approvedCount, color: COLORS.approved },
     { name: "No Aprobados", value: failedCount, color: COLORS.failed },
-    { name: "En Curso", value: pendingCount, color: COLORS.pending },
+    { name: "En Proceso", value: pendingCount, color: COLORS.pending },
     { name: "Sin Iniciar", value: notStartedCount, color: COLORS.notStarted },
   ].filter(d => d.value > 0);
 
@@ -492,9 +520,9 @@ const AdherenceEvaluations = () => {
         />
         <KPICard
           icon={Clock}
-          label="En Curso"
+          label="En Proceso"
           value={pendingCount}
-          tooltip="Haz clic para ver usuarios con evaluación en curso."
+          tooltip="Usuarios con la capacitación o evaluación en proceso."
           bgColor="bg-[hsl(45,70%,48%)]"
           iconColor="text-yellow-200"
           textColor="text-yellow-100"
@@ -524,6 +552,7 @@ const AdherenceEvaluations = () => {
           trainings={trainings}
           profiles={profiles}
           notStartedUserIds={notStartedUserIds}
+          inProgressUserIds={inProgressUserIds}
           onDataRefresh={fetchData}
         />
       )}
