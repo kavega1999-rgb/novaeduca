@@ -11,6 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import FileUploader from "./FileUploader";
+import UserAssignmentSelector from "./UserAssignmentSelector";
 import { formatTrainingTitle, toSentenceCase } from "@/lib/text-utils";
 
 const currentYear = new Date().getFullYear();
@@ -34,6 +35,7 @@ const formSchema = z.object({
   active_from: z.string().optional(),
   active_until: z.string().optional(),
   target_user_count: z.coerce.number().min(0).optional(),
+  calendar_visible: z.boolean().default(false),
 });
 
 interface TrainingFormProps {
@@ -46,6 +48,7 @@ const TrainingForm = ({ trainingId, onSuccess }: TrainingFormProps) => {
   const [areas, setAreas] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [uploadedFileUrl, setUploadedFileUrl] = useState<string>("");
+  const [assignedUserIds, setAssignedUserIds] = useState<string[]>([]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -67,6 +70,7 @@ const TrainingForm = ({ trainingId, onSuccess }: TrainingFormProps) => {
       active_from: "",
       active_until: "",
       target_user_count: undefined,
+      calendar_visible: false,
     },
   });
 
@@ -116,6 +120,7 @@ const TrainingForm = ({ trainingId, onSuccess }: TrainingFormProps) => {
         active_from: data.active_from ? data.active_from.split("T")[0] : "",
         active_until: data.active_until ? data.active_until.split("T")[0] : "",
         target_user_count: data.target_user_count || undefined,
+        calendar_visible: data.calendar_visible || false,
       });
       if (data.content_url) {
         setUploadedFileUrl(data.content_url);
@@ -150,11 +155,12 @@ const TrainingForm = ({ trainingId, onSuccess }: TrainingFormProps) => {
           generates_certificate: values.generates_certificate,
           generates_constancia: values.generates_constancia,
           visible_to_all: values.visible_to_all,
-          content_url: uploadedFileUrl || null,
-          active_from: values.active_from ? new Date(values.active_from).toISOString() : null,
-          active_until: values.active_until ? new Date(values.active_until).toISOString() : null,
-          target_user_count: values.target_user_count || null,
-        };
+           content_url: uploadedFileUrl || null,
+           active_from: values.active_from ? new Date(values.active_from).toISOString() : null,
+           active_until: values.active_until ? new Date(values.active_until).toISOString() : null,
+           target_user_count: values.target_user_count || null,
+           calendar_visible: values.calendar_visible,
+         };
         
         ({ error: trainingError } = await supabase
           .from("trainings")
@@ -180,6 +186,7 @@ const TrainingForm = ({ trainingId, onSuccess }: TrainingFormProps) => {
           active_from: values.active_from ? new Date(values.active_from).toISOString() : null,
           active_until: values.active_until ? new Date(values.active_until).toISOString() : null,
           target_user_count: values.target_user_count || null,
+          calendar_visible: values.calendar_visible,
         };
         
         const { data: newTraining, error } = await supabase
@@ -223,6 +230,26 @@ const TrainingForm = ({ trainingId, onSuccess }: TrainingFormProps) => {
           .eq("training_id", savedTrainingId);
       }
 
+      // Save user assignments
+      if (savedTrainingId && assignedUserIds.length > 0) {
+        await supabase
+          .from("training_assignments")
+          .delete()
+          .eq("training_id", savedTrainingId);
+
+        const assignmentsData = assignedUserIds.map(userId => ({
+          training_id: savedTrainingId!,
+          user_id: userId,
+          assigned_by: user?.id,
+        }));
+
+        const { error: assignError } = await supabase
+          .from("training_assignments")
+          .insert(assignmentsData);
+
+        if (assignError) throw assignError;
+      }
+
       toast({
         title: trainingId ? "Capacitación actualizada" : "Capacitación creada",
         description: "Los cambios se han guardado exitosamente",
@@ -231,6 +258,7 @@ const TrainingForm = ({ trainingId, onSuccess }: TrainingFormProps) => {
       if (!trainingId) {
         form.reset();
         setUploadedFileUrl("");
+        setAssignedUserIds([]);
       }
       
       onSuccess?.();
@@ -564,6 +592,25 @@ const TrainingForm = ({ trainingId, onSuccess }: TrainingFormProps) => {
               </FormItem>
             )}
           />
+          
+          <FormField
+            control={form.control}
+            name="calendar_visible"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                <FormControl>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <FormLabel>Mostrar en calendario de usuarios</FormLabel>
+                  <p className="text-xs text-muted-foreground">Los usuarios podrán ver esta capacitación en su calendario</p>
+                </div>
+              </FormItem>
+            )}
+          />
         </div>
 
         {!form.watch("visible_to_all") && (
@@ -598,6 +645,13 @@ const TrainingForm = ({ trainingId, onSuccess }: TrainingFormProps) => {
             )}
           />
         )}
+
+        {/* User Assignment */}
+        <UserAssignmentSelector
+          selectedUserIds={assignedUserIds}
+          onSelectionChange={setAssignedUserIds}
+          trainingId={trainingId}
+        />
 
         <div>
           <FormLabel>Material de Apoyo</FormLabel>

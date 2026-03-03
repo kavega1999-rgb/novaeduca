@@ -10,6 +10,7 @@ import DashboardReports from "./pages/DashboardReports";
 import UserManagement from "./pages/UserManagement";
 import AdminOverview from "./pages/admin/AdminOverview";
 import AdminTrainings from "./pages/admin/AdminTrainings";
+import TrainingCalendar from "./pages/admin/TrainingCalendar";
 import Trainings from "./pages/Trainings";
 import TrainingDetail from "./pages/TrainingDetail";
 import EvaluationPage from "./pages/EvaluationPage";
@@ -38,6 +39,9 @@ const App = () => (
           </Route>
           <Route path="/dashboard/trainings" element={<Dashboard />}>
             <Route index element={<AdminTrainings />} />
+          </Route>
+          <Route path="/dashboard/calendar" element={<Dashboard />}>
+            <Route index element={<TrainingCalendar />} />
           </Route>
           <Route path="/dashboard/reports" element={<Dashboard />}>
             <Route index element={<DashboardReports />} />

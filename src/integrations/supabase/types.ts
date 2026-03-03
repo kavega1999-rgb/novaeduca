@@ -657,6 +657,52 @@ export type Database = {
           },
         ]
       }
+      training_assignments: {
+        Row: {
+          assigned_by: string | null
+          created_at: string
+          id: string
+          training_id: string
+          user_id: string
+        }
+        Insert: {
+          assigned_by?: string | null
+          created_at?: string
+          id?: string
+          training_id: string
+          user_id: string
+        }
+        Update: {
+          assigned_by?: string | null
+          created_at?: string
+          id?: string
+          training_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_assignments_training_id_fkey"
+            columns: ["training_id"]
+            isOneToOne: false
+            referencedRelation: "trainings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_assignments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       training_target_areas: {
         Row: {
           created_at: string
@@ -691,6 +737,7 @@ export type Database = {
           active_from: string | null
           active_until: string | null
           area_id: string
+          calendar_visible: boolean | null
           content_url: string | null
           created_at: string
           created_by: string | null
@@ -718,6 +765,7 @@ export type Database = {
           active_from?: string | null
           active_until?: string | null
           area_id: string
+          calendar_visible?: boolean | null
           content_url?: string | null
           created_at?: string
           created_by?: string | null
@@ -745,6 +793,7 @@ export type Database = {
           active_from?: string | null
           active_until?: string | null
           area_id?: string
+          calendar_visible?: boolean | null
           content_url?: string | null
           created_at?: string
           created_by?: string | null
