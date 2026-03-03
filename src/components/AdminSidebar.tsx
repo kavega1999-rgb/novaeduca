@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
-import { LayoutDashboard, BarChart3, BookOpen, Shield, UserCog, ChevronRight, TrendingUp, ClipboardCheck, FileSpreadsheet, Award, Home, Menu } from "lucide-react";
+import { LayoutDashboard, BarChart3, BookOpen, Shield, UserCog, ChevronRight, TrendingUp, ClipboardCheck, FileSpreadsheet, Award, Home, Menu, CalendarDays } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -28,6 +28,7 @@ const allMenuItems = [
     adminOnly: false,
     children: [
       { title: "Gestionar", url: "/dashboard/trainings" },
+      { title: "Calendario", url: "/dashboard/calendar" },
     ]
   },
   { 
