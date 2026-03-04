@@ -14,6 +14,12 @@ import { cn } from "@/lib/utils";
 const currentYear = new Date().getFullYear();
 const yearOptions = Array.from({ length: 6 }, (_, i) => currentYear - 1 + i);
 
+// Parse date string without timezone shift (extracts YYYY-MM-DD and creates local date)
+const parseLocalDate = (dateStr: string) => {
+  const [y, m, d] = dateStr.substring(0, 10).split("-").map(Number);
+  return new Date(y, m - 1, d);
+};
+
 interface Training {
   id: string;
   title: string;
@@ -77,8 +83,8 @@ const TrainingCalendar = () => {
     const map: Record<string, Training[]> = {};
     for (const t of trainings) {
       if (!t.active_from) continue;
-      const fromDate = new Date(t.active_from);
-      const key = format(fromDate, "yyyy-MM-dd");
+      // Extract date portion to avoid timezone shift
+      const key = t.active_from.substring(0, 10);
       if (!map[key]) map[key] = [];
       map[key].push(t);
     }
@@ -222,7 +228,7 @@ const TrainingCalendar = () => {
         <CardContent>
           <div className="divide-y">
             {trainings
-              .filter(t => t.active_from && new Date(t.active_from) >= new Date())
+              .filter(t => t.active_from && parseLocalDate(t.active_from) >= new Date(new Date().toDateString()))
               .slice(0, 8)
               .map(t => {
                 const sc = statusConfig(t);
@@ -239,7 +245,7 @@ const TrainingCalendar = () => {
                       <div className="min-w-0">
                         <p className="text-sm font-medium truncate">{t.title}</p>
                         <p className="text-xs text-muted-foreground">
-                          {format(new Date(t.active_from!), "d MMM yyyy", { locale: es })}
+                          {format(parseLocalDate(t.active_from!), "d MMM yyyy", { locale: es })}
                           {" · "}
                           <span style={{ color: areaColor }}>{areaName}</span>
                         </p>
@@ -251,7 +257,7 @@ const TrainingCalendar = () => {
                   </button>
                 );
               })}
-            {trainings.filter(t => t.active_from && new Date(t.active_from) >= new Date()).length === 0 && (
+            {trainings.filter(t => t.active_from && parseLocalDate(t.active_from) >= new Date(new Date().toDateString())).length === 0 && (
               <p className="text-sm text-muted-foreground py-4 text-center">No hay capacitaciones próximas.</p>
             )}
           </div>
@@ -280,13 +286,13 @@ const TrainingCalendar = () => {
                   <div>
                     <p className="text-muted-foreground text-xs mb-1">Fecha de inicio</p>
                     <p className="font-medium">
-                      {t.active_from ? format(new Date(t.active_from), "d 'de' MMMM, yyyy", { locale: es }) : "—"}
+                      {t.active_from ? format(parseLocalDate(t.active_from), "d 'de' MMMM, yyyy", { locale: es }) : "—"}
                     </p>
                   </div>
                   <div>
                     <p className="text-muted-foreground text-xs mb-1">Fecha de fin</p>
                     <p className="font-medium">
-                      {t.active_until ? format(new Date(t.active_until), "d 'de' MMMM, yyyy", { locale: es }) : "Sin definir"}
+                      {t.active_until ? format(parseLocalDate(t.active_until), "d 'de' MMMM, yyyy", { locale: es }) : "Sin definir"}
                     </p>
                   </div>
                 </div>
