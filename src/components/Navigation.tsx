@@ -1,7 +1,7 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Home, BookOpen, User, LogOut, Settings, Menu, BarChart3, ChevronDown } from "lucide-react";
+import { Home, BookOpen, User, LogOut, Settings, Menu, BarChart3, CalendarDays } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { logAccess } from "@/hooks/useAccessLog";
@@ -99,6 +99,14 @@ const Navigation = ({ userRole }: NavigationProps) => {
                 <BookOpen className="w-4 h-4 mr-2" />
                 Capacitaciones
               </Button>
+              <Button
+                variant={isActive("/calendar") ? "default" : "ghost"}
+                size="sm"
+                onClick={() => navigate("/calendar")}
+              >
+                <CalendarDays className="w-4 h-4 mr-2" />
+                Calendario
+              </Button>
               {(userRole === "admin" || userRole === "leader") && (
                 <Button
                   variant={isActive("/admin") ? "default" : "ghost"}
@@ -175,6 +183,14 @@ const Navigation = ({ userRole }: NavigationProps) => {
                       >
                         <BookOpen className="w-5 h-5 mr-3" />
                         Capacitaciones
+                      </Button>
+                      <Button
+                        variant={isActive("/calendar") ? "secondary" : "ghost"}
+                        className="w-full justify-start"
+                        onClick={() => handleNavigate("/calendar")}
+                      >
+                        <CalendarDays className="w-5 h-5 mr-3" />
+                        Calendario
                       </Button>
                       {(userRole === "admin" || userRole === "leader") && (
                         <>

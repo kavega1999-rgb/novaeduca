@@ -16,6 +16,7 @@ import TrainingDetail from "./pages/TrainingDetail";
 import EvaluationPage from "./pages/EvaluationPage";
 import Profile from "./pages/Profile";
 import AccessLogs from "./pages/AccessLogs";
+import UserCalendar from "./pages/UserCalendar";
 import AdherenceEvaluations from "./pages/AdherenceEvaluations";
 import AttendanceRecords from "./pages/AttendanceRecords";
 import CertificatesAdmin from "./pages/CertificatesAdmin";
@@ -61,6 +62,7 @@ const App = () => (
           <Route path="/dashboard/tabulation" element={<Dashboard />}>
             <Route index element={<AdherenceTabulation />} />
           </Route>
+          <Route path="/calendar" element={<UserCalendar />} />
           <Route path="/trainings" element={<Trainings />} />
           <Route path="/training/:id" element={<TrainingDetail />} />
           <Route path="/evaluation/:trainingId" element={<EvaluationPage />} />
