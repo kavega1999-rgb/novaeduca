@@ -36,10 +36,16 @@ const typeLabels: Record<string, string> = {
   capacitacion: "Capacitación",
   induccion: "Inducción",
   entrenamiento: "Entrenamiento",
+  socializacion: "Socialización",
 };
 
 const statusConfig = (t: Training) => {
   if (t.is_finished) return { label: "Finalizada", dotClass: "bg-red-500", badgeClass: "bg-red-500/15 text-red-700 border-red-200" };
+  if (t.active_until) {
+    const untilDate = parseLocalDate(t.active_until);
+    const today = new Date(new Date().toDateString());
+    if (untilDate < today) return { label: "Finalizada", dotClass: "bg-red-500", badgeClass: "bg-red-500/15 text-red-700 border-red-200" };
+  }
   if (t.status === "active") return { label: "Activa", dotClass: "bg-emerald-500", badgeClass: "bg-emerald-500/15 text-emerald-700 border-emerald-200" };
   return { label: "Pendiente", dotClass: "bg-amber-500", badgeClass: "bg-amber-500/15 text-amber-700 border-amber-200" };
 };

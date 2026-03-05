@@ -20,7 +20,7 @@ const yearOptions = Array.from({ length: 10 }, (_, i) => currentYear - 5 + i);
 const formSchema = z.object({
   title: z.string().min(3, "El título debe tener al menos 3 caracteres").max(200),
   description: z.string().min(10, "La descripción debe tener al menos 10 caracteres").max(1000),
-  type: z.enum(["capacitacion", "induccion", "entrenamiento"]),
+  type: z.enum(["capacitacion", "induccion", "entrenamiento", "socializacion"]),
   area_id: z.string().uuid("Selecciona un área válida"),
   duration_minutes: z.coerce.number().min(1, "La duración debe ser mayor a 0"),
   total_pages: z.coerce.number().min(1, "El número de páginas debe ser mayor a 0").default(10),
@@ -326,6 +326,7 @@ const TrainingForm = ({ trainingId, onSuccess }: TrainingFormProps) => {
                     <SelectItem value="capacitacion">Capacitación</SelectItem>
                     <SelectItem value="induccion">Inducción</SelectItem>
                     <SelectItem value="entrenamiento">Entrenamiento</SelectItem>
+                    <SelectItem value="socializacion">Socialización</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
