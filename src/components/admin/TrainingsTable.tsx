@@ -381,7 +381,7 @@ const TrainingsTable = ({ onRefresh, onEdit }: TrainingsTableProps) => {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 hover:bg-primary/10 hover:text-primary"
-                        onClick={() => setEditingId(training.id)}
+                        onClick={() => onEdit ? onEdit(training.id) : setEditingId(training.id)}
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
