@@ -43,6 +43,7 @@ const TrainingReports = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [areas, setAreas] = useState<Area[]>([]);
   const [selectedArea, setSelectedArea] = useState<string>("all");
+  const [viewMode, setViewMode] = useState<"general" | "assigned">("assigned");
   const [globalStats, setGlobalStats] = useState<GlobalStats>({
     totalTrainings: 0,
     completedUsers: 0,
@@ -53,6 +54,11 @@ const TrainingReports = () => {
   const [areaStats, setAreaStats] = useState<AreaStats[]>([]);
   const [topTrainings, setTopTrainings] = useState<TopTraining[]>([]);
   const [totalCertificates, setTotalCertificates] = useState(0);
+  const [assignments, setAssignments] = useState<{ training_id: string; user_id: string }[]>([]);
+  const [targetAreas, setTargetAreas] = useState<{ training_id: string; target_area: string }[]>([]);
+  const [allProgress, setAllProgress] = useState<any[]>([]);
+  const [trainingsData, setTrainingsData] = useState<any[]>([]);
+  const [profiles, setProfiles] = useState<any[]>([]);
 
   useEffect(() => {
     fetchData();
