@@ -138,12 +138,15 @@ const AdherenceEvaluations = () => {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [areas, setAreas] = useState<Area[]>([]);
   const [userProgress, setUserProgress] = useState<{ user_id: string; training_id: string; status: string }[]>([]);
+  const [assignments, setAssignments] = useState<{ training_id: string; user_id: string }[]>([]);
+  const [targetAreas, setTargetAreas] = useState<{ training_id: string; target_area: string }[]>([]);
 
   const [selectedTraining, setSelectedTraining] = useState<string>("all");
   const [selectedArea, setSelectedArea] = useState<string>("all");
   const [dateFrom, setDateFrom] = useState<string>(format(subDays(new Date(), 30), "yyyy-MM-dd"));
   const [dateTo, setDateTo] = useState<string>(format(new Date(), "yyyy-MM-dd"));
   const [activePanel, setActivePanel] = useState<PanelType>(null);
+  const [viewMode, setViewMode] = useState<"assigned" | "general">("assigned");
 
   useEffect(() => {
     const checkAccess = async () => {
