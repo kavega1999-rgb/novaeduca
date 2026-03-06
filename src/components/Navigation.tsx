@@ -107,16 +107,6 @@ const Navigation = ({ userRole }: NavigationProps) => {
                 <CalendarDays className="w-4 h-4 mr-2" />
                 Calendario
               </Button>
-              {(userRole === "admin" || userRole === "leader") && (
-                <Button
-                  variant={isActive("/admin") ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => navigate("/admin")}
-                >
-                  <Settings className="w-4 h-4 mr-2" />
-                  Administración
-                </Button>
-              )}
             </div>
           </div>
 

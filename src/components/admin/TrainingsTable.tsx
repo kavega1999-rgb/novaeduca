@@ -223,6 +223,7 @@ const TrainingsTable = ({ onRefresh }: TrainingsTableProps) => {
       capacitacion: "Capacitación",
       induccion: "Inducción",
       entrenamiento: "Entrenamiento",
+      socializacion: "Socialización",
     };
     return (
       <Badge variant="outline" className="flex items-center gap-1.5">
