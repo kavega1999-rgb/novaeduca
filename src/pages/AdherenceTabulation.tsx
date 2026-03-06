@@ -124,15 +124,20 @@ const AdherenceTabulation = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [reportsRes, trainingsRes, areasRes, profilesRes] = await Promise.all([
+      const [reportsRes, trainingsRes, areasRes, profilesRes, assignmentsRes, targetAreasRes] = await Promise.all([
         supabase
           .from("adherence_reports")
           .select("*")
           .order("created_at", { ascending: false }),
-        supabase.from("trainings").select("id, title, area_id, target_user_count, is_finished, active_from, active_until"),
+        supabase.from("trainings").select("id, title, area_id, target_user_count, is_finished, active_from, active_until, visible_to_all"),
         supabase.from("areas").select("*"),
         supabase.from("profiles").select("id, full_name, area"),
+        supabase.from("training_assignments").select("training_id, user_id"),
+        supabase.from("training_target_areas").select("training_id, target_area"),
       ]);
+
+      setAssignments(assignmentsRes.data || []);
+      setTargetAreasData(targetAreasRes.data || []);
 
       if (reportsRes.data) {
         // Enrich reports with training and user names
