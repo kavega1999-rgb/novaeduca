@@ -35,7 +35,7 @@ interface TrainingsTableProps {
 
 const ITEMS_PER_PAGE = 10;
 
-const TrainingsTable = ({ onRefresh }: TrainingsTableProps) => {
+const TrainingsTable = ({ onRefresh, onEdit }: TrainingsTableProps) => {
   const { toast } = useToast();
   const [trainings, setTrainings] = useState<Training[]>([]);
   const [filteredTrainings, setFilteredTrainings] = useState<Training[]>([]);
