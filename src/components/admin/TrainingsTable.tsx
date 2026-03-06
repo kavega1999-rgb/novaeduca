@@ -300,6 +300,7 @@ const TrainingsTable = ({ onRefresh }: TrainingsTableProps) => {
               <SelectItem value="capacitacion">Capacitación</SelectItem>
               <SelectItem value="induccion">Inducción</SelectItem>
               <SelectItem value="entrenamiento">Entrenamiento</SelectItem>
+              <SelectItem value="socializacion">Socialización</SelectItem>
             </SelectContent>
           </Select>
         </div>
