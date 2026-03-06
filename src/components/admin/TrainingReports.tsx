@@ -62,7 +62,7 @@ const TrainingReports = () => {
 
   useEffect(() => {
     fetchData();
-  }, [selectedArea]);
+  }, [selectedArea, viewMode]);
 
   const fetchData = async () => {
     setIsLoading(true);
