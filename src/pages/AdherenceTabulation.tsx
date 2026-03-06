@@ -183,7 +183,21 @@ const AdherenceTabulation = () => {
     const matchesDateFrom = !dateFrom || reportDate >= new Date(dateFrom);
     const matchesDateTo = !dateTo || reportDate <= new Date(dateTo + 'T23:59:59');
 
-    return matchesSearch && matchesTraining && matchesArea && matchesUser && matchesDateFrom && matchesDateTo;
+    // If "assigned" view mode, filter to only assigned/targeted users
+    let matchesAssignment = true;
+    if (viewMode === "assigned" && training) {
+      if ((training as any).visible_to_all) {
+        matchesAssignment = true;
+      } else {
+        const isAssigned = assignments.some(a => a.training_id === report.training_id && a.user_id === report.user_id);
+        const userProfile = profiles.find(p => p.id === report.user_id);
+        const trainingTargets = targetAreasData.filter(ta => ta.training_id === report.training_id).map(ta => ta.target_area);
+        const isTargeted = userProfile?.area && trainingTargets.includes(userProfile.area);
+        matchesAssignment = isAssigned || !!isTargeted;
+      }
+    }
+
+    return matchesSearch && matchesTraining && matchesArea && matchesUser && matchesDateFrom && matchesDateTo && matchesAssignment;
   });
 
   // Calculate statistics
