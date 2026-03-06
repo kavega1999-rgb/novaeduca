@@ -238,15 +238,31 @@ const AdherenceEvaluations = () => {
 
   const trainingIdsInArea = filteredTrainingsByArea.map(t => t.id);
 
-  // Filter profiles by selected area
-  const filteredProfiles = selectedArea === "all"
-    ? profiles
-    : profiles.filter(p => {
-        // Map area filter to profile area values
-        const areaObj = areas.find(a => a.id === selectedArea);
-        if (!areaObj) return true;
-        return p.area !== null;
+  // Filter profiles: in "assigned" mode, only show profiles that are assigned/targeted
+  const filteredProfiles = useMemo(() => {
+    let filtered = selectedArea === "all"
+      ? profiles
+      : profiles.filter(p => p.area !== null);
+
+    if (viewMode === "assigned") {
+      filtered = filtered.filter(p => {
+        const relevantTrainings = selectedTraining === "all" 
+          ? trainings.filter(t => selectedArea === "all" || t.area_id === selectedArea)
+          : trainings.filter(t => t.id === selectedTraining);
+        
+        return relevantTrainings.some(t => {
+          if ((t as any).visible_to_all) return true;
+          const isAssigned = assignments.some(a => a.training_id === t.id && a.user_id === p.id);
+          if (isAssigned) return true;
+          const trainingTargets = targetAreas.filter(ta => ta.training_id === t.id).map(ta => ta.target_area);
+          if (p.area && trainingTargets.includes(p.area)) return true;
+          return false;
+        });
       });
+    }
+
+    return filtered;
+  }, [profiles, selectedArea, viewMode, selectedTraining, trainings, assignments, targetAreas]);
 
   // Get evaluation IDs for selected training and area
   const evaluationIdsForTraining = selectedTraining === "all" 
