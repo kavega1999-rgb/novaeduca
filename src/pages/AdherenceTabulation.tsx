@@ -92,6 +92,9 @@ const AdherenceTabulation = () => {
   const [selectedUser, setSelectedUser] = useState<string>("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [viewMode, setViewMode] = useState<"assigned" | "general">("assigned");
+  const [assignments, setAssignments] = useState<{ training_id: string; user_id: string }[]>([]);
+  const [targetAreasData, setTargetAreasData] = useState<{ training_id: string; target_area: string }[]>([]);
 
   useEffect(() => {
     checkAccessAndLoadData();
