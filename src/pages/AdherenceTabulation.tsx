@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -92,6 +93,9 @@ const AdherenceTabulation = () => {
   const [selectedUser, setSelectedUser] = useState<string>("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [viewMode, setViewMode] = useState<"assigned" | "general">("assigned");
+  const [assignments, setAssignments] = useState<{ training_id: string; user_id: string }[]>([]);
+  const [targetAreasData, setTargetAreasData] = useState<{ training_id: string; target_area: string }[]>([]);
 
   useEffect(() => {
     checkAccessAndLoadData();
@@ -121,15 +125,20 @@ const AdherenceTabulation = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [reportsRes, trainingsRes, areasRes, profilesRes] = await Promise.all([
+      const [reportsRes, trainingsRes, areasRes, profilesRes, assignmentsRes, targetAreasRes] = await Promise.all([
         supabase
           .from("adherence_reports")
           .select("*")
           .order("created_at", { ascending: false }),
-        supabase.from("trainings").select("id, title, area_id, target_user_count, is_finished, active_from, active_until"),
+        supabase.from("trainings").select("id, title, area_id, target_user_count, is_finished, active_from, active_until, visible_to_all"),
         supabase.from("areas").select("*"),
         supabase.from("profiles").select("id, full_name, area"),
+        supabase.from("training_assignments").select("training_id, user_id"),
+        supabase.from("training_target_areas").select("training_id, target_area"),
       ]);
+
+      setAssignments(assignmentsRes.data || []);
+      setTargetAreasData(targetAreasRes.data || []);
 
       if (reportsRes.data) {
         // Enrich reports with training and user names
@@ -175,7 +184,21 @@ const AdherenceTabulation = () => {
     const matchesDateFrom = !dateFrom || reportDate >= new Date(dateFrom);
     const matchesDateTo = !dateTo || reportDate <= new Date(dateTo + 'T23:59:59');
 
-    return matchesSearch && matchesTraining && matchesArea && matchesUser && matchesDateFrom && matchesDateTo;
+    // If "assigned" view mode, filter to only assigned/targeted users
+    let matchesAssignment = true;
+    if (viewMode === "assigned" && training) {
+      if ((training as any).visible_to_all) {
+        matchesAssignment = true;
+      } else {
+        const isAssigned = assignments.some(a => a.training_id === report.training_id && a.user_id === report.user_id);
+        const userProfile = profiles.find(p => p.id === report.user_id);
+        const trainingTargets = targetAreasData.filter(ta => ta.training_id === report.training_id).map(ta => ta.target_area);
+        const isTargeted = userProfile?.area && trainingTargets.includes(userProfile.area);
+        matchesAssignment = isAssigned || !!isTargeted;
+      }
+    }
+
+    return matchesSearch && matchesTraining && matchesArea && matchesUser && matchesDateFrom && matchesDateTo && matchesAssignment;
   });
 
   // Calculate statistics
@@ -340,7 +363,19 @@ const AdherenceTabulation = () => {
               <CardTitle className="text-lg">Filtros</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-4">
+                <div>
+                  <Label className="text-xs">Vista</Label>
+                  <Select value={viewMode} onValueChange={(v: "assigned" | "general") => setViewMode(v)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="assigned">Solo asignados</SelectItem>
+                      <SelectItem value="general">Todos</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input

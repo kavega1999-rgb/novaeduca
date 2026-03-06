@@ -138,12 +138,15 @@ const AdherenceEvaluations = () => {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [areas, setAreas] = useState<Area[]>([]);
   const [userProgress, setUserProgress] = useState<{ user_id: string; training_id: string; status: string }[]>([]);
+  const [assignments, setAssignments] = useState<{ training_id: string; user_id: string }[]>([]);
+  const [targetAreas, setTargetAreas] = useState<{ training_id: string; target_area: string }[]>([]);
 
   const [selectedTraining, setSelectedTraining] = useState<string>("all");
   const [selectedArea, setSelectedArea] = useState<string>("all");
   const [dateFrom, setDateFrom] = useState<string>(format(subDays(new Date(), 30), "yyyy-MM-dd"));
   const [dateTo, setDateTo] = useState<string>(format(new Date(), "yyyy-MM-dd"));
   const [activePanel, setActivePanel] = useState<PanelType>(null);
+  const [viewMode, setViewMode] = useState<"assigned" | "general">("assigned");
 
   useEffect(() => {
     const checkAccess = async () => {
@@ -202,21 +205,25 @@ const AdherenceEvaluations = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [attemptsRes, evaluationsRes, trainingsRes, profilesRes, areasRes, progressRes] = await Promise.all([
+      const [attemptsRes, evaluationsRes, trainingsRes, profilesRes, areasRes, progressRes, assignmentsRes, targetAreasRes] = await Promise.all([
         supabase.from("evaluation_attempts").select("*"),
         supabase.from("evaluations").select("id, training_id, title, passing_score"),
-        supabase.from("trainings").select("id, title, requires_evaluation, area_id, target_user_count"),
+        supabase.from("trainings").select("id, title, requires_evaluation, area_id, target_user_count, visible_to_all"),
         supabase.from("profiles").select("id, full_name, area"),
         supabase.from("areas").select("id, name").order("name"),
         supabase.from("user_progress").select("user_id, training_id, status"),
+        supabase.from("training_assignments").select("training_id, user_id"),
+        supabase.from("training_target_areas").select("training_id, target_area"),
       ]);
 
       setAttempts(attemptsRes.data || []);
       setEvaluations(evaluationsRes.data || []);
-      setTrainings(trainingsRes.data || []);
+      setTrainings((trainingsRes.data || []) as any);
       setProfiles(profilesRes.data || []);
       setAreas(areasRes.data || []);
       setUserProgress(progressRes.data || []);
+      setAssignments(assignmentsRes.data || []);
+      setTargetAreas(targetAreasRes.data || []);
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -231,15 +238,31 @@ const AdherenceEvaluations = () => {
 
   const trainingIdsInArea = filteredTrainingsByArea.map(t => t.id);
 
-  // Filter profiles by selected area
-  const filteredProfiles = selectedArea === "all"
-    ? profiles
-    : profiles.filter(p => {
-        // Map area filter to profile area values
-        const areaObj = areas.find(a => a.id === selectedArea);
-        if (!areaObj) return true;
-        return p.area !== null;
+  // Filter profiles: in "assigned" mode, only show profiles that are assigned/targeted
+  const filteredProfiles = useMemo(() => {
+    let filtered = selectedArea === "all"
+      ? profiles
+      : profiles.filter(p => p.area !== null);
+
+    if (viewMode === "assigned") {
+      filtered = filtered.filter(p => {
+        const relevantTrainings = selectedTraining === "all" 
+          ? trainings.filter(t => selectedArea === "all" || t.area_id === selectedArea)
+          : trainings.filter(t => t.id === selectedTraining);
+        
+        return relevantTrainings.some(t => {
+          if ((t as any).visible_to_all) return true;
+          const isAssigned = assignments.some(a => a.training_id === t.id && a.user_id === p.id);
+          if (isAssigned) return true;
+          const trainingTargets = targetAreas.filter(ta => ta.training_id === t.id).map(ta => ta.target_area);
+          if (p.area && trainingTargets.includes(p.area)) return true;
+          return false;
+        });
       });
+    }
+
+    return filtered;
+  }, [profiles, selectedArea, viewMode, selectedTraining, trainings, assignments, targetAreas]);
 
   // Get evaluation IDs for selected training and area
   const evaluationIdsForTraining = selectedTraining === "all" 
@@ -414,7 +437,19 @@ const AdherenceEvaluations = () => {
       {/* Filters - simplified */}
       <Card>
         <CardContent className="p-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div>
+              <Label className="text-xs">Vista</Label>
+              <Select value={viewMode} onValueChange={(v: "assigned" | "general") => setViewMode(v)}>
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="assigned">Solo asignados</SelectItem>
+                  <SelectItem value="general">Todos</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div>
               <Label className="text-xs flex items-center gap-1">
                 <Filter className="h-3 w-3" />

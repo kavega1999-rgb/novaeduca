@@ -30,11 +30,12 @@ interface Area {
 
 interface TrainingsTableProps {
   onRefresh?: () => void;
+  onEdit?: (trainingId: string) => void;
 }
 
 const ITEMS_PER_PAGE = 10;
 
-const TrainingsTable = ({ onRefresh }: TrainingsTableProps) => {
+const TrainingsTable = ({ onRefresh, onEdit }: TrainingsTableProps) => {
   const { toast } = useToast();
   const [trainings, setTrainings] = useState<Training[]>([]);
   const [filteredTrainings, setFilteredTrainings] = useState<Training[]>([]);
@@ -223,6 +224,7 @@ const TrainingsTable = ({ onRefresh }: TrainingsTableProps) => {
       capacitacion: "Capacitación",
       induccion: "Inducción",
       entrenamiento: "Entrenamiento",
+      socializacion: "Socialización",
     };
     return (
       <Badge variant="outline" className="flex items-center gap-1.5">
@@ -300,6 +302,7 @@ const TrainingsTable = ({ onRefresh }: TrainingsTableProps) => {
               <SelectItem value="capacitacion">Capacitación</SelectItem>
               <SelectItem value="induccion">Inducción</SelectItem>
               <SelectItem value="entrenamiento">Entrenamiento</SelectItem>
+              <SelectItem value="socializacion">Socialización</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -378,7 +381,7 @@ const TrainingsTable = ({ onRefresh }: TrainingsTableProps) => {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 hover:bg-primary/10 hover:text-primary"
-                        onClick={() => setEditingId(training.id)}
+                        onClick={() => onEdit ? onEdit(training.id) : setEditingId(training.id)}
                       >
                         <Edit className="w-4 h-4" />
                       </Button>

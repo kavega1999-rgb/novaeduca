@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BookOpen, CheckCircle, Clock, AlertCircle, TrendingUp, Users, Award, Target, Filter } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 
@@ -42,6 +43,7 @@ const TrainingReports = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [areas, setAreas] = useState<Area[]>([]);
   const [selectedArea, setSelectedArea] = useState<string>("all");
+  const [viewMode, setViewMode] = useState<"general" | "assigned">("assigned");
   const [globalStats, setGlobalStats] = useState<GlobalStats>({
     totalTrainings: 0,
     completedUsers: 0,
@@ -52,15 +54,19 @@ const TrainingReports = () => {
   const [areaStats, setAreaStats] = useState<AreaStats[]>([]);
   const [topTrainings, setTopTrainings] = useState<TopTraining[]>([]);
   const [totalCertificates, setTotalCertificates] = useState(0);
+  const [assignments, setAssignments] = useState<{ training_id: string; user_id: string }[]>([]);
+  const [targetAreas, setTargetAreas] = useState<{ training_id: string; target_area: string }[]>([]);
+  const [allProgress, setAllProgress] = useState<any[]>([]);
+  const [trainingsData, setTrainingsData] = useState<any[]>([]);
+  const [profiles, setProfiles] = useState<any[]>([]);
 
   useEffect(() => {
     fetchData();
-  }, [selectedArea]);
+  }, [selectedArea, viewMode]);
 
   const fetchData = async () => {
     setIsLoading(true);
     
-    // Fetch areas
     const { data: areasData } = await supabase
       .from("areas")
       .select("id, name")
@@ -68,120 +74,135 @@ const TrainingReports = () => {
     
     setAreas(areasData || []);
 
-    // Fetch trainings count - filter by area if selected
     let trainingsQuery = supabase
       .from("trainings")
-      .select("id, title, area_id")
+      .select("id, title, area_id, visible_to_all, target_user_count")
       .eq("status", "active");
     
     if (selectedArea !== "all") {
       trainingsQuery = trainingsQuery.eq("area_id", selectedArea);
     }
     
-    const { data: trainingsData } = await trainingsQuery;
+    const { data: fetchedTrainings } = await trainingsQuery;
+    setTrainingsData(fetchedTrainings || []);
 
-    const trainingIds = trainingsData?.map(t => t.id) || [];
+    const trainingIds = fetchedTrainings?.map(t => t.id) || [];
 
-    // Fetch global progress stats - filter by training IDs if area is selected
-    let progressQuery = supabase
-      .from("user_progress")
-      .select("status, progress_percentage, training_id, user_id");
-    
-    if (selectedArea !== "all" && trainingIds.length > 0) {
-      progressQuery = progressQuery.in("training_id", trainingIds);
-    } else if (selectedArea !== "all" && trainingIds.length === 0) {
-      // No trainings for this area
-      setGlobalStats({
-        totalTrainings: 0,
-        completedUsers: 0,
-        inProgressUsers: 0,
-        notStartedUsers: 0,
-        averageProgress: 0,
-      });
+    if (selectedArea !== "all" && trainingIds.length === 0) {
+      setGlobalStats({ totalTrainings: 0, completedUsers: 0, inProgressUsers: 0, notStartedUsers: 0, averageProgress: 0 });
       setAreaStats([]);
       setTopTrainings([]);
       setTotalCertificates(0);
       setIsLoading(false);
       return;
     }
-    
-    const { data: allProgress } = await progressQuery;
 
-    // Fetch profiles for area stats
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("id, area");
+    // Fetch all data in parallel
+    const [progressRes, profilesRes, certificatesRes, assignmentsRes, targetAreasRes] = await Promise.all([
+      supabase.from("user_progress").select("status, progress_percentage, training_id, user_id")
+        .then(res => selectedArea !== "all" && trainingIds.length > 0 
+          ? { ...res, data: res.data?.filter(p => trainingIds.includes(p.training_id)) } 
+          : res),
+      supabase.from("profiles").select("id, area"),
+      supabase.from("certificates").select("id, training_id")
+        .then(res => selectedArea !== "all" && trainingIds.length > 0 
+          ? { ...res, data: res.data?.filter(c => trainingIds.includes(c.training_id)) } 
+          : res),
+      supabase.from("training_assignments").select("training_id, user_id"),
+      supabase.from("training_target_areas").select("training_id, target_area"),
+    ]);
 
-    // Fetch certificates count - filter by training IDs if area is selected
-    let certificatesQuery = supabase.from("certificates").select("id");
-    if (selectedArea !== "all" && trainingIds.length > 0) {
-      certificatesQuery = certificatesQuery.in("training_id", trainingIds);
-    }
-    const { data: certificates } = await certificatesQuery;
+    const fetchedProfiles = profilesRes.data || [];
+    setProfiles(fetchedProfiles);
+    setAssignments(assignmentsRes.data || []);
+    setTargetAreas(targetAreasRes.data || []);
 
-    if (allProgress) {
-      const completed = allProgress.filter(p => p.status === "completed").length;
-      const inProgress = allProgress.filter(p => p.status === "in_progress").length;
-      const notStarted = allProgress.filter(p => p.status === "pending").length;
-      const avgProgress = allProgress.length > 0 
-        ? Math.round(allProgress.reduce((acc, p) => acc + (p.progress_percentage || 0), 0) / allProgress.length)
-        : 0;
+    let filteredProgress = progressRes.data || [];
 
-      setGlobalStats({
-        totalTrainings: trainingsData?.length || 0,
-        completedUsers: completed,
-        inProgressUsers: inProgress,
-        notStartedUsers: notStarted,
-        averageProgress: avgProgress,
+    // If "assigned" view mode, filter progress to only users who were assigned/targeted
+    if (viewMode === "assigned") {
+      filteredProgress = filteredProgress.filter(p => {
+        const training = fetchedTrainings?.find(t => t.id === p.training_id);
+        if (!training) return false;
+        if (training.visible_to_all) return true;
+        
+        // Check direct assignment
+        const isAssigned = (assignmentsRes.data || []).some(
+          a => a.training_id === p.training_id && a.user_id === p.user_id
+        );
+        if (isAssigned) return true;
+
+        // Check area targeting
+        const trainingTargets = (targetAreasRes.data || [])
+          .filter(ta => ta.training_id === p.training_id)
+          .map(ta => ta.target_area);
+        const userProfile = fetchedProfiles.find(pr => pr.id === p.user_id);
+        if (userProfile?.area && trainingTargets.includes(userProfile.area)) return true;
+
+        return false;
       });
-
-      // Calculate area stats
-      if (profiles) {
-        const userAreas = ["medicos", "asistencial", "administrativos"];
-        const areaLabels: Record<string, string> = {
-          medicos: "Médicos",
-          asistencial: "Asistencial",
-          administrativos: "Administrativos",
-        };
-
-        const stats = userAreas.map(area => {
-          const areaUsers = profiles.filter(p => p.area === area).map(p => p.id);
-          const areaProgress = allProgress.filter(p => areaUsers.includes(p.user_id));
-          
-          return {
-            area,
-            label: areaLabels[area],
-            completed: areaProgress.filter(p => p.status === "completed").length,
-            inProgress: areaProgress.filter(p => p.status === "in_progress").length,
-            pending: areaProgress.filter(p => p.status === "pending").length,
-            total: areaProgress.length,
-          };
-        });
-
-        setAreaStats(stats);
-      }
-
-      // Calculate top trainings
-      if (trainingsData) {
-        const trainingStats = trainingsData.map(t => {
-          const trainingProgress = allProgress.filter(p => p.training_id === t.id);
-          const completedCount = trainingProgress.filter(p => p.status === "completed").length;
-          const totalUsers = trainingProgress.length;
-          
-          return {
-            id: t.id,
-            title: t.title,
-            completedCount,
-            totalUsers,
-            percentage: totalUsers > 0 ? Math.round((completedCount / totalUsers) * 100) : 0,
-          };
-        }).sort((a, b) => b.percentage - a.percentage).slice(0, 5);
-
-        setTopTrainings(trainingStats);
-      }
     }
 
-    setTotalCertificates(certificates?.length || 0);
+    setAllProgress(filteredProgress);
+
+    const completed = filteredProgress.filter(p => p.status === "completed").length;
+    const inProgress = filteredProgress.filter(p => p.status === "in_progress").length;
+    const notStarted = filteredProgress.filter(p => p.status === "pending").length;
+    const avgProgress = filteredProgress.length > 0 
+      ? Math.round(filteredProgress.reduce((acc, p) => acc + (p.progress_percentage || 0), 0) / filteredProgress.length)
+      : 0;
+
+    setGlobalStats({
+      totalTrainings: fetchedTrainings?.length || 0,
+      completedUsers: completed,
+      inProgressUsers: inProgress,
+      notStartedUsers: notStarted,
+      averageProgress: avgProgress,
+    });
+
+    // Area stats
+    const userAreas = ["medicos", "asistencial", "administrativos"];
+    const areaLabels: Record<string, string> = {
+      medicos: "Médicos",
+      asistencial: "Asistencial",
+      administrativos: "Administrativos",
+    };
+
+    const stats = userAreas.map(area => {
+      const areaUsers = fetchedProfiles.filter(p => p.area === area).map(p => p.id);
+      const areaProgress = filteredProgress.filter(p => areaUsers.includes(p.user_id));
+      
+      return {
+        area,
+        label: areaLabels[area],
+        completed: areaProgress.filter(p => p.status === "completed").length,
+        inProgress: areaProgress.filter(p => p.status === "in_progress").length,
+        pending: areaProgress.filter(p => p.status === "pending").length,
+        total: areaProgress.length,
+      };
+    });
+    setAreaStats(stats);
+
+    // Top trainings
+    if (fetchedTrainings) {
+      const trainingStats = fetchedTrainings.map(t => {
+        const trainingProgress = filteredProgress.filter(p => p.training_id === t.id);
+        const completedCount = trainingProgress.filter(p => p.status === "completed").length;
+        const totalUsers = trainingProgress.length;
+        
+        return {
+          id: t.id,
+          title: t.title,
+          completedCount,
+          totalUsers,
+          percentage: totalUsers > 0 ? Math.round((completedCount / totalUsers) * 100) : 0,
+        };
+      }).sort((a, b) => b.percentage - a.percentage).slice(0, 5);
+
+      setTopTrainings(trainingStats);
+    }
+
+    setTotalCertificates(certificatesRes.data?.length || 0);
     setIsLoading(false);
   };
 
@@ -214,7 +235,7 @@ const TrainingReports = () => {
       {/* Area Filter */}
       <Card>
         <CardContent className="p-4">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
             <Filter className="h-4 w-4 text-muted-foreground" />
             <div className="flex-1 max-w-xs">
               <Label className="text-xs">Filtrar por Área de Capacitación</Label>
@@ -227,6 +248,18 @@ const TrainingReports = () => {
                   {areas.map(area => (
                     <SelectItem key={area.id} value={area.id}>{area.name}</SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="max-w-xs">
+              <Label className="text-xs">Vista</Label>
+              <Select value={viewMode} onValueChange={(v: "general" | "assigned") => setViewMode(v)}>
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="assigned">Solo usuarios asignados</SelectItem>
+                  <SelectItem value="general">Todos los usuarios</SelectItem>
                 </SelectContent>
               </Select>
             </div>
