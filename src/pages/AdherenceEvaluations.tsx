@@ -205,21 +205,25 @@ const AdherenceEvaluations = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [attemptsRes, evaluationsRes, trainingsRes, profilesRes, areasRes, progressRes] = await Promise.all([
+      const [attemptsRes, evaluationsRes, trainingsRes, profilesRes, areasRes, progressRes, assignmentsRes, targetAreasRes] = await Promise.all([
         supabase.from("evaluation_attempts").select("*"),
         supabase.from("evaluations").select("id, training_id, title, passing_score"),
-        supabase.from("trainings").select("id, title, requires_evaluation, area_id, target_user_count"),
+        supabase.from("trainings").select("id, title, requires_evaluation, area_id, target_user_count, visible_to_all"),
         supabase.from("profiles").select("id, full_name, area"),
         supabase.from("areas").select("id, name").order("name"),
         supabase.from("user_progress").select("user_id, training_id, status"),
+        supabase.from("training_assignments").select("training_id, user_id"),
+        supabase.from("training_target_areas").select("training_id, target_area"),
       ]);
 
       setAttempts(attemptsRes.data || []);
       setEvaluations(evaluationsRes.data || []);
-      setTrainings(trainingsRes.data || []);
+      setTrainings((trainingsRes.data || []) as any);
       setProfiles(profilesRes.data || []);
       setAreas(areasRes.data || []);
       setUserProgress(progressRes.data || []);
+      setAssignments(assignmentsRes.data || []);
+      setTargetAreas(targetAreasRes.data || []);
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
