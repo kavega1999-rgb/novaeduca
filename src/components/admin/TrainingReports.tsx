@@ -235,7 +235,7 @@ const TrainingReports = () => {
       {/* Area Filter */}
       <Card>
         <CardContent className="p-4">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
             <Filter className="h-4 w-4 text-muted-foreground" />
             <div className="flex-1 max-w-xs">
               <Label className="text-xs">Filtrar por Área de Capacitación</Label>
@@ -248,6 +248,18 @@ const TrainingReports = () => {
                   {areas.map(area => (
                     <SelectItem key={area.id} value={area.id}>{area.name}</SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="max-w-xs">
+              <Label className="text-xs">Vista</Label>
+              <Select value={viewMode} onValueChange={(v: "general" | "assigned") => setViewMode(v)}>
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="assigned">Solo usuarios asignados</SelectItem>
+                  <SelectItem value="general">Todos los usuarios</SelectItem>
                 </SelectContent>
               </Select>
             </div>
