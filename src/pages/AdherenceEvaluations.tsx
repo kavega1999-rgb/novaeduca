@@ -437,7 +437,19 @@ const AdherenceEvaluations = () => {
       {/* Filters - simplified */}
       <Card>
         <CardContent className="p-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div>
+              <Label className="text-xs">Vista</Label>
+              <Select value={viewMode} onValueChange={(v: "assigned" | "general") => setViewMode(v)}>
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="assigned">Solo asignados</SelectItem>
+                  <SelectItem value="general">Todos</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div>
               <Label className="text-xs flex items-center gap-1">
                 <Filter className="h-3 w-3" />
