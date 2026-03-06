@@ -30,6 +30,7 @@ interface Area {
 
 interface TrainingsTableProps {
   onRefresh?: () => void;
+  onEdit?: (trainingId: string) => void;
 }
 
 const ITEMS_PER_PAGE = 10;
