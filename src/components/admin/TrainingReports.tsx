@@ -97,7 +97,6 @@ const TrainingReports = () => {
       return;
     }
 
-    // Fetch all data in parallel
     const [progressRes, profilesRes, certificatesRes, assignmentsRes, targetAreasRes] = await Promise.all([
       supabase.from("user_progress").select("status, progress_percentage, training_id, user_id")
         .then(res => selectedArea !== "all" && trainingIds.length > 0 
@@ -119,20 +118,17 @@ const TrainingReports = () => {
 
     let filteredProgress = progressRes.data || [];
 
-    // If "assigned" view mode, filter progress to only users who were assigned/targeted
     if (viewMode === "assigned") {
       filteredProgress = filteredProgress.filter(p => {
         const training = fetchedTrainings?.find(t => t.id === p.training_id);
         if (!training) return false;
         if (training.visible_to_all) return true;
         
-        // Check direct assignment
         const isAssigned = (assignmentsRes.data || []).some(
           a => a.training_id === p.training_id && a.user_id === p.user_id
         );
         if (isAssigned) return true;
 
-        // Check area targeting
         const trainingTargets = (targetAreasRes.data || [])
           .filter(ta => ta.training_id === p.training_id)
           .map(ta => ta.target_area);
@@ -160,7 +156,6 @@ const TrainingReports = () => {
       averageProgress: avgProgress,
     });
 
-    // Area stats
     const userAreas = ["medicos", "asistencial", "administrativos"];
     const areaLabels: Record<string, string> = {
       medicos: "Médicos",
@@ -183,7 +178,6 @@ const TrainingReports = () => {
     });
     setAreaStats(stats);
 
-    // Top trainings
     if (fetchedTrainings) {
       const trainingStats = fetchedTrainings.map(t => {
         const trainingProgress = filteredProgress.filter(p => p.training_id === t.id);
@@ -206,7 +200,6 @@ const TrainingReports = () => {
     setIsLoading(false);
   };
 
-  // Chart data
   const barChartData = [
     { name: "No Iniciadas", value: globalStats.notStartedUsers, fill: "hsl(210, 40%, 75%)" },
     { name: "En Progreso", value: globalStats.inProgressUsers, fill: "hsl(210, 70%, 55%)" },
@@ -232,13 +225,18 @@ const TrainingReports = () => {
 
   return (
     <div className="space-y-6">
-      {/* Area Filter */}
+      {/* Filters */}
       <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center gap-4 flex-wrap">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
             <Filter className="h-4 w-4 text-muted-foreground" />
-            <div className="flex-1 max-w-xs">
-              <Label className="text-xs">Filtrar por Área de Capacitación</Label>
+            Filtros
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">Área de Capacitación</Label>
               <Select value={selectedArea} onValueChange={setSelectedArea}>
                 <SelectTrigger className="h-9">
                   <SelectValue placeholder="Todas las áreas" />
@@ -251,8 +249,8 @@ const TrainingReports = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div className="max-w-xs">
-              <Label className="text-xs">Vista</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">Vista</Label>
               <Select value={viewMode} onValueChange={(v: "general" | "assigned") => setViewMode(v)}>
                 <SelectTrigger className="h-9">
                   <SelectValue />
@@ -400,7 +398,7 @@ const TrainingReports = () => {
         </Card>
       </div>
 
-      {/* Charts Row 2 - Area Stats & Top Trainings */}
+      {/* Charts Row 2 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
@@ -451,66 +449,12 @@ const TrainingReports = () => {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{training.title}</p>
                       <p className="text-xs text-muted-foreground">
-                        {training.completedCount} de {training.totalUsers} completados
+                        {training.completedCount} de {training.totalUsers} ({training.percentage}%)
                       </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-lg font-bold text-primary">{training.percentage}%</p>
                     </div>
                   </div>
                 ))
               )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-gradient-to-br from-card to-primary/5 border-primary/20">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-primary/10">
-                <Award className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Certificados Emitidos</p>
-                <p className="text-2xl font-bold text-primary">{totalCertificates}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-card to-primary/5 border-primary/20">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-primary/10">
-                <Users className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Inscripciones</p>
-                <p className="text-2xl font-bold text-primary">
-                  {globalStats.completedUsers + globalStats.inProgressUsers + globalStats.notStartedUsers}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-card to-primary/5 border-primary/20">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-primary/10">
-                <Target className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Tasa de Finalización</p>
-                <p className="text-2xl font-bold text-primary">
-                  {globalStats.completedUsers + globalStats.inProgressUsers + globalStats.notStartedUsers > 0
-                    ? Math.round((globalStats.completedUsers / (globalStats.completedUsers + globalStats.inProgressUsers + globalStats.notStartedUsers)) * 100)
-                    : 0}%
-                </p>
-              </div>
             </div>
           </CardContent>
         </Card>

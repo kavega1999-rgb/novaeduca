@@ -180,7 +180,6 @@ const AdherenceEvaluations = () => {
     checkAccess();
   }, [navigate, toast]);
 
-  // Realtime subscription: refresh data when evaluation_attempts change
   useEffect(() => {
     const channel = supabase
       .channel('adherence-realtime')
@@ -231,14 +230,12 @@ const AdherenceEvaluations = () => {
     }
   };
 
-  // Filter trainings by area
   const filteredTrainingsByArea = selectedArea === "all"
     ? trainings
     : trainings.filter(t => t.area_id === selectedArea);
 
   const trainingIdsInArea = filteredTrainingsByArea.map(t => t.id);
 
-  // Filter profiles: in "assigned" mode, only show profiles that are assigned/targeted
   const filteredProfiles = useMemo(() => {
     let filtered = selectedArea === "all"
       ? profiles
@@ -264,17 +261,14 @@ const AdherenceEvaluations = () => {
     return filtered;
   }, [profiles, selectedArea, viewMode, selectedTraining, trainings, assignments, targetAreas]);
 
-  // Get evaluation IDs for selected training and area
   const evaluationIdsForTraining = selectedTraining === "all" 
     ? evaluations.filter(e => selectedArea === "all" || trainingIdsInArea.includes(e.training_id)).map(e => e.id)
     : evaluations.filter(e => e.training_id === selectedTraining).map(e => e.id);
 
-  // Get the relevant trainings for the current filter to find target_user_count
   const relevantTrainingIds = selectedTraining === "all"
     ? trainingIdsInArea
     : [selectedTraining];
 
-  // Apply filters
   const filteredAttempts = attempts.filter(a => {
     const attemptDate = new Date(a.started_at);
     const fromDate = new Date(dateFrom + 'T00:00:00');
@@ -285,16 +279,13 @@ const AdherenceEvaluations = () => {
     return true;
   });
 
-  // KPIs
   const completedAttempts = filteredAttempts.filter(a => a.status === "completed");
   const approvedCount = completedAttempts.filter(a => a.passed).length;
   const failedCount = completedAttempts.filter(a => !a.passed).length;
-  // Users with evaluation attempts in_progress
   const evalInProgressUserIds = new Set(
     filteredAttempts.filter(a => a.status === "in_progress").map(a => a.user_id)
   );
   
-  // Users who started the training (user_progress in_progress) but haven't started the evaluation
   const trainingInProgressUserIds = useMemo(() => {
     const relevantProgress = userProgress.filter(up => {
       if (selectedTraining !== "all") {
@@ -302,7 +293,6 @@ const AdherenceEvaluations = () => {
       }
       return relevantTrainingIds.includes(up.training_id) && up.status === "in_progress";
     });
-    // Only include users who don't already have an evaluation attempt
     const usersWithEvalAttempts = new Set(filteredAttempts.map(a => a.user_id));
     return new Set(
       relevantProgress
@@ -313,13 +303,9 @@ const AdherenceEvaluations = () => {
 
   const pendingCount = evalInProgressUserIds.size + trainingInProgressUserIds.size;
   
-  // Get unique users who have attempts or are in training progress
   const usersWithAttempts = new Set(filteredAttempts.map(a => a.user_id));
   const allActiveUserIds = new Set([...usersWithAttempts, ...trainingInProgressUserIds]);
   
-  // For "Sin Iniciar": only count users who are expected to take the evaluation
-  // If a specific training is selected and has target_user_count, use that
-  // Otherwise count users who have registered (user_progress) but haven't attempted
   const relevantTrainingsData = trainings.filter(t => relevantTrainingIds.includes(t.id));
   const hasTargetCount = relevantTrainingsData.some(t => t.target_user_count && t.target_user_count > 0);
   
@@ -333,13 +319,11 @@ const AdherenceEvaluations = () => {
   
   const notStartedCount = Math.max(0, expectedUserCount - allActiveUserIds.size);
 
-  // Compute not-started user IDs for the detail panel
   const notStartedUserIds = useMemo(() => {
     const allUserIds = filteredProfiles.map(p => p.id);
     return allUserIds.filter(id => !allActiveUserIds.has(id));
   }, [filteredProfiles, allActiveUserIds]);
   
-  // Compute in-progress user IDs for the detail panel (training started but no eval attempt)
   const inProgressUserIds = useMemo(() => {
     return [...trainingInProgressUserIds];
   }, [trainingInProgressUserIds]);
@@ -347,7 +331,7 @@ const AdherenceEvaluations = () => {
   const togglePanel = (panel: PanelType) => {
     setActivePanel(prev => prev === panel ? null : panel);
   };
-  // Adherencia general: aprobados / usuarios esperados por evaluación
+
   const totalEvaluations = evaluations.filter(e => 
     (selectedTraining === "all" || e.training_id === selectedTraining) && 
     (selectedArea === "all" || trainingIdsInArea.includes(e.training_id))
@@ -358,7 +342,6 @@ const AdherenceEvaluations = () => {
     ? Math.round((totalPassed / totalExpectedCompletions) * 100) 
     : 0;
 
-  // Chart data
   const statusPieData = [
     { name: "Aprobados", value: approvedCount, color: COLORS.approved },
     { name: "No Aprobados", value: failedCount, color: COLORS.failed },
@@ -366,7 +349,6 @@ const AdherenceEvaluations = () => {
     { name: "Sin Iniciar", value: notStartedCount, color: COLORS.notStarted },
   ].filter(d => d.value > 0);
 
-  // Export to XLSX
   const exportToXLSX = () => {
     const completedForExport = filteredAttempts.filter(a => a.status === 'completed');
     
@@ -434,12 +416,18 @@ const AdherenceEvaluations = () => {
         </Button>
       </div>
 
-      {/* Filters - simplified */}
+      {/* Filters */}
       <Card>
-        <CardContent className="p-4">
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <div>
-              <Label className="text-xs">Vista</Label>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            Filtros
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">Vista</Label>
               <Select value={viewMode} onValueChange={(v: "assigned" | "general") => setViewMode(v)}>
                 <SelectTrigger className="h-9">
                   <SelectValue />
@@ -450,11 +438,8 @@ const AdherenceEvaluations = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label className="text-xs flex items-center gap-1">
-                <Filter className="h-3 w-3" />
-                Área
-              </Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">Área</Label>
               <Select value={selectedArea} onValueChange={(value) => {
                 setSelectedArea(value);
                 setSelectedTraining("all");
@@ -470,8 +455,8 @@ const AdherenceEvaluations = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label className="text-xs">Capacitación</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">Capacitación</Label>
               <Select value={selectedTraining} onValueChange={setSelectedTraining}>
                 <SelectTrigger className="h-9">
                   <SelectValue placeholder="Todas" />
@@ -484,12 +469,12 @@ const AdherenceEvaluations = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label className="text-xs">Desde</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">Desde</Label>
               <Input type="date" className="h-9" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
             </div>
-            <div>
-              <Label className="text-xs">Hasta</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">Hasta</Label>
               <Input type="date" className="h-9" value={dateTo} onChange={e => setDateTo(e.target.value)} />
             </div>
           </div>
@@ -529,7 +514,7 @@ const AdherenceEvaluations = () => {
         </Tooltip>
       </TooltipProvider>
 
-      {/* Status KPIs - clickable */}
+      {/* Status KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard
           icon={CheckCircle}

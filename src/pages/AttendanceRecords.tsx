@@ -55,10 +55,8 @@ const AttendanceRecords = () => {
   const [selectedTraining, setSelectedTraining] = useState<string>("");
   const [selectedArea, setSelectedArea] = useState<string>("all");
 
-  // Get unique years from trainings
   const years = [...new Set(trainings.map(t => t.year))].sort((a, b) => b - a);
 
-  // Filter trainings by year and area
   const filteredTrainings = trainings.filter(t => {
     const matchesYear = selectedYear === "all" || t.year === parseInt(selectedYear);
     const matchesArea = selectedArea === "all" || t.area_id === selectedArea;
@@ -115,7 +113,6 @@ const AttendanceRecords = () => {
       setTrainings(trainingsRes.data || []);
       setAreas(areasRes.data || []);
       
-      // Set default year to current year if exists
       if (trainingsRes.data && trainingsRes.data.length > 0) {
         const currentYear = new Date().getFullYear();
         const hasCurrentYear = trainingsRes.data.some(t => t.year === currentYear);
@@ -130,7 +127,6 @@ const AttendanceRecords = () => {
     }
   };
 
-  // Fetch progress when training is selected
   useEffect(() => {
     const fetchProgress = async () => {
       if (!selectedTraining) {
@@ -157,15 +153,6 @@ const AttendanceRecords = () => {
           )
         `)
         .eq("training_id", selectedTraining);
-
-      // Fetch emails for users with progress
-      const userIds = (progressData || []).map((p: any) => p.user_id);
-      let emailMap: Record<string, string> = {};
-      if (userIds.length > 0) {
-        // Get emails from auth via profiles - we'll use the user's email from auth
-        // Since we can't query auth.users, we'll fetch from supabase auth admin
-        // For now, we include the data we have
-      }
 
       const enrichedProgress = (progressData || []).map((p: any) => ({
         ...p,
@@ -224,7 +211,6 @@ const AttendanceRecords = () => {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Asistencia");
 
-    // Auto-size columns
     const colWidths = Object.keys(rows[0]).map(key => ({
       wch: Math.max(key.length, ...rows.map(r => String((r as any)[key]).length)) + 2,
     }));
@@ -260,17 +246,14 @@ const AttendanceRecords = () => {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
-            <FileSpreadsheet className="h-4 w-4" />
-            Seleccionar Capacitación
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            Filtros
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <Label className="text-xs flex items-center gap-1">
-                <Filter className="h-3 w-3" />
-                Área
-              </Label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">Área</Label>
               <Select value={selectedArea} onValueChange={(value) => {
                 setSelectedArea(value);
                 setSelectedTraining("");
@@ -286,8 +269,8 @@ const AttendanceRecords = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label className="text-xs">Año</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">Año</Label>
               <Select value={selectedYear} onValueChange={(value) => {
                 setSelectedYear(value);
                 setSelectedTraining("");
@@ -303,8 +286,8 @@ const AttendanceRecords = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label className="text-xs">Capacitación</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">Capacitación</Label>
               <Select value={selectedTraining} onValueChange={setSelectedTraining}>
                 <SelectTrigger className="h-9">
                   <SelectValue placeholder="Seleccionar capacitación" />
