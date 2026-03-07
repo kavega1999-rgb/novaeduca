@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { Download, Search, TrendingUp, TrendingDown, Minus, Users, BookOpen, BarChart3, FileText } from "lucide-react";
+import { Download, Search, TrendingUp, TrendingDown, Minus, Users, BookOpen, BarChart3, FileText, Filter, ArrowLeft, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
@@ -97,6 +97,11 @@ const AdherenceTabulation = () => {
   const [assignments, setAssignments] = useState<{ training_id: string; user_id: string }[]>([]);
   const [targetAreasData, setTargetAreasData] = useState<{ training_id: string; target_area: string }[]>([]);
 
+  // Cards view mode
+  const [cardsView, setCardsView] = useState<"training" | "user">("training");
+  const [selectedCardTraining, setSelectedCardTraining] = useState<string | null>(null);
+  const [selectedCardUser, setSelectedCardUser] = useState<string | null>(null);
+
   useEffect(() => {
     checkAccessAndLoadData();
   }, []);
@@ -141,7 +146,6 @@ const AdherenceTabulation = () => {
       setTargetAreasData(targetAreasRes.data || []);
 
       if (reportsRes.data) {
-        // Enrich reports with training and user names
         const enrichedReports = reportsRes.data.map((report: any) => {
           const training = trainingsRes.data?.find((t: Training) => t.id === report.training_id);
           const profile = profilesRes.data?.find((p: any) => p.id === report.user_id);
@@ -184,7 +188,6 @@ const AdherenceTabulation = () => {
     const matchesDateFrom = !dateFrom || reportDate >= new Date(dateFrom);
     const matchesDateTo = !dateTo || reportDate <= new Date(dateTo + 'T23:59:59');
 
-    // If "assigned" view mode, filter to only assigned/targeted users
     let matchesAssignment = true;
     if (viewMode === "assigned" && training) {
       if ((training as any).visible_to_all) {
@@ -236,6 +239,37 @@ const AdherenceTabulation = () => {
     };
   }).filter(Boolean);
 
+  // Grouped data for cards view
+  const trainingsWithReports = useMemo(() => {
+    const grouped: Record<string, { training: Training; reports: AdherenceReport[]; avgPretest: number; avgPostest: number; avgImprovement: number }> = {};
+    filteredReports.forEach(report => {
+      if (!grouped[report.training_id]) {
+        const t = trainings.find(tr => tr.id === report.training_id);
+        if (!t) return;
+        grouped[report.training_id] = { training: t, reports: [], avgPretest: 0, avgPostest: 0, avgImprovement: 0 };
+      }
+      grouped[report.training_id].reports.push(report);
+    });
+    Object.values(grouped).forEach(g => {
+      g.avgPretest = g.reports.reduce((s, r) => s + (r.pretest_score || 0), 0) / g.reports.length;
+      g.avgPostest = g.reports.reduce((s, r) => s + (r.postest_score || 0), 0) / g.reports.length;
+      g.avgImprovement = g.reports.reduce((s, r) => s + (r.improvement_percentage || 0), 0) / g.reports.length;
+    });
+    return Object.values(grouped);
+  }, [filteredReports, trainings]);
+
+  const usersWithReports = useMemo(() => {
+    const grouped: Record<string, { profile: any; reports: AdherenceReport[] }> = {};
+    filteredReports.forEach(report => {
+      if (!grouped[report.user_id]) {
+        const p = profiles.find(pr => pr.id === report.user_id);
+        grouped[report.user_id] = { profile: p || { id: report.user_id, full_name: report.user_name || 'Usuario' }, reports: [] };
+      }
+      grouped[report.user_id].reports.push(report);
+    });
+    return Object.values(grouped);
+  }, [filteredReports, profiles]);
+
   const exportXLSX = () => {
     const exportData = filteredReports.map(r => ({
       'Fecha': format(new Date(r.created_at), 'dd/MM/yyyy'),
@@ -255,7 +289,6 @@ const AdherenceTabulation = () => {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Tabulación Pre-Post");
     
-    // Auto-size columns
     const maxWidth = 50;
     const colWidths = Object.keys(exportData[0] || {}).map(key => ({
       wch: Math.min(maxWidth, Math.max(key.length, ...exportData.map(row => String(row[key as keyof typeof row]).length)))
@@ -292,340 +325,485 @@ const AdherenceTabulation = () => {
         </Button>
       </div>
 
-          {/* KPI Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-full bg-primary/10">
-                    <FileText className="w-6 h-6 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Total Reportes</p>
-                    <p className="text-2xl font-bold">{stats.totalReports}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-full bg-primary/10">
+                <FileText className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Total Reportes</p>
+                <p className="text-2xl font-bold">{stats.totalReports}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-full bg-amber-500/10">
-                    <BarChart3 className="w-6 h-6 text-amber-500" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Promedio Pretest</p>
-                    <p className="text-2xl font-bold">{stats.avgPretest.toFixed(1)}%</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-full bg-amber-500/10">
+                <BarChart3 className="w-6 h-6 text-amber-500" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Promedio Pretest</p>
+                <p className="text-2xl font-bold">{stats.avgPretest.toFixed(1)}%</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-full bg-green-500/10">
-                    <BookOpen className="w-6 h-6 text-green-500" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Promedio Postest</p>
-                    <p className="text-2xl font-bold">{stats.avgPostest.toFixed(1)}%</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-full bg-green-500/10">
+                <BookOpen className="w-6 h-6 text-green-500" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Promedio Postest</p>
+                <p className="text-2xl font-bold">{stats.avgPostest.toFixed(1)}%</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-4">
-                  <div className={`p-3 rounded-full ${stats.avgImprovement >= 0 ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
-                    {stats.avgImprovement >= 0 ? (
-                      <TrendingUp className="w-6 h-6 text-green-500" />
-                    ) : (
-                      <TrendingDown className="w-6 h-6 text-red-500" />
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Mejora Promedio</p>
-                    <p className={`text-2xl font-bold ${stats.avgImprovement >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {stats.avgImprovement >= 0 ? '+' : ''}{stats.avgImprovement.toFixed(1)}%
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className={`p-3 rounded-full ${stats.avgImprovement >= 0 ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
+                {stats.avgImprovement >= 0 ? (
+                  <TrendingUp className="w-6 h-6 text-green-500" />
+                ) : (
+                  <TrendingDown className="w-6 h-6 text-red-500" />
+                )}
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Mejora Promedio</p>
+                <p className={`text-2xl font-bold ${stats.avgImprovement >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {stats.avgImprovement >= 0 ? '+' : ''}{stats.avgImprovement.toFixed(1)}%
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-          {/* Filters */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Filtros</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-4">
-                <div>
-                  <Label className="text-xs">Vista</Label>
-                  <Select value={viewMode} onValueChange={(v: "assigned" | "general") => setViewMode(v)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="assigned">Solo asignados</SelectItem>
-                      <SelectItem value="general">Todos</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9"
-                  />
-                </div>
-
-                <Select value={selectedArea} onValueChange={setSelectedArea}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Área" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas las áreas</SelectItem>
-                    {areas.map(area => (
-                      <SelectItem key={area.id} value={area.id}>{area.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select value={selectedTraining} onValueChange={setSelectedTraining}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Capacitación" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas</SelectItem>
-                    {trainings.map(t => (
-                      <SelectItem key={t.id} value={t.id}>{t.title}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select value={selectedUser} onValueChange={setSelectedUser}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Usuario" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    {profiles.map(p => (
-                      <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
+      {/* Filters */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            Filtros
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">Vista</Label>
+              <Select value={viewMode} onValueChange={(v: "assigned" | "general") => setViewMode(v)}>
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="assigned">Solo asignados</SelectItem>
+                  <SelectItem value="general">Todos</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">Buscar</Label>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  type="date"
-                  value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                  placeholder="Desde"
-                />
-
-                <Input
-                  type="date"
-                  value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
-                  placeholder="Hasta"
+                  placeholder="Nombre o capacitación..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 h-9"
                 />
               </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">Área</Label>
+              <Select value={selectedArea} onValueChange={setSelectedArea}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Todas las áreas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas las áreas</SelectItem>
+                  {areas.map(area => (
+                    <SelectItem key={area.id} value={area.id}>{area.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">Capacitación</Label>
+              <Select value={selectedTraining} onValueChange={setSelectedTraining}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Todas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas</SelectItem>
+                  {trainings.map(t => (
+                    <SelectItem key={t.id} value={t.id}>{t.title}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">Usuario</Label>
+              <Select value={selectedUser} onValueChange={setSelectedUser}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {profiles.map(p => (
+                    <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">Desde</Label>
+              <Input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="h-9"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">Hasta</Label>
+              <Input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="h-9"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Distribución por Categoría (Postest)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {pieChartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={pieChartData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    outerRadius={100}
+                    dataKey="value"
+                  >
+                    {pieChartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                No hay datos para mostrar
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Comparación Pretest vs Postest por Capacitación</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {trainingStats.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={trainingStats} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="name" 
+                    angle={-45} 
+                    textAnchor="end" 
+                    height={80}
+                    fontSize={12}
+                  />
+                  <YAxis domain={[0, 100]} />
+                  <Tooltip 
+                    formatter={(value: number, name: string) => [`${value.toFixed(1)}%`, name === 'pretest' ? 'Pretest' : 'Postest']}
+                    labelFormatter={(label) => trainingStats.find(t => t?.name === label)?.fullName || label}
+                  />
+                  <Legend />
+                  <Bar dataKey="pretest" name="Pretest" fill={CHART_COLORS.acceptable} />
+                  <Bar dataKey="postest" name="Postest" fill={CHART_COLORS.excellent} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                No hay datos para mostrar
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Tabs for different views */}
+      <Tabs defaultValue="table" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="table">Tabla Detallada</TabsTrigger>
+          <TabsTrigger value="cards">Vista por Tarjetas</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="table">
+          <Card>
+            <CardContent className="pt-6">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Fecha</TableHead>
+                    <TableHead>Usuario</TableHead>
+                    <TableHead>Capacitación</TableHead>
+                    <TableHead>Área</TableHead>
+                    <TableHead className="text-center">Pretest</TableHead>
+                    <TableHead className="text-center">Postest</TableHead>
+                    <TableHead className="text-center">Mejora</TableHead>
+                    <TableHead className="text-center">Categoría Final</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredReports.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                        No se encontraron reportes de adherencia
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredReports.map((report) => (
+                      <TableRow key={report.id}>
+                        <TableCell>
+                          {format(new Date(report.created_at), "dd/MM/yyyy")}
+                        </TableCell>
+                        <TableCell className="font-medium">{report.user_name}</TableCell>
+                        <TableCell>{report.training_title}</TableCell>
+                        <TableCell>{report.area_name}</TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex flex-col items-center">
+                            <span className="font-medium">{report.pretest_score?.toFixed(1) || 'N/A'}%</span>
+                            {report.pretest_category && (
+                              <Badge variant="outline" className={`mt-1 text-xs ${getCategoryColor(report.pretest_category)}`}>
+                                {report.pretest_category}
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex flex-col items-center">
+                            <span className="font-medium">{report.postest_score?.toFixed(1) || 'N/A'}%</span>
+                            {report.postest_category && (
+                              <Badge variant="outline" className={`mt-1 text-xs ${getCategoryColor(report.postest_category)}`}>
+                                {report.postest_category}
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className={`flex items-center justify-center gap-1 ${
+                            (report.improvement_percentage || 0) > 0 
+                              ? 'text-green-600' 
+                              : (report.improvement_percentage || 0) < 0 
+                                ? 'text-red-600' 
+                                : 'text-muted-foreground'
+                          }`}>
+                            {(report.improvement_percentage || 0) > 0 ? (
+                              <TrendingUp className="w-4 h-4" />
+                            ) : (report.improvement_percentage || 0) < 0 ? (
+                              <TrendingDown className="w-4 h-4" />
+                            ) : (
+                              <Minus className="w-4 h-4" />
+                            )}
+                            <span className="font-medium">
+                              {(report.improvement_percentage || 0) > 0 ? '+' : ''}
+                              {report.improvement_percentage?.toFixed(1) || '0'}%
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge className={getCategoryColor(report.postest_category || 'Inaceptable')}>
+                            {report.postest_category || 'N/A'}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
+        </TabsContent>
 
-          {/* Charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Distribución por Categoría (Postest)</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {pieChartData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={pieChartData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                        outerRadius={100}
-                        dataKey="value"
-                      >
-                        {pieChartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-                    No hay datos para mostrar
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Comparación Pretest vs Postest por Capacitación</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {trainingStats.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={trainingStats} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis 
-                        dataKey="name" 
-                        angle={-45} 
-                        textAnchor="end" 
-                        height={80}
-                        fontSize={12}
-                      />
-                      <YAxis domain={[0, 100]} />
-                      <Tooltip 
-                        formatter={(value: number, name: string) => [`${value.toFixed(1)}%`, name === 'pretest' ? 'Pretest' : 'Postest']}
-                        labelFormatter={(label) => trainingStats.find(t => t?.name === label)?.fullName || label}
-                      />
-                      <Legend />
-                      <Bar dataKey="pretest" name="Pretest" fill={CHART_COLORS.acceptable} />
-                      <Bar dataKey="postest" name="Postest" fill={CHART_COLORS.excellent} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-                    No hay datos para mostrar
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+        <TabsContent value="cards">
+          {/* Cards view mode toggle */}
+          <div className="flex items-center gap-2 mb-4">
+            <Button
+              variant={cardsView === "training" ? "default" : "outline"}
+              size="sm"
+              onClick={() => { setCardsView("training"); setSelectedCardTraining(null); setSelectedCardUser(null); }}
+            >
+              <BookOpen className="w-4 h-4 mr-2" />
+              Por Capacitación
+            </Button>
+            <Button
+              variant={cardsView === "user" ? "default" : "outline"}
+              size="sm"
+              onClick={() => { setCardsView("user"); setSelectedCardTraining(null); setSelectedCardUser(null); }}
+            >
+              <Users className="w-4 h-4 mr-2" />
+              Por Usuario
+            </Button>
           </div>
 
-          {/* Tabs for different views */}
-          <Tabs defaultValue="table" className="space-y-4">
-            <TabsList>
-              <TabsTrigger value="table">Tabla Detallada</TabsTrigger>
-              <TabsTrigger value="cards">Vista por Tarjetas</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="table">
-              <Card>
-                <CardContent className="pt-6">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Fecha</TableHead>
-                        <TableHead>Usuario</TableHead>
-                        <TableHead>Capacitación</TableHead>
-                        <TableHead>Área</TableHead>
-                        <TableHead className="text-center">Pretest</TableHead>
-                        <TableHead className="text-center">Postest</TableHead>
-                        <TableHead className="text-center">Mejora</TableHead>
-                        <TableHead className="text-center">Categoría Final</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredReports.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                            No se encontraron reportes de adherencia
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        filteredReports.map((report) => (
-                          <TableRow key={report.id}>
-                            <TableCell>
-                              {format(new Date(report.created_at), "dd/MM/yyyy")}
-                            </TableCell>
-                            <TableCell className="font-medium">{report.user_name}</TableCell>
-                            <TableCell>{report.training_title}</TableCell>
-                            <TableCell>{report.area_name}</TableCell>
-                            <TableCell className="text-center">
-                              <div className="flex flex-col items-center">
-                                <span className="font-medium">{report.pretest_score?.toFixed(1) || 'N/A'}%</span>
-                                {report.pretest_category && (
-                                  <Badge variant="outline" className={`mt-1 text-xs ${getCategoryColor(report.pretest_category)}`}>
-                                    {report.pretest_category}
-                                  </Badge>
-                                )}
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-center">
-                              <div className="flex flex-col items-center">
-                                <span className="font-medium">{report.postest_score?.toFixed(1) || 'N/A'}%</span>
-                                {report.postest_category && (
-                                  <Badge variant="outline" className={`mt-1 text-xs ${getCategoryColor(report.postest_category)}`}>
-                                    {report.postest_category}
-                                  </Badge>
-                                )}
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-center">
-                              <div className={`flex items-center justify-center gap-1 ${
-                                (report.improvement_percentage || 0) > 0 
-                                  ? 'text-green-600' 
-                                  : (report.improvement_percentage || 0) < 0 
-                                    ? 'text-red-600' 
-                                    : 'text-muted-foreground'
-                              }`}>
-                                {(report.improvement_percentage || 0) > 0 ? (
-                                  <TrendingUp className="w-4 h-4" />
-                                ) : (report.improvement_percentage || 0) < 0 ? (
-                                  <TrendingDown className="w-4 h-4" />
-                                ) : (
-                                  <Minus className="w-4 h-4" />
-                                )}
-                                <span className="font-medium">
-                                  {(report.improvement_percentage || 0) > 0 ? '+' : ''}
-                                  {report.improvement_percentage?.toFixed(1) || '0'}%
-                                </span>
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-center">
-                              <Badge className={getCategoryColor(report.postest_category || 'Inaceptable')}>
-                                {report.postest_category || 'N/A'}
-                              </Badge>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="cards">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredReports.length === 0 ? (
-                  <Card className="col-span-full">
-                    <CardContent className="py-8 text-center text-muted-foreground">
-                      No se encontraron reportes de adherencia
+          {cardsView === "training" && !selectedCardTraining && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {trainingsWithReports.length === 0 ? (
+                <Card className="col-span-full">
+                  <CardContent className="py-8 text-center text-muted-foreground">
+                    No se encontraron reportes de adherencia
+                  </CardContent>
+                </Card>
+              ) : (
+                trainingsWithReports.map((group) => (
+                  <Card 
+                    key={group.training.id} 
+                    className="cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={() => setSelectedCardTraining(group.training.id)}
+                  >
+                    <CardHeader className="bg-gradient-to-r from-primary/10 to-primary/5 pb-3">
+                      <CardTitle className="text-base flex items-center justify-between">
+                        <span className="truncate">{group.training.title}</span>
+                        <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+                      </CardTitle>
+                      <CardDescription>{group.reports.length} reportes</CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-4">
+                      <div className="grid grid-cols-3 gap-2 text-center text-sm">
+                        <div>
+                          <p className="text-muted-foreground text-xs">Pretest</p>
+                          <p className="font-bold">{group.avgPretest.toFixed(1)}%</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground text-xs">Postest</p>
+                          <p className="font-bold">{group.avgPostest.toFixed(1)}%</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground text-xs">Mejora</p>
+                          <p className={`font-bold ${group.avgImprovement >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {group.avgImprovement >= 0 ? '+' : ''}{group.avgImprovement.toFixed(1)}%
+                          </p>
+                        </div>
+                      </div>
                     </CardContent>
                   </Card>
-                ) : (
-                  filteredReports.map((report) => (
+                ))
+              )}
+            </div>
+          )}
+
+          {cardsView === "training" && selectedCardTraining && (
+            <div className="space-y-4">
+              <Button variant="ghost" size="sm" onClick={() => setSelectedCardTraining(null)}>
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Volver a capacitaciones
+              </Button>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredReports
+                  .filter(r => r.training_id === selectedCardTraining)
+                  .map((report) => (
                     <AdherenceReportCard
                       key={report.id}
-                      report={{
-                        ...report,
-                        training_title: report.training_title || 'Capacitación',
-                      }}
+                      report={{ ...report, training_title: report.training_title || 'Capacitación' }}
                       showUserName
                     />
                   ))
-                )}
+                }
               </div>
-            </TabsContent>
-          </Tabs>
+            </div>
+          )}
+
+          {cardsView === "user" && !selectedCardUser && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {usersWithReports.length === 0 ? (
+                <Card className="col-span-full">
+                  <CardContent className="py-8 text-center text-muted-foreground">
+                    No se encontraron reportes de adherencia
+                  </CardContent>
+                </Card>
+              ) : (
+                usersWithReports.map((group) => (
+                  <Card 
+                    key={group.profile.id} 
+                    className="cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={() => setSelectedCardUser(group.profile.id)}
+                  >
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base flex items-center justify-between">
+                        <span className="truncate">{group.profile.full_name}</span>
+                        <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+                      </CardTitle>
+                      <CardDescription>{group.reports.length} evaluaciones completadas</CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="flex flex-wrap gap-1">
+                        {group.reports.slice(0, 3).map(r => (
+                          <Badge key={r.id} variant="outline" className="text-xs">
+                            {r.training_title}
+                          </Badge>
+                        ))}
+                        {group.reports.length > 3 && (
+                          <Badge variant="secondary" className="text-xs">+{group.reports.length - 3} más</Badge>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+          )}
+
+          {cardsView === "user" && selectedCardUser && (
+            <div className="space-y-4">
+              <Button variant="ghost" size="sm" onClick={() => setSelectedCardUser(null)}>
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Volver a usuarios
+              </Button>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredReports
+                  .filter(r => r.user_id === selectedCardUser)
+                  .map((report) => (
+                    <AdherenceReportCard
+                      key={report.id}
+                      report={{ ...report, training_title: report.training_title || 'Capacitación' }}
+                      showUserName
+                    />
+                  ))
+                }
+              </div>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
