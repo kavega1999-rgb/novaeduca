@@ -502,7 +502,6 @@ const EvaluationManager = ({ trainingId, trainingTitle, contentUrl }: Evaluation
               value={evaluation.description || ""}
               onChange={(e) => setEvaluation({ ...evaluation, description: e.target.value })}
               placeholder="Descripción opcional de la evaluación"
-              maxLength={1000}
             />
           </div>
 
