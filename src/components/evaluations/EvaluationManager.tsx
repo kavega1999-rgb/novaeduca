@@ -716,7 +716,6 @@ const EvaluationManager = ({ trainingId, trainingTitle, contentUrl }: Evaluation
                         value={option.option_text}
                         onChange={(e) => updateOption(qIndex, oIndex, "option_text", e.target.value)}
                         placeholder={`Opción ${oIndex + 1}`}
-                        maxLength={200}
                         className="flex-1"
                         disabled={question.question_type === 'true_false'}
                       />
