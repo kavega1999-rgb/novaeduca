@@ -7,7 +7,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Users, Shield, UserCog, MapPin, FolderOpen } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Search, Users, Shield, UserCog, MapPin, FolderOpen, KeyRound, Pencil, Eye, EyeOff } from "lucide-react";
 import { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
@@ -60,6 +63,18 @@ const UserManagement = () => {
   const [updatingAreaUserId, setUpdatingAreaUserId] = useState<string | null>(null);
   const [updatingLeaderAreaUserId, setUpdatingLeaderAreaUserId] = useState<string | null>(null);
 
+  // Password reset dialog
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserWithRole | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [resettingPassword, setResettingPassword] = useState(false);
+
+  // Position edit dialog
+  const [positionDialogOpen, setPositionDialogOpen] = useState(false);
+  const [editingPosition, setEditingPosition] = useState("");
+  const [savingPosition, setSavingPosition] = useState(false);
+
   useEffect(() => {
     checkAccessAndFetchUsers();
   }, []);
@@ -81,7 +96,6 @@ const UserManagement = () => {
       return;
     }
 
-    // Check if user is admin
     const { data: roles } = await supabase
       .from("user_roles")
       .select("role")
@@ -105,7 +119,6 @@ const UserManagement = () => {
   const fetchUsers = async () => {
     setIsLoading(true);
 
-    // Fetch training areas
     const { data: areasData } = await supabase
       .from("areas")
       .select("id, name")
@@ -113,7 +126,6 @@ const UserManagement = () => {
     
     setTrainingAreas(areasData || []);
 
-    // Fetch profiles with their roles and leader_area
     const { data: profiles, error: profilesError } = await supabase
       .from("profiles")
       .select(`
@@ -138,7 +150,6 @@ const UserManagement = () => {
       return;
     }
 
-    // Fetch all user roles
     const { data: userRoles, error: rolesError } = await supabase
       .from("user_roles")
       .select("user_id, role");
@@ -147,7 +158,6 @@ const UserManagement = () => {
       console.error("Error fetching roles:", rolesError);
     }
 
-    // Create a map of user_id to role
     const roleMap = new Map<string, AppRole>();
     userRoles?.forEach((ur) => {
       const currentRole = roleMap.get(ur.user_id);
@@ -158,7 +168,6 @@ const UserManagement = () => {
       }
     });
 
-    // We need to get emails from access_logs as a fallback
     const { data: accessLogs } = await supabase
       .from("access_logs")
       .select("user_id, user_email")
@@ -171,7 +180,6 @@ const UserManagement = () => {
       }
     });
 
-    // Build users with roles
     const usersWithRoles: UserWithRole[] = profiles.map((profile: any) => ({
       id: profile.id,
       full_name: profile.full_name,
@@ -191,24 +199,18 @@ const UserManagement = () => {
 
   const handleRoleChange = async (userId: string, newRole: AppRole) => {
     setUpdatingUserId(userId);
-
     try {
-      // First, delete existing roles for this user
       const { error: deleteError } = await supabase
         .from("user_roles")
         .delete()
         .eq("user_id", userId);
-
       if (deleteError) throw deleteError;
 
-      // Then insert the new role
       const { error: insertError } = await supabase
         .from("user_roles")
         .insert({ user_id: userId, role: newRole });
-
       if (insertError) throw insertError;
 
-      // Update local state
       setUsers((prev) =>
         prev.map((user) =>
           user.id === userId ? { ...user, role: newRole } : user
@@ -221,11 +223,7 @@ const UserManagement = () => {
       });
     } catch (error) {
       console.error("Error updating role:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo actualizar el rol",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "No se pudo actualizar el rol", variant: "destructive" });
     } finally {
       setUpdatingUserId(null);
     }
@@ -233,16 +231,13 @@ const UserManagement = () => {
 
   const handleAreaChange = async (userId: string, newArea: UserArea | "none") => {
     setUpdatingAreaUserId(userId);
-
     try {
       const { error } = await supabase
         .from("profiles")
         .update({ area: newArea === "none" ? null : newArea })
         .eq("id", userId);
-
       if (error) throw error;
 
-      // Update local state
       setUsers((prev) =>
         prev.map((user) =>
           user.id === userId ? { ...user, area: newArea === "none" ? null : newArea } : user
@@ -257,11 +252,7 @@ const UserManagement = () => {
       });
     } catch (error) {
       console.error("Error updating area:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo actualizar el área",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "No se pudo actualizar el área", variant: "destructive" });
     } finally {
       setUpdatingAreaUserId(null);
     }
@@ -269,18 +260,15 @@ const UserManagement = () => {
 
   const handleLeaderAreaChange = async (userId: string, newAreaId: string) => {
     setUpdatingLeaderAreaUserId(userId);
-
     try {
       const { error } = await supabase
         .from("profiles")
         .update({ leader_area_id: newAreaId === "none" ? null : newAreaId })
         .eq("id", userId);
-
       if (error) throw error;
 
       const areaName = trainingAreas.find(a => a.id === newAreaId)?.name || null;
 
-      // Update local state
       setUsers((prev) =>
         prev.map((user) =>
           user.id === userId ? { 
@@ -299,14 +287,83 @@ const UserManagement = () => {
       });
     } catch (error) {
       console.error("Error updating leader area:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo actualizar el área de capacitación",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "No se pudo actualizar el área de capacitación", variant: "destructive" });
     } finally {
       setUpdatingLeaderAreaUserId(null);
     }
+  };
+
+  const handlePasswordReset = async () => {
+    if (!selectedUser || !newPassword) return;
+    if (newPassword.length < 6) {
+      toast({ title: "Error", description: "La contraseña debe tener al menos 6 caracteres", variant: "destructive" });
+      return;
+    }
+
+    setResettingPassword(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await supabase.functions.invoke("admin-update-user", {
+        body: { userId: selectedUser.id, newPassword, action: "reset_password" },
+      });
+
+      if (response.error) throw new Error(response.error.message);
+
+      toast({
+        title: "Contraseña actualizada",
+        description: `La contraseña de ${selectedUser.full_name} ha sido cambiada exitosamente`,
+      });
+      setPasswordDialogOpen(false);
+      setNewPassword("");
+      setShowPassword(false);
+    } catch (error: any) {
+      console.error("Error resetting password:", error);
+      toast({ title: "Error", description: error.message || "No se pudo cambiar la contraseña", variant: "destructive" });
+    } finally {
+      setResettingPassword(false);
+    }
+  };
+
+  const handlePositionSave = async () => {
+    if (!selectedUser) return;
+    setSavingPosition(true);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ position: editingPosition || null })
+        .eq("id", selectedUser.id);
+      if (error) throw error;
+
+      setUsers((prev) =>
+        prev.map((user) =>
+          user.id === selectedUser.id ? { ...user, position: editingPosition || null } : user
+        )
+      );
+
+      toast({
+        title: "Cargo actualizado",
+        description: `El cargo de ${selectedUser.full_name} ha sido actualizado`,
+      });
+      setPositionDialogOpen(false);
+    } catch (error) {
+      console.error("Error updating position:", error);
+      toast({ title: "Error", description: "No se pudo actualizar el cargo", variant: "destructive" });
+    } finally {
+      setSavingPosition(false);
+    }
+  };
+
+  const openPasswordDialog = (user: UserWithRole) => {
+    setSelectedUser(user);
+    setNewPassword("");
+    setShowPassword(false);
+    setPasswordDialogOpen(true);
+  };
+
+  const openPositionDialog = (user: UserWithRole) => {
+    setSelectedUser(user);
+    setEditingPosition(user.position || "");
+    setPositionDialogOpen(true);
   };
 
   const getAreaLabel = (area: UserArea | null) => {
@@ -329,7 +386,7 @@ const UserManagement = () => {
           Gestión de Usuarios
         </h1>
         <p className="text-muted-foreground mt-2">
-          Administra los roles y permisos de los usuarios del sistema
+          Administra los roles, áreas, cargos y contraseñas de los usuarios
         </p>
       </div>
 
@@ -381,7 +438,7 @@ const UserManagement = () => {
         <CardHeader>
           <CardTitle>Usuarios Registrados</CardTitle>
           <CardDescription>
-            Selecciona un rol para cambiar los permisos de cada usuario
+            Gestiona roles, áreas, cargos y contraseñas de cada usuario
           </CardDescription>
           <div className="relative mt-4">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -394,22 +451,24 @@ const UserManagement = () => {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
+          <div className="rounded-md border overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Usuario</TableHead>
                   <TableHead>Email</TableHead>
+                  <TableHead>Cargo</TableHead>
                   <TableHead>Área Usuario</TableHead>
                   <TableHead>Área de Capacitación</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead>Rol</TableHead>
+                  <TableHead>Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredUsers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                       No se encontraron usuarios
                     </TableCell>
                   </TableRow>
@@ -417,17 +476,23 @@ const UserManagement = () => {
                   filteredUsers.map((user) => (
                     <TableRow key={user.id}>
                       <TableCell>
-                        <div>
-                          <div className="font-medium">{user.full_name}</div>
-                          {user.position && (
-                            <div className="text-sm text-muted-foreground">
-                              {user.position}
-                            </div>
-                          )}
-                        </div>
+                        <div className="font-medium">{user.full_name}</div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {user.email}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <span className="text-sm">{user.position || "Sin cargo"}</span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => openPositionDialog(user)}
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Select
@@ -527,6 +592,17 @@ const UserManagement = () => {
                           </SelectContent>
                         </Select>
                       </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openPasswordDialog(user)}
+                          className="gap-1"
+                        >
+                          <KeyRound className="h-3 w-3" />
+                          Contraseña
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))
                 )}
@@ -535,6 +611,80 @@ const UserManagement = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Password Reset Dialog */}
+      <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cambiar Contraseña</DialogTitle>
+            <DialogDescription>
+              Cambiar la contraseña de <strong>{selectedUser?.full_name}</strong> ({selectedUser?.email})
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-password">Nueva Contraseña</Label>
+              <div className="relative">
+                <Input
+                  id="new-password"
+                  type={showPassword ? "text" : "password"}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Mínimo 6 caracteres"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPasswordDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handlePasswordReset} disabled={resettingPassword || newPassword.length < 6}>
+              {resettingPassword ? "Guardando..." : "Cambiar Contraseña"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Position Edit Dialog */}
+      <Dialog open={positionDialogOpen} onOpenChange={setPositionDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Cargo</DialogTitle>
+            <DialogDescription>
+              Editar el cargo de <strong>{selectedUser?.full_name}</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="position">Cargo</Label>
+              <Input
+                id="position"
+                value={editingPosition}
+                onChange={(e) => setEditingPosition(e.target.value)}
+                placeholder="Ej: Enfermera, Médico General, Coordinador..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPositionDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handlePositionSave} disabled={savingPosition}>
+              {savingPosition ? "Guardando..." : "Guardar Cargo"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
