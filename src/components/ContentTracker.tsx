@@ -15,7 +15,7 @@ const ContentTracker = ({ contentUrl, userProgressId, onContentViewed, contentVi
   const [isViewed, setIsViewed] = useState(contentViewedCompletely);
   const [viewingTime, setViewingTime] = useState(0);
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     // Start timer when component mounts
