@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { format } from "date-fns";
 import * as XLSX from "xlsx";
+import { downloadXlsx } from "@/lib/xlsx-utils";
 
 const TrainingDetail = () => {
   const { id } = useParams();

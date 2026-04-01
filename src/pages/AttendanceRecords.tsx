@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Download, FileSpreadsheet, Users, Filter } from "lucide-react";
 import { format } from "date-fns";
 import * as XLSX from "xlsx";
+import { downloadXlsx } from "@/lib/xlsx-utils";
 
 interface Training {
   id: string;

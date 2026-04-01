@@ -16,6 +16,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
+import { downloadXlsx } from "@/lib/xlsx-utils";
 import AdherenceReportCard from "@/components/adherence/AdherenceReportCard";
 import { getScoreCategory, getCategoryColor } from "@/lib/adherence-utils";
 import {
