@@ -492,7 +492,6 @@ const EvaluationManager = ({ trainingId, trainingTitle, contentUrl }: Evaluation
               value={evaluation.title}
               onChange={(e) => setEvaluation({ ...evaluation, title: e.target.value })}
               placeholder="Ej: Evaluación Final del Curso"
-              maxLength={200}
             />
           </div>
 
