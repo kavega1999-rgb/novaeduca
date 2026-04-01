@@ -216,7 +216,7 @@ const AttendanceRecords = () => {
     }));
     ws["!cols"] = colWidths;
 
-    XLSX.writeFile(wb, `asistencia_${training?.title.replace(/\s+/g, "_") || "capacitacion"}_${format(new Date(), "yyyy-MM-dd")}.xlsx`);
+    downloadXlsx(wb, `asistencia_${training?.title.replace(/\s+/g, "_") || "capacitacion"}_${format(new Date(), "yyyy-MM-dd")}.xlsx`);
 
     toast({
       title: "Exportado",

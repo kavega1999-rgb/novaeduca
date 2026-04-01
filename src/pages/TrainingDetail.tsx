@@ -375,7 +375,7 @@ const TrainingDetail = () => {
       wch: Math.min(50, Math.max(key.length, ...rows.map(r => String(r[key]).length)))
     }));
     ws['!cols'] = colWidths;
-    XLSX.writeFile(wb, `respuestas_${training?.title?.replace(/\s+/g, '_') || 'evaluacion'}_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+    downloadXlsx(wb, `respuestas_${training?.title?.replace(/\s+/g, '_') || 'evaluacion'}_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
     toast.success("Respuestas exportadas");
   };
 

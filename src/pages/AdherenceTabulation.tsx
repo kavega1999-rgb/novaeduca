@@ -295,7 +295,7 @@ const AdherenceTabulation = () => {
     }));
     worksheet['!cols'] = colWidths;
 
-    XLSX.writeFile(workbook, `tabulacion_adherencia_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+    downloadXlsx(workbook, `tabulacion_adherencia_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
     toast.success("Archivo XLSX exportado");
   };
 

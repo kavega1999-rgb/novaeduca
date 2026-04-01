@@ -386,7 +386,7 @@ const AdherenceEvaluations = () => {
     }));
     worksheet['!cols'] = colWidths;
 
-    XLSX.writeFile(workbook, `evaluaciones_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+    downloadXlsx(workbook, `evaluaciones_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
     toast({ title: "Exportado", description: `${completedForExport.length} registros descargados.` });
   };
 
