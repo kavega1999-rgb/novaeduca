@@ -681,7 +681,6 @@ const EvaluationManager = ({ trainingId, trainingTitle, contentUrl }: Evaluation
                 value={question.question_text}
                 onChange={(e) => updateQuestion(qIndex, "question_text", e.target.value)}
                 placeholder="Escribe tu pregunta aquí"
-                maxLength={500}
               />
             </div>
 
