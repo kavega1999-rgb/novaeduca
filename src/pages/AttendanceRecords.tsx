@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Download, FileSpreadsheet, Users, Filter } from "lucide-react";
 import { format } from "date-fns";
 import * as XLSX from "xlsx";
+import { downloadXlsx } from "@/lib/xlsx-utils";
 
 interface Training {
   id: string;
@@ -216,7 +217,7 @@ const AttendanceRecords = () => {
     }));
     ws["!cols"] = colWidths;
 
-    XLSX.writeFile(wb, `asistencia_${training?.title.replace(/\s+/g, "_") || "capacitacion"}_${format(new Date(), "yyyy-MM-dd")}.xlsx`);
+    downloadXlsx(wb, `asistencia_${training?.title.replace(/\s+/g, "_") || "capacitacion"}_${format(new Date(), "yyyy-MM-dd")}.xlsx`);
 
     toast({
       title: "Exportado",

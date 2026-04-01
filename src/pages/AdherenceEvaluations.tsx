@@ -31,6 +31,7 @@ import {
 } from "recharts";
 import { format, subDays } from "date-fns";
 import * as XLSX from "xlsx";
+import { downloadXlsx } from "@/lib/xlsx-utils";
 import UserDetailPanel, { type PanelType } from "@/components/adherence/UserDetailPanel";
 
 interface Evaluation {
@@ -386,7 +387,7 @@ const AdherenceEvaluations = () => {
     }));
     worksheet['!cols'] = colWidths;
 
-    XLSX.writeFile(workbook, `evaluaciones_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+    downloadXlsx(workbook, `evaluaciones_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
     toast({ title: "Exportado", description: `${completedForExport.length} registros descargados.` });
   };
 

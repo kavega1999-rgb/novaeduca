@@ -16,6 +16,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
+import { downloadXlsx } from "@/lib/xlsx-utils";
 import AdherenceReportCard from "@/components/adherence/AdherenceReportCard";
 import { getScoreCategory, getCategoryColor } from "@/lib/adherence-utils";
 import {
@@ -295,7 +296,7 @@ const AdherenceTabulation = () => {
     }));
     worksheet['!cols'] = colWidths;
 
-    XLSX.writeFile(workbook, `tabulacion_adherencia_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+    downloadXlsx(workbook, `tabulacion_adherencia_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
     toast.success("Archivo XLSX exportado");
   };
 

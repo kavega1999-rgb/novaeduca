@@ -491,7 +491,6 @@ const EvaluationTaker = ({ evaluationId, trainingId, onComplete }: EvaluationTak
               value={textAnswers[currentQuestion.id] || ""}
               onChange={(e) => handleTextAnswerChange(currentQuestion.id, e.target.value)}
               className="min-h-[150px]"
-              maxLength={2000}
             />
             <p className="text-xs text-muted-foreground">
               {(textAnswers[currentQuestion.id]?.length || 0)} / 2000 caracteres

@@ -434,7 +434,6 @@ const PretestTaker = ({ evaluationId, trainingId, onComplete, onSkip }: PretestT
               value={textAnswers[currentQuestion.id] || ""}
               onChange={(e) => handleTextAnswerChange(currentQuestion.id, e.target.value)}
               className="min-h-[120px]"
-              maxLength={1000}
             />
             <p className="text-xs text-muted-foreground">
               {(textAnswers[currentQuestion.id]?.length || 0)} / 1000 caracteres

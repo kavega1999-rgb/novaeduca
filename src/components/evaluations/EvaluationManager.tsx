@@ -492,7 +492,6 @@ const EvaluationManager = ({ trainingId, trainingTitle, contentUrl }: Evaluation
               value={evaluation.title}
               onChange={(e) => setEvaluation({ ...evaluation, title: e.target.value })}
               placeholder="Ej: Evaluación Final del Curso"
-              maxLength={200}
             />
           </div>
 
@@ -503,7 +502,6 @@ const EvaluationManager = ({ trainingId, trainingTitle, contentUrl }: Evaluation
               value={evaluation.description || ""}
               onChange={(e) => setEvaluation({ ...evaluation, description: e.target.value })}
               placeholder="Descripción opcional de la evaluación"
-              maxLength={1000}
             />
           </div>
 
@@ -683,7 +681,6 @@ const EvaluationManager = ({ trainingId, trainingTitle, contentUrl }: Evaluation
                 value={question.question_text}
                 onChange={(e) => updateQuestion(qIndex, "question_text", e.target.value)}
                 placeholder="Escribe tu pregunta aquí"
-                maxLength={500}
               />
             </div>
 
@@ -719,7 +716,6 @@ const EvaluationManager = ({ trainingId, trainingTitle, contentUrl }: Evaluation
                         value={option.option_text}
                         onChange={(e) => updateOption(qIndex, oIndex, "option_text", e.target.value)}
                         placeholder={`Opción ${oIndex + 1}`}
-                        maxLength={200}
                         className="flex-1"
                         disabled={question.question_type === 'true_false'}
                       />
