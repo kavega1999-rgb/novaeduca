@@ -61,8 +61,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    const adminClient = createClient(supabaseUrl, supabaseServiceKey);
-
     if (action === "reset_password" && newPassword) {
       if (newPassword.length < 6) {
         return new Response(
@@ -71,13 +69,21 @@ Deno.serve(async (req) => {
         );
       }
 
-      const { error } = await adminClient.auth.admin.updateUser(userId, {
-        password: newPassword,
+      // Use Admin API directly via fetch
+      const res = await fetch(`${supabaseUrl}/auth/v1/admin/users/${userId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${supabaseServiceKey}`,
+          "apikey": supabaseServiceKey,
+        },
+        body: JSON.stringify({ password: newPassword }),
       });
 
-      if (error) {
-        console.error("Error updating password:", error);
-        return new Response(JSON.stringify({ error: error.message }), {
+      if (!res.ok) {
+        const errData = await res.json();
+        console.error("Error updating password:", errData);
+        return new Response(JSON.stringify({ error: errData.message || "Error al actualizar" }), {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
