@@ -219,17 +219,29 @@ const EvaluationTaker = ({ evaluationId, trainingId, onComplete }: EvaluationTak
     // Calculate score
     const { data: answersData } = await supabase
       .from("evaluation_answers")
-      .select("points_earned")
-      .eq("attempt_id", attemptId);
+      .select("question_id, points_earned, created_at")
+      .eq("attempt_id", attemptId)
+      .order("created_at", { ascending: true });
 
     if (!answersData) {
       setSubmitting(false);
       return;
     }
 
-    const totalEarned = answersData.reduce((sum, a) => sum + (a.points_earned || 0), 0);
+    // Deduplicar: tomar solo la última respuesta por pregunta
+    const latestByQuestion = new Map<string, number>();
+    for (const a of answersData) {
+      latestByQuestion.set(a.question_id, a.points_earned || 0);
+    }
+    // Cap puntos por pregunta al máximo definido
+    const questionMaxMap = new Map(questions.map(q => [q.id, q.points]));
+    let totalEarned = 0;
+    for (const [qid, earned] of latestByQuestion.entries()) {
+      const max = questionMaxMap.get(qid) ?? earned;
+      totalEarned += Math.min(earned, max);
+    }
     const totalPoints = questions.reduce((sum, q) => sum + q.points, 0);
-    const scorePercentage = (totalEarned / totalPoints) * 100;
+    const scorePercentage = totalPoints > 0 ? Math.min(100, (totalEarned / totalPoints) * 100) : 0;
     const passed = scorePercentage >= evaluation.passing_score;
 
     const { data: updatedAttempt, error } = await supabase
