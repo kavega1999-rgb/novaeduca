@@ -144,8 +144,8 @@ const AdherenceEvaluations = () => {
 
   const [selectedTraining, setSelectedTraining] = useState<string>("all");
   const [selectedArea, setSelectedArea] = useState<string>("all");
-  const [dateFrom, setDateFrom] = useState<string>(format(subDays(new Date(), 30), "yyyy-MM-dd"));
-  const [dateTo, setDateTo] = useState<string>(format(new Date(), "yyyy-MM-dd"));
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
   const [activePanel, setActivePanel] = useState<PanelType>(null);
   const [viewMode, setViewMode] = useState<"assigned" | "general">("assigned");
 
@@ -271,20 +271,39 @@ const AdherenceEvaluations = () => {
     : [selectedTraining];
 
   const filteredAttempts = attempts.filter(a => {
-    const attemptDate = new Date(a.started_at);
-    const fromDate = new Date(dateFrom + 'T00:00:00');
-    const toDate = new Date(dateTo + 'T23:59:59');
+    const attemptDate = new Date(a.completed_at || a.started_at);
 
     if (!evaluationIdsForTraining.includes(a.evaluation_id)) return false;
-    if (attemptDate < fromDate || attemptDate > toDate) return false;
+    if (dateFrom && attemptDate < new Date(dateFrom + 'T00:00:00')) return false;
+    if (dateTo && attemptDate > new Date(dateTo + 'T23:59:59')) return false;
     return true;
   });
 
-  const completedAttempts = filteredAttempts.filter(a => a.status === "completed");
+  const latestAttempts = useMemo(() => {
+    const latestByUserTraining = new Map<string, EvaluationAttempt>();
+
+    filteredAttempts.forEach(attempt => {
+      const evaluation = evaluations.find(e => e.id === attempt.evaluation_id);
+      if (!evaluation) return;
+
+      const key = `${attempt.user_id}:${evaluation.training_id}`;
+      const existing = latestByUserTraining.get(key);
+      const attemptTime = new Date(attempt.completed_at || attempt.started_at).getTime();
+      const existingTime = existing ? new Date(existing.completed_at || existing.started_at).getTime() : 0;
+
+      if (!existing || attemptTime > existingTime) {
+        latestByUserTraining.set(key, attempt);
+      }
+    });
+
+    return Array.from(latestByUserTraining.values());
+  }, [filteredAttempts, evaluations]);
+
+  const completedAttempts = latestAttempts.filter(a => a.status === "completed");
   const approvedCount = completedAttempts.filter(a => a.passed).length;
   const failedCount = completedAttempts.filter(a => !a.passed).length;
   const evalInProgressUserIds = new Set(
-    filteredAttempts.filter(a => a.status === "in_progress").map(a => a.user_id)
+    latestAttempts.filter(a => a.status === "in_progress").map(a => a.user_id)
   );
   
   const trainingInProgressUserIds = useMemo(() => {
@@ -294,17 +313,17 @@ const AdherenceEvaluations = () => {
       }
       return relevantTrainingIds.includes(up.training_id) && up.status === "in_progress";
     });
-    const usersWithEvalAttempts = new Set(filteredAttempts.map(a => a.user_id));
+    const usersWithEvalAttempts = new Set(latestAttempts.map(a => a.user_id));
     return new Set(
       relevantProgress
         .filter(up => !usersWithEvalAttempts.has(up.user_id))
         .map(up => up.user_id)
     );
-  }, [userProgress, selectedTraining, relevantTrainingIds, filteredAttempts]);
+  }, [userProgress, selectedTraining, relevantTrainingIds, latestAttempts]);
 
   const pendingCount = evalInProgressUserIds.size + trainingInProgressUserIds.size;
   
-  const usersWithAttempts = new Set(filteredAttempts.map(a => a.user_id));
+  const usersWithAttempts = new Set(latestAttempts.map(a => a.user_id));
   const allActiveUserIds = new Set([...usersWithAttempts, ...trainingInProgressUserIds]);
   
   const relevantTrainingsData = trainings.filter(t => relevantTrainingIds.includes(t.id));
@@ -337,10 +356,12 @@ const AdherenceEvaluations = () => {
     (selectedTraining === "all" || e.training_id === selectedTraining) && 
     (selectedArea === "all" || trainingIdsInArea.includes(e.training_id))
   ).length;
-  const totalExpectedCompletions = expectedUserCount * totalEvaluations;
+  const totalExpectedCompletions = selectedTraining === "all"
+    ? expectedUserCount * Math.max(1, totalEvaluations)
+    : expectedUserCount;
   const totalPassed = approvedCount;
   const adherencePercentage = totalExpectedCompletions > 0 
-    ? Math.round((totalPassed / totalExpectedCompletions) * 100) 
+    ? Math.min(100, Math.round((totalPassed / totalExpectedCompletions) * 100)) 
     : 0;
 
   const statusPieData = [
@@ -351,7 +372,7 @@ const AdherenceEvaluations = () => {
   ].filter(d => d.value > 0);
 
   const exportToXLSX = () => {
-    const completedForExport = filteredAttempts.filter(a => a.status === 'completed');
+    const completedForExport = latestAttempts.filter(a => a.status === 'completed');
     
     if (completedForExport.length === 0) {
       toast({ 
@@ -568,7 +589,7 @@ const AdherenceEvaluations = () => {
         <UserDetailPanel
           panelType={activePanel}
           onClose={() => setActivePanel(null)}
-          filteredAttempts={filteredAttempts}
+          filteredAttempts={latestAttempts}
           evaluations={evaluations}
           trainings={trainings}
           profiles={profiles}
