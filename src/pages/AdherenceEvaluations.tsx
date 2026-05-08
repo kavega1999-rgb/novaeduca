@@ -589,7 +589,7 @@ const AdherenceEvaluations = () => {
         <UserDetailPanel
           panelType={activePanel}
           onClose={() => setActivePanel(null)}
-          filteredAttempts={filteredAttempts}
+          filteredAttempts={latestAttempts}
           evaluations={evaluations}
           trainings={trainings}
           profiles={profiles}
