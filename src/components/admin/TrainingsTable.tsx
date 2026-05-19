@@ -44,7 +44,7 @@ const TrainingsTable = ({ onRefresh, onEdit }: TrainingsTableProps) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
-  const [userAreaId, setUserAreaId] = useState<string | null>(null);
+  const [userAreaIds, setUserAreaIds] = useState<string[]>([]);
 
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
@@ -61,7 +61,7 @@ const TrainingsTable = ({ onRefresh, onEdit }: TrainingsTableProps) => {
 
   useEffect(() => {
     applyFilters();
-  }, [trainings, searchTerm, selectedArea, selectedStatus, selectedType, userRole, userAreaId]);
+  }, [trainings, searchTerm, selectedArea, selectedStatus, selectedType, userRole, userAreaIds]);
 
   const fetchUserRoleAndData = async () => {
     setIsLoading(true);
@@ -80,17 +80,14 @@ const TrainingsTable = ({ onRefresh, onEdit }: TrainingsTableProps) => {
     
     setUserRole(isAdmin ? "admin" : isLeader ? "leader" : "user");
 
-    // Get leader_area_id directly from profile (for leaders)
+    // Get all areas this leader manages
     if (isLeader && !isAdmin) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("leader_area_id")
-        .eq("id", user.id)
-        .single();
+      const { data: leaderAreas } = await supabase
+        .from("leader_areas")
+        .select("area_id")
+        .eq("user_id", user.id);
 
-      if (profile?.leader_area_id) {
-        setUserAreaId(profile.leader_area_id);
-      }
+      setUserAreaIds((leaderAreas || []).map((la: any) => la.area_id));
     }
 
     await fetchData();
@@ -135,9 +132,12 @@ const TrainingsTable = ({ onRefresh, onEdit }: TrainingsTableProps) => {
   const applyFilters = () => {
     let result = [...trainings];
 
-    // For leaders (not admins), filter by their assigned area
-    if (userRole === "leader" && userAreaId) {
-      result = result.filter(t => t.areas?.id === userAreaId);
+    // For leaders (not admins), filter by their assigned areas
+    if (userRole === "leader" && userAreaIds.length > 0) {
+      const areaSet = new Set(userAreaIds);
+      result = result.filter(t => t.areas?.id && areaSet.has(t.areas.id));
+    } else if (userRole === "leader" && userAreaIds.length === 0) {
+      result = [];
     }
 
     // Search filter
