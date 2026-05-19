@@ -533,30 +533,54 @@ const UserManagement = () => {
                       </TableCell>
                       <TableCell>
                         {user.role === "leader" ? (
-                          <Select
-                            value={user.leader_area_id || "none"}
-                            onValueChange={(value) =>
-                              handleLeaderAreaChange(user.id, value)
-                            }
-                            disabled={updatingLeaderAreaUserId === user.id}
-                          >
-                            <SelectTrigger className="w-[180px]">
-                              <SelectValue>
-                                <div className="flex items-center gap-2">
-                                  <FolderOpen className="h-3 w-3" />
-                                  {user.leader_area_name || "Sin asignar"}
-                                </div>
-                              </SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="none">Sin asignar</SelectItem>
-                              {trainingAreas.map(area => (
-                                <SelectItem key={area.id} value={area.id}>
-                                  {area.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={updatingLeaderAreaUserId === user.id}
+                                className="w-[220px] justify-start"
+                              >
+                                <FolderOpen className="h-3 w-3 mr-2 shrink-0" />
+                                <span className="truncate text-left">
+                                  {user.leader_area_ids.length === 0
+                                    ? "Sin asignar"
+                                    : user.leader_area_ids.length === 1
+                                      ? (trainingAreas.find(a => a.id === user.leader_area_ids[0])?.name || "1 área")
+                                      : `${user.leader_area_ids.length} áreas asignadas`}
+                                </span>
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-64 p-2" align="start">
+                              <div className="text-xs font-medium text-muted-foreground px-2 py-1.5">
+                                Áreas que lidera
+                              </div>
+                              <div className="max-h-64 overflow-y-auto">
+                                {trainingAreas.map(area => {
+                                  const checked = user.leader_area_ids.includes(area.id);
+                                  return (
+                                    <label
+                                      key={area.id}
+                                      className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-accent cursor-pointer text-sm"
+                                    >
+                                      <Checkbox
+                                        checked={checked}
+                                        onCheckedChange={() => toggleLeaderArea(user.id, area.id, user.leader_area_ids)}
+                                        disabled={updatingLeaderAreaUserId === user.id}
+                                      />
+                                      <span className="flex-1 truncate">{area.name}</span>
+                                      {checked && <Check className="h-3 w-3 text-primary shrink-0" />}
+                                    </label>
+                                  );
+                                })}
+                                {trainingAreas.length === 0 && (
+                                  <p className="text-xs text-muted-foreground px-2 py-2">
+                                    No hay áreas disponibles.
+                                  </p>
+                                )}
+                              </div>
+                            </PopoverContent>
+                          </Popover>
                         ) : (
                           <span className="text-muted-foreground text-sm">-</span>
                         )}
