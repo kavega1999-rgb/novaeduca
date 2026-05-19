@@ -10,7 +10,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Search, Users, Shield, UserCog, MapPin, FolderOpen, KeyRound, Pencil, Eye, EyeOff } from "lucide-react";
+import { Search, Users, Shield, UserCog, MapPin, FolderOpen, KeyRound, Pencil, Eye, EyeOff, Check } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
@@ -29,8 +31,7 @@ interface UserWithRole {
   position: string | null;
   status: string;
   role: AppRole;
-  leader_area_id: string | null;
-  leader_area_name: string | null;
+  leader_area_ids: string[];
 }
 
 const roleLabels: Record<AppRole, string> = {
@@ -133,9 +134,7 @@ const UserManagement = () => {
         full_name, 
         area, 
         position, 
-        status,
-        leader_area_id,
-        areas:leader_area_id (id, name)
+        status
       `)
       .order("full_name");
 
@@ -168,6 +167,17 @@ const UserManagement = () => {
       }
     });
 
+    // Fetch multi-area leader assignments
+    const { data: leaderAreasData } = await supabase
+      .from("leader_areas")
+      .select("user_id, area_id");
+    const leaderAreasMap = new Map<string, string[]>();
+    leaderAreasData?.forEach((la: any) => {
+      const arr = leaderAreasMap.get(la.user_id) || [];
+      arr.push(la.area_id);
+      leaderAreasMap.set(la.user_id, arr);
+    });
+
     const { data: accessLogs } = await supabase
       .from("access_logs")
       .select("user_id, user_email")
@@ -188,8 +198,7 @@ const UserManagement = () => {
       position: profile.position,
       status: profile.status,
       role: roleMap.get(profile.id) || "user",
-      leader_area_id: profile.leader_area_id,
-      leader_area_name: profile.areas?.name || null,
+      leader_area_ids: leaderAreasMap.get(profile.id) || [],
     }));
 
     setUsers(usersWithRoles);
@@ -258,36 +267,40 @@ const UserManagement = () => {
     }
   };
 
-  const handleLeaderAreaChange = async (userId: string, newAreaId: string) => {
+  const toggleLeaderArea = async (userId: string, areaId: string, currentIds: string[]) => {
     setUpdatingLeaderAreaUserId(userId);
+    const isAssigned = currentIds.includes(areaId);
     try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({ leader_area_id: newAreaId === "none" ? null : newAreaId })
-        .eq("id", userId);
-      if (error) throw error;
+      if (isAssigned) {
+        const { error } = await supabase
+          .from("leader_areas")
+          .delete()
+          .eq("user_id", userId)
+          .eq("area_id", areaId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("leader_areas")
+          .insert({ user_id: userId, area_id: areaId });
+        if (error) throw error;
+      }
 
-      const areaName = trainingAreas.find(a => a.id === newAreaId)?.name || null;
+      const newIds = isAssigned
+        ? currentIds.filter(id => id !== areaId)
+        : [...currentIds, areaId];
 
-      setUsers((prev) =>
-        prev.map((user) =>
-          user.id === userId ? { 
-            ...user, 
-            leader_area_id: newAreaId === "none" ? null : newAreaId,
-            leader_area_name: areaName
-          } : user
-        )
-      );
+      setUsers(prev => prev.map(u =>
+        u.id === userId ? { ...u, leader_area_ids: newIds } : u
+      ));
 
+      const areaName = trainingAreas.find(a => a.id === areaId)?.name;
       toast({
-        title: "Área de capacitación actualizada",
-        description: newAreaId === "none" 
-          ? "Se ha removido el área de capacitación del líder"
-          : `El área de capacitación ha sido asignada a ${areaName}`,
+        title: isAssigned ? "Área removida" : "Área asignada",
+        description: `${areaName} ${isAssigned ? "ya no está asignada" : "asignada"} al líder`,
       });
-    } catch (error) {
-      console.error("Error updating leader area:", error);
-      toast({ title: "Error", description: "No se pudo actualizar el área de capacitación", variant: "destructive" });
+    } catch (error: any) {
+      console.error("Error updating leader areas:", error);
+      toast({ title: "Error", description: error.message || "No se pudo actualizar", variant: "destructive" });
     } finally {
       setUpdatingLeaderAreaUserId(null);
     }
@@ -520,30 +533,54 @@ const UserManagement = () => {
                       </TableCell>
                       <TableCell>
                         {user.role === "leader" ? (
-                          <Select
-                            value={user.leader_area_id || "none"}
-                            onValueChange={(value) =>
-                              handleLeaderAreaChange(user.id, value)
-                            }
-                            disabled={updatingLeaderAreaUserId === user.id}
-                          >
-                            <SelectTrigger className="w-[180px]">
-                              <SelectValue>
-                                <div className="flex items-center gap-2">
-                                  <FolderOpen className="h-3 w-3" />
-                                  {user.leader_area_name || "Sin asignar"}
-                                </div>
-                              </SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="none">Sin asignar</SelectItem>
-                              {trainingAreas.map(area => (
-                                <SelectItem key={area.id} value={area.id}>
-                                  {area.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={updatingLeaderAreaUserId === user.id}
+                                className="w-[220px] justify-start"
+                              >
+                                <FolderOpen className="h-3 w-3 mr-2 shrink-0" />
+                                <span className="truncate text-left">
+                                  {user.leader_area_ids.length === 0
+                                    ? "Sin asignar"
+                                    : user.leader_area_ids.length === 1
+                                      ? (trainingAreas.find(a => a.id === user.leader_area_ids[0])?.name || "1 área")
+                                      : `${user.leader_area_ids.length} áreas asignadas`}
+                                </span>
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-64 p-2" align="start">
+                              <div className="text-xs font-medium text-muted-foreground px-2 py-1.5">
+                                Áreas que lidera
+                              </div>
+                              <div className="max-h-64 overflow-y-auto">
+                                {trainingAreas.map(area => {
+                                  const checked = user.leader_area_ids.includes(area.id);
+                                  return (
+                                    <label
+                                      key={area.id}
+                                      className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-accent cursor-pointer text-sm"
+                                    >
+                                      <Checkbox
+                                        checked={checked}
+                                        onCheckedChange={() => toggleLeaderArea(user.id, area.id, user.leader_area_ids)}
+                                        disabled={updatingLeaderAreaUserId === user.id}
+                                      />
+                                      <span className="flex-1 truncate">{area.name}</span>
+                                      {checked && <Check className="h-3 w-3 text-primary shrink-0" />}
+                                    </label>
+                                  );
+                                })}
+                                {trainingAreas.length === 0 && (
+                                  <p className="text-xs text-muted-foreground px-2 py-2">
+                                    No hay áreas disponibles.
+                                  </p>
+                                )}
+                              </div>
+                            </PopoverContent>
+                          </Popover>
                         ) : (
                           <span className="text-muted-foreground text-sm">-</span>
                         )}
