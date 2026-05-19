@@ -498,6 +498,38 @@ export type Database = {
         }
         Relationships: []
       }
+      leader_areas: {
+        Row: {
+          area_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          area_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          area_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leader_areas_area_id_fkey"
+            columns: ["area_id"]
+            isOneToOne: false
+            referencedRelation: "areas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pretest_answers: {
         Row: {
           attempt_id: string
@@ -934,6 +966,10 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      is_leader_of_area: {
+        Args: { _area_id: string; _user_id: string }
         Returns: boolean
       }
     }
