@@ -10,7 +10,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Search, Users, Shield, UserCog, MapPin, FolderOpen, KeyRound, Pencil, Eye, EyeOff } from "lucide-react";
+import { Search, Users, Shield, UserCog, MapPin, FolderOpen, KeyRound, Pencil, Eye, EyeOff, Check } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
@@ -29,8 +31,7 @@ interface UserWithRole {
   position: string | null;
   status: string;
   role: AppRole;
-  leader_area_id: string | null;
-  leader_area_name: string | null;
+  leader_area_ids: string[];
 }
 
 const roleLabels: Record<AppRole, string> = {
