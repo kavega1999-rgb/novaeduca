@@ -134,9 +134,7 @@ const UserManagement = () => {
         full_name, 
         area, 
         position, 
-        status,
-        leader_area_id,
-        areas:leader_area_id (id, name)
+        status
       `)
       .order("full_name");
 
@@ -169,6 +167,17 @@ const UserManagement = () => {
       }
     });
 
+    // Fetch multi-area leader assignments
+    const { data: leaderAreasData } = await supabase
+      .from("leader_areas")
+      .select("user_id, area_id");
+    const leaderAreasMap = new Map<string, string[]>();
+    leaderAreasData?.forEach((la: any) => {
+      const arr = leaderAreasMap.get(la.user_id) || [];
+      arr.push(la.area_id);
+      leaderAreasMap.set(la.user_id, arr);
+    });
+
     const { data: accessLogs } = await supabase
       .from("access_logs")
       .select("user_id, user_email")
@@ -189,8 +198,7 @@ const UserManagement = () => {
       position: profile.position,
       status: profile.status,
       role: roleMap.get(profile.id) || "user",
-      leader_area_id: profile.leader_area_id,
-      leader_area_name: profile.areas?.name || null,
+      leader_area_ids: leaderAreasMap.get(profile.id) || [],
     }));
 
     setUsers(usersWithRoles);
@@ -259,36 +267,40 @@ const UserManagement = () => {
     }
   };
 
-  const handleLeaderAreaChange = async (userId: string, newAreaId: string) => {
+  const toggleLeaderArea = async (userId: string, areaId: string, currentIds: string[]) => {
     setUpdatingLeaderAreaUserId(userId);
+    const isAssigned = currentIds.includes(areaId);
     try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({ leader_area_id: newAreaId === "none" ? null : newAreaId })
-        .eq("id", userId);
-      if (error) throw error;
+      if (isAssigned) {
+        const { error } = await supabase
+          .from("leader_areas")
+          .delete()
+          .eq("user_id", userId)
+          .eq("area_id", areaId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("leader_areas")
+          .insert({ user_id: userId, area_id: areaId });
+        if (error) throw error;
+      }
 
-      const areaName = trainingAreas.find(a => a.id === newAreaId)?.name || null;
+      const newIds = isAssigned
+        ? currentIds.filter(id => id !== areaId)
+        : [...currentIds, areaId];
 
-      setUsers((prev) =>
-        prev.map((user) =>
-          user.id === userId ? { 
-            ...user, 
-            leader_area_id: newAreaId === "none" ? null : newAreaId,
-            leader_area_name: areaName
-          } : user
-        )
-      );
+      setUsers(prev => prev.map(u =>
+        u.id === userId ? { ...u, leader_area_ids: newIds } : u
+      ));
 
+      const areaName = trainingAreas.find(a => a.id === areaId)?.name;
       toast({
-        title: "Área de capacitación actualizada",
-        description: newAreaId === "none" 
-          ? "Se ha removido el área de capacitación del líder"
-          : `El área de capacitación ha sido asignada a ${areaName}`,
+        title: isAssigned ? "Área removida" : "Área asignada",
+        description: `${areaName} ${isAssigned ? "ya no está asignada" : "asignada"} al líder`,
       });
-    } catch (error) {
-      console.error("Error updating leader area:", error);
-      toast({ title: "Error", description: "No se pudo actualizar el área de capacitación", variant: "destructive" });
+    } catch (error: any) {
+      console.error("Error updating leader areas:", error);
+      toast({ title: "Error", description: error.message || "No se pudo actualizar", variant: "destructive" });
     } finally {
       setUpdatingLeaderAreaUserId(null);
     }
