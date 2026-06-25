@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.send-training-reminder]
 verify_jwt = true
+
+[functions.generate-distractors]
+verify_jwt = true
