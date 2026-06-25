@@ -98,18 +98,30 @@ INSTRUCCIONES:
    - Identifica todas las opciones de respuesta disponibles
    - Si el documento indica cuál es la respuesta correcta (puede estar marcada, resaltada, o indicada de alguna forma), marca esa opción como correcta
    - Si NO hay indicación de la respuesta correcta, marca la primera opción como correcta por defecto
-4. Para preguntas abiertas:
+4. FORMATO ESPECIAL "Pregunta + Respuesta:":
+   Si el documento sigue el patrón de una pregunta/enunciado seguido por una línea
+   "Respuesta: <texto>" (o "R:", "Resp:"), trata cada par como una pregunta de
+   "multiple_choice" donde:
+   - El texto que sigue a "Respuesta:" es la opción CORRECTA (cópialo literal).
+   - Debes GENERAR exactamente 3 distractores plausibles e incorrectos, en el
+     mismo dominio temático, longitud y estilo similares a la respuesta
+     correcta, pero claramente incorrectos. No deben ser sinónimos ni
+     parafraseos de la respuesta correcta.
+   - El resultado debe tener 4 opciones en total (1 correcta + 3 incorrectas).
+5. Para preguntas abiertas SOLO cuando NO exista una respuesta indicada en el
+   documento y tampoco siga el formato "Respuesta:":
    - NO generes opciones, deja el array de opciones vacío
    - Indica que el tipo es "open_ended"
-5. Mantén el texto exacto de las preguntas y opciones como aparecen en el documento
+6. Mantén el texto exacto de las preguntas y de las respuestas tomadas del documento (sin reescribirlas).
 
 IMPORTANTE:
 - Extrae TODAS las preguntas del documento, no importa cuántas sean
 - Para preguntas de selección múltiple: debe tener al menos 2 opciones
 - Para preguntas verdadero/falso: exactamente 2 opciones (Verdadero/Falso, Sí/No, Correcto/Incorrecto)
-- Para preguntas abiertas: el array de opciones debe estar vacío
+- Para preguntas abiertas: el array de opciones debe estar vacío (úsalas SOLO si no hay respuesta indicada)
+- Prefiere clasificar como "multiple_choice" siempre que exista una respuesta indicada en el documento (formato "Respuesta:").
 - Solo UNA opción por pregunta puede ser marcada como correcta (excepto en preguntas abiertas)
-- Usa el texto exacto del documento, no modifiques el contenido
+- Usa el texto exacto del documento para la pregunta y la respuesta correcta; los distractores los generas tú.
 
 Responde ÚNICAMENTE con un JSON válido con la siguiente estructura (sin markdown, sin explicaciones):
 {
