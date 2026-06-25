@@ -59,6 +59,7 @@ const EvaluationManager = ({ trainingId, trainingTitle, contentUrl }: Evaluation
   const [generatingAI, setGeneratingAI] = useState(false);
   const [extractingPDF, setExtractingPDF] = useState(false);
   const [extractionStep, setExtractionStep] = useState<string>("");
+  const [generatingDistractorsFor, setGeneratingDistractorsFor] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -324,6 +325,63 @@ const EvaluationManager = ({ trainingId, trainingTitle, contentUrl }: Evaluation
     const updated = [...questions];
     updated[questionIndex].evaluation_question_options.splice(optionIndex, 1);
     setQuestions(updated);
+  };
+
+  const generateDistractors = async (questionIndex: number) => {
+    const question = questions[questionIndex];
+    if (!question.question_text || question.question_text.trim().length < 5) {
+      toast.error("Escribe primero el texto de la pregunta");
+      return;
+    }
+    const correctOption = question.evaluation_question_options.find((o: any) => o.is_correct);
+    if (!correctOption || !correctOption.option_text?.trim()) {
+      toast.error("Marca y completa la opción correcta antes de generar los distractores");
+      return;
+    }
+
+    setGeneratingDistractorsFor(questionIndex);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-distractors", {
+        body: {
+          question_text: question.question_text,
+          correct_answer: correctOption.option_text,
+          training_title: trainingTitle || "",
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      const distractors: string[] = data?.distractors || [];
+      if (distractors.length < 3) {
+        toast.error("La IA no devolvió 3 distractores");
+        return;
+      }
+
+      const updated = [...questions];
+      const q = updated[questionIndex];
+      // Keep correct option, replace the rest with the new distractors (3 total).
+      const newOptions = [
+        { ...correctOption, order_index: 0 },
+        ...distractors.map((text, i) => ({
+          id: `temp-dist-${Date.now()}-${i}`,
+          option_text: text,
+          is_correct: false,
+          order_index: i + 1,
+        })),
+      ];
+      q.evaluation_question_options = newOptions;
+      setQuestions(updated);
+      toast.success("Distractores generados con IA");
+    } catch (err) {
+      console.error("Error generando distractores:", err);
+      toast.error("Error al generar distractores con IA");
+    } finally {
+      setGeneratingDistractorsFor(null);
+    }
   };
 
   const updateOption = (questionIndex: number, optionIndex: number, field: string, value: any) => {
@@ -699,14 +757,30 @@ const EvaluationManager = ({ trainingId, trainingTitle, contentUrl }: Evaluation
                   <div className="flex items-center justify-between">
                     <Label>Opciones de Respuesta</Label>
                     {question.question_type !== 'true_false' && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => addOption(qIndex)}
-                      >
-                        <Plus className="w-4 h-4 mr-2" />
-                        Agregar Opción
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => generateDistractors(qIndex)}
+                          disabled={generatingDistractorsFor === qIndex}
+                          title="Genera 3 opciones incorrectas con IA a partir de la respuesta correcta"
+                        >
+                          {generatingDistractorsFor === qIndex ? (
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          ) : (
+                            <Sparkles className="w-4 h-4 mr-2" />
+                          )}
+                          {generatingDistractorsFor === qIndex ? "Generando..." : "Generar incorrectas con IA"}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => addOption(qIndex)}
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Agregar Opción
+                        </Button>
+                      </div>
                     )}
                   </div>
 
