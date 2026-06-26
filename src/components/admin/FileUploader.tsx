@@ -59,12 +59,12 @@ const FileUploader = ({ onUploadComplete, currentFileUrl }: FileUploaderProps) =
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Validate file size (500MB)
-    const maxSize = 500 * 1024 * 1024; // 500MB in bytes
+    // Validate file size (2GB)
+    const maxSize = 2 * 1024 * 1024 * 1024; // 2GB in bytes
     if (file.size > maxSize) {
       toast({
         title: "Archivo muy grande",
-        description: "El archivo no debe superar los 500MB",
+        description: "El archivo no debe superar los 2GB",
         variant: "destructive",
       });
       return;
@@ -165,7 +165,7 @@ const FileUploader = ({ onUploadComplete, currentFileUrl }: FileUploaderProps) =
           {isUploading ? "Subiendo..." : "Seleccionar archivo"}
         </Button>
         <span className="text-sm text-muted-foreground">
-          PDF, Video MP4 y otros (Máx. 500MB)
+          PDF, Video MP4 y otros (Máx. 2GB)
         </span>
       </div>
 
