@@ -21,6 +21,9 @@ import AdherenceEvaluations from "./pages/AdherenceEvaluations";
 import AttendanceRecords from "./pages/AttendanceRecords";
 import CertificatesAdmin from "./pages/CertificatesAdmin";
 import AdherenceTabulation from "./pages/AdherenceTabulation";
+import SurveysAdmin from "./pages/admin/SurveysAdmin";
+import SurveyPermissions from "./pages/admin/SurveyPermissions";
+import UserSurveys from "./pages/UserSurveys";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -62,7 +65,14 @@ const App = () => (
           <Route path="/dashboard/tabulation" element={<Dashboard />}>
             <Route index element={<AdherenceTabulation />} />
           </Route>
+          <Route path="/dashboard/surveys" element={<Dashboard />}>
+            <Route index element={<SurveysAdmin />} />
+          </Route>
+          <Route path="/dashboard/surveys/permissions" element={<Dashboard />}>
+            <Route index element={<SurveyPermissions />} />
+          </Route>
           <Route path="/calendar" element={<UserCalendar />} />
+          <Route path="/surveys" element={<UserSurveys />} />
           <Route path="/trainings" element={<Trainings />} />
           <Route path="/training/:id" element={<TrainingDetail />} />
           <Route path="/evaluation/:trainingId" element={<EvaluationPage />} />

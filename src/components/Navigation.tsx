@@ -1,7 +1,7 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Home, BookOpen, User, LogOut, Settings, Menu, BarChart3, CalendarDays } from "lucide-react";
+import { Home, BookOpen, User, LogOut, Settings, Menu, BarChart3, CalendarDays, ClipboardList } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { logAccess } from "@/hooks/useAccessLog";
@@ -107,6 +107,14 @@ const Navigation = ({ userRole }: NavigationProps) => {
                 <CalendarDays className="w-4 h-4 mr-2" />
                 Calendario
               </Button>
+              <Button
+                variant={isActive("/surveys") ? "default" : "ghost"}
+                size="sm"
+                onClick={() => navigate("/surveys")}
+              >
+                <ClipboardList className="w-4 h-4 mr-2" />
+                Encuestas
+              </Button>
             </div>
           </div>
 
@@ -181,6 +189,14 @@ const Navigation = ({ userRole }: NavigationProps) => {
                       >
                         <CalendarDays className="w-5 h-5 mr-3" />
                         Calendario
+                      </Button>
+                      <Button
+                        variant={isActive("/surveys") ? "secondary" : "ghost"}
+                        className="w-full justify-start"
+                        onClick={() => handleNavigate("/surveys")}
+                      >
+                        <ClipboardList className="w-5 h-5 mr-3" />
+                        Encuestas
                       </Button>
                       {(userRole === "admin" || userRole === "leader") && (
                         <>
