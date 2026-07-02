@@ -689,6 +689,494 @@ export type Database = {
           },
         ]
       }
+      survey_answers: {
+        Row: {
+          created_at: string
+          file_url: string | null
+          id: string
+          question_id: string
+          response_id: string
+          updated_at: string
+          value_boolean: boolean | null
+          value_date: string | null
+          value_json: Json | null
+          value_number: number | null
+          value_text: string | null
+        }
+        Insert: {
+          created_at?: string
+          file_url?: string | null
+          id?: string
+          question_id: string
+          response_id: string
+          updated_at?: string
+          value_boolean?: boolean | null
+          value_date?: string | null
+          value_json?: Json | null
+          value_number?: number | null
+          value_text?: string | null
+        }
+        Update: {
+          created_at?: string
+          file_url?: string | null
+          id?: string
+          question_id?: string
+          response_id?: string
+          updated_at?: string
+          value_boolean?: boolean | null
+          value_date?: string | null
+          value_json?: Json | null
+          value_number?: number | null
+          value_text?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "survey_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "survey_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "survey_answers_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: false
+            referencedRelation: "survey_responses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      survey_assignments: {
+        Row: {
+          assignment_type: Database["public"]["Enums"]["survey_assignment_type"]
+          created_at: string
+          created_by: string | null
+          id: string
+          survey_id: string
+          target_area_id: string | null
+          target_user_id: string | null
+          target_value: string | null
+        }
+        Insert: {
+          assignment_type: Database["public"]["Enums"]["survey_assignment_type"]
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          survey_id: string
+          target_area_id?: string | null
+          target_user_id?: string | null
+          target_value?: string | null
+        }
+        Update: {
+          assignment_type?: Database["public"]["Enums"]["survey_assignment_type"]
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          survey_id?: string
+          target_area_id?: string | null
+          target_user_id?: string | null
+          target_value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "survey_assignments_survey_id_fkey"
+            columns: ["survey_id"]
+            isOneToOne: false
+            referencedRelation: "surveys"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "survey_assignments_target_area_id_fkey"
+            columns: ["target_area_id"]
+            isOneToOne: false
+            referencedRelation: "areas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      survey_audit_log: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          ip_address: string | null
+          payload: Json | null
+          response_id: string | null
+          survey_id: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          payload?: Json | null
+          response_id?: string | null
+          survey_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          payload?: Json | null
+          response_id?: string | null
+          survey_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "survey_audit_log_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: false
+            referencedRelation: "survey_responses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "survey_audit_log_survey_id_fkey"
+            columns: ["survey_id"]
+            isOneToOne: false
+            referencedRelation: "surveys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      survey_categories: {
+        Row: {
+          color: string | null
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      survey_question_options: {
+        Row: {
+          created_at: string
+          id: string
+          label: string
+          order_index: number
+          question_id: string
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label: string
+          order_index?: number
+          question_id: string
+          value: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string
+          order_index?: number
+          question_id?: string
+          value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "survey_question_options_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "survey_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      survey_questions: {
+        Row: {
+          autofill_source: string | null
+          created_at: string
+          default_value: string | null
+          help_text: string | null
+          id: string
+          is_readonly: boolean
+          is_required: boolean
+          order_index: number
+          question_text: string
+          question_type: Database["public"]["Enums"]["survey_question_type"]
+          section_id: string | null
+          survey_id: string
+          updated_at: string
+          validations: Json
+          visibility_condition: Json | null
+        }
+        Insert: {
+          autofill_source?: string | null
+          created_at?: string
+          default_value?: string | null
+          help_text?: string | null
+          id?: string
+          is_readonly?: boolean
+          is_required?: boolean
+          order_index?: number
+          question_text: string
+          question_type: Database["public"]["Enums"]["survey_question_type"]
+          section_id?: string | null
+          survey_id: string
+          updated_at?: string
+          validations?: Json
+          visibility_condition?: Json | null
+        }
+        Update: {
+          autofill_source?: string | null
+          created_at?: string
+          default_value?: string | null
+          help_text?: string | null
+          id?: string
+          is_readonly?: boolean
+          is_required?: boolean
+          order_index?: number
+          question_text?: string
+          question_type?: Database["public"]["Enums"]["survey_question_type"]
+          section_id?: string | null
+          survey_id?: string
+          updated_at?: string
+          validations?: Json
+          visibility_condition?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "survey_questions_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "survey_sections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "survey_questions_survey_id_fkey"
+            columns: ["survey_id"]
+            isOneToOne: false
+            referencedRelation: "surveys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      survey_responses: {
+        Row: {
+          created_at: string
+          duration_seconds: number | null
+          id: string
+          ip_address: string | null
+          last_saved_at: string | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["survey_response_status"]
+          submitted_at: string | null
+          survey_id: string
+          updated_at: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          ip_address?: string | null
+          last_saved_at?: string | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["survey_response_status"]
+          submitted_at?: string | null
+          survey_id: string
+          updated_at?: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          ip_address?: string | null
+          last_saved_at?: string | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["survey_response_status"]
+          submitted_at?: string | null
+          survey_id?: string
+          updated_at?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "survey_responses_survey_id_fkey"
+            columns: ["survey_id"]
+            isOneToOne: false
+            referencedRelation: "surveys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      survey_sections: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          order_index: number
+          survey_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          order_index?: number
+          survey_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          order_index?: number
+          survey_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "survey_sections_survey_id_fkey"
+            columns: ["survey_id"]
+            isOneToOne: false
+            referencedRelation: "surveys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      survey_user_permissions: {
+        Row: {
+          created_at: string
+          granted_by: string | null
+          id: string
+          permission: Database["public"]["Enums"]["survey_permission"]
+          scope_area_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          permission: Database["public"]["Enums"]["survey_permission"]
+          scope_area_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          permission?: Database["public"]["Enums"]["survey_permission"]
+          scope_area_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "survey_user_permissions_scope_area_id_fkey"
+            columns: ["scope_area_id"]
+            isOneToOne: false
+            referencedRelation: "areas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      surveys: {
+        Row: {
+          allow_multiple_responses: boolean
+          autosave_enabled: boolean
+          category_id: string | null
+          closed_at: string | null
+          closes_at: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_template: boolean
+          opens_at: string | null
+          owner_area_id: string | null
+          published_at: string | null
+          status: Database["public"]["Enums"]["survey_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          allow_multiple_responses?: boolean
+          autosave_enabled?: boolean
+          category_id?: string | null
+          closed_at?: string | null
+          closes_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_template?: boolean
+          opens_at?: string | null
+          owner_area_id?: string | null
+          published_at?: string | null
+          status?: Database["public"]["Enums"]["survey_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          allow_multiple_responses?: boolean
+          autosave_enabled?: boolean
+          category_id?: string | null
+          closed_at?: string | null
+          closes_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_template?: boolean
+          opens_at?: string | null
+          owner_area_id?: string | null
+          published_at?: string | null
+          status?: Database["public"]["Enums"]["survey_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "surveys_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "survey_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "surveys_owner_area_id_fkey"
+            columns: ["owner_area_id"]
+            isOneToOne: false
+            referencedRelation: "areas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       training_assignments: {
         Row: {
           assigned_by: string | null
@@ -961,9 +1449,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_manage_survey: {
+        Args: { _survey_id: string; _user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      has_survey_permission: {
+        Args: {
+          _area_id?: string
+          _permission: Database["public"]["Enums"]["survey_permission"]
           _user_id: string
         }
         Returns: boolean
@@ -972,10 +1472,46 @@ export type Database = {
         Args: { _area_id: string; _user_id: string }
         Returns: boolean
       }
+      is_survey_assigned_to: {
+        Args: { _survey_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "leader" | "user"
       document_category: "Norma" | "Circular" | "Resolución" | "Manual" | "Otro"
+      survey_assignment_type: "user" | "area" | "position" | "site" | "all"
+      survey_permission:
+        | "create"
+        | "edit"
+        | "delete"
+        | "publish"
+        | "close"
+        | "view_responses"
+        | "export"
+        | "view_dashboard"
+        | "manage_templates"
+        | "manage_own_area"
+        | "manage_all"
+      survey_question_type:
+        | "short_text"
+        | "long_text"
+        | "number"
+        | "date"
+        | "time"
+        | "email"
+        | "phone"
+        | "dropdown"
+        | "single_choice"
+        | "multi_choice"
+        | "boolean"
+        | "rating"
+        | "scale"
+        | "file"
+        | "signature"
+        | "section_info"
+      survey_response_status: "pending" | "in_progress" | "submitted"
+      survey_status: "draft" | "published" | "closed"
       user_area: "medicos" | "asistencial" | "administrativos"
       visibility_target: "Administrativos" | "Médicos" | "Operativos" | "Todos"
     }
@@ -1107,6 +1643,40 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "leader", "user"],
       document_category: ["Norma", "Circular", "Resolución", "Manual", "Otro"],
+      survey_assignment_type: ["user", "area", "position", "site", "all"],
+      survey_permission: [
+        "create",
+        "edit",
+        "delete",
+        "publish",
+        "close",
+        "view_responses",
+        "export",
+        "view_dashboard",
+        "manage_templates",
+        "manage_own_area",
+        "manage_all",
+      ],
+      survey_question_type: [
+        "short_text",
+        "long_text",
+        "number",
+        "date",
+        "time",
+        "email",
+        "phone",
+        "dropdown",
+        "single_choice",
+        "multi_choice",
+        "boolean",
+        "rating",
+        "scale",
+        "file",
+        "signature",
+        "section_info",
+      ],
+      survey_response_status: ["pending", "in_progress", "submitted"],
+      survey_status: ["draft", "published", "closed"],
       user_area: ["medicos", "asistencial", "administrativos"],
       visibility_target: ["Administrativos", "Médicos", "Operativos", "Todos"],
     },
