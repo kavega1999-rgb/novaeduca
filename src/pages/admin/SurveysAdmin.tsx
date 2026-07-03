@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,7 @@ const statusVariant: Record<string, "secondary" | "default" | "outline"> = {
 
 export default function SurveysAdmin() {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [surveys, setSurveys] = useState<SurveyRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [kpis, setKpis] = useState({ total: 0, published: 0, draft: 0, responses: 0 });
@@ -68,6 +69,22 @@ export default function SurveysAdmin() {
     load();
   }, []);
 
+  const createSurvey = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data, error } = await supabase.from("surveys").insert({
+      title: "Nueva encuesta",
+      status: "draft",
+      created_by: user.id,
+      autosave_enabled: true,
+    }).select().single();
+    if (error) {
+      toast({ title: "Error al crear encuesta", description: error.message, variant: "destructive" });
+      return;
+    }
+    navigate(`/dashboard/surveys/${data.id}/edit`);
+  };
+
   return (
     <div className="p-4 md:p-6 space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
@@ -85,7 +102,7 @@ export default function SurveysAdmin() {
             <FileSpreadsheet className="w-4 h-4 mr-2" />
             Importar desde Excel
           </Button>
-          <Button disabled title="Disponible en Fase 2">
+          <Button onClick={createSurvey}>
             <Plus className="w-4 h-4 mr-2" />
             Nueva encuesta
           </Button>
