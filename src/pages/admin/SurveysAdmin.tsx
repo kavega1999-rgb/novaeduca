@@ -128,7 +128,7 @@ export default function SurveysAdmin() {
             <div className="text-center py-10">
               <ClipboardList className="w-10 h-10 mx-auto text-muted-foreground mb-3" />
               <p className="text-sm text-muted-foreground">
-                Aún no hay encuestas creadas. El constructor manual estará disponible en la Fase 2.
+                Aún no hay encuestas creadas. Haz clic en "Nueva encuesta" para crear la primera.
               </p>
             </div>
           ) : (
