@@ -24,6 +24,7 @@ import AdherenceTabulation from "./pages/AdherenceTabulation";
 import SurveysAdmin from "./pages/admin/SurveysAdmin";
 import SurveyPermissions from "./pages/admin/SurveyPermissions";
 import SurveyEditor from "./pages/admin/SurveyEditor";
+import SurveyDashboard from "./pages/admin/SurveyDashboard";
 import UserSurveys from "./pages/UserSurveys";
 import SurveyRespond from "./pages/SurveyRespond";
 import NotFound from "./pages/NotFound";
@@ -75,6 +76,9 @@ const App = () => (
           </Route>
           <Route path="/dashboard/surveys/:id/edit" element={<Dashboard />}>
             <Route index element={<SurveyEditor />} />
+          </Route>
+          <Route path="/dashboard/surveys/:id/dashboard" element={<Dashboard />}>
+            <Route index element={<SurveyDashboard />} />
           </Route>
           <Route path="/calendar" element={<UserCalendar />} />
           <Route path="/surveys" element={<UserSurveys />} />
