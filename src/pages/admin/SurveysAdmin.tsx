@@ -4,8 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ClipboardList, Plus, FileSpreadsheet, Users, Activity, CheckCircle2, Clock } from "lucide-react";
+import { ClipboardList, Plus, FileSpreadsheet, Users, Activity, CheckCircle2, Clock, BarChart3, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { seedSstSociodemografico } from "@/lib/seed-sst-survey";
 
 interface SurveyRow {
   id: string;
@@ -85,6 +86,18 @@ export default function SurveysAdmin() {
     navigate(`/dashboard/surveys/${data.id}/edit`);
   };
 
+  const seedSst = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    try {
+      const surveyId = await seedSstSociodemografico(user.id);
+      toast({ title: "Encuesta SST creada", description: "Se cargó el Perfil Sociodemográfico como borrador." });
+      navigate(`/dashboard/surveys/${surveyId}/edit`);
+    } catch (e: any) {
+      toast({ title: "Error al sembrar encuesta", description: e.message, variant: "destructive" });
+    }
+  };
+
   return (
     <div className="p-4 md:p-6 space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
@@ -98,6 +111,10 @@ export default function SurveysAdmin() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={seedSst}>
+            <Sparkles className="w-4 h-4 mr-2" />
+            Sembrar SST Sociodemográfico
+          </Button>
           <Button variant="outline" disabled title="Disponible en Fase 3">
             <FileSpreadsheet className="w-4 h-4 mr-2" />
             Importar desde Excel
@@ -145,9 +162,14 @@ export default function SurveysAdmin() {
                       <p className="text-sm text-muted-foreground truncate">{s.description}</p>
                     )}
                   </div>
-                  <Link to={`/dashboard/surveys/${s.id}/edit`}>
-                    <Button size="sm" variant="outline">Abrir</Button>
-                  </Link>
+                  <div className="flex gap-2 shrink-0">
+                    <Link to={`/dashboard/surveys/${s.id}/dashboard`}>
+                      <Button size="sm" variant="outline"><BarChart3 className="w-4 h-4 mr-1" />Dashboard</Button>
+                    </Link>
+                    <Link to={`/dashboard/surveys/${s.id}/edit`}>
+                      <Button size="sm">Editar</Button>
+                    </Link>
+                  </div>
                 </div>
               ))}
             </div>
