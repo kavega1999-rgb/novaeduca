@@ -93,7 +93,7 @@ export default function SurveyDashboard() {
       toast({ title: "Sin respuestas", description: "No hay respuestas enviadas para exportar." });
       return;
     }
-    const headers = ["Cédula", "Nombre", "Cargo", "Fecha envío", ...questions.map(q => q.title)];
+    const headers = ["Cédula", "Nombre", "Cargo", "Fecha envío", ...questions.map(q => q.question_text)];
     const rows = submitted.map(r => {
       const p = profiles[r.user_id] ?? {};
       const rAns = answers.filter(a => a.response_id === r.id);
@@ -125,7 +125,7 @@ export default function SurveyDashboard() {
   if (!survey) return <div className="p-6">Encuesta no encontrada.</div>;
 
   const chartableTypes = ["single_choice", "multi_choice", "dropdown", "boolean", "rating", "scale"];
-  const chartableQuestions = questions.filter(q => chartableTypes.includes(q.type));
+  const chartableQuestions = questions.filter(q => chartableTypes.includes(q.question_type));
 
   return (
     <div className="p-4 md:p-6 space-y-6">
@@ -164,14 +164,14 @@ export default function SurveyDashboard() {
           ) : (
             <div className="grid md:grid-cols-2 gap-4">
               {chartableQuestions.map(q => {
-                const data = chartData(q.id, q.type);
+                const data = chartData(q.id, q.question_type);
                 return (
                   <Card key={q.id}>
-                    <CardHeader><CardTitle className="text-base">{q.title}</CardTitle></CardHeader>
+                    <CardHeader><CardTitle className="text-base">{q.question_text}</CardTitle></CardHeader>
                     <CardContent style={{ height: 260 }}>
                       {data.length === 0 ? (
                         <p className="text-sm text-muted-foreground">Sin respuestas aún.</p>
-                      ) : q.type === "boolean" ? (
+                      ) : q.question_type === "boolean" ? (
                         <ResponsiveContainer><PieChart>
                           <Pie data={data} dataKey="value" nameKey="name" outerRadius={80} label>
                             {data.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
