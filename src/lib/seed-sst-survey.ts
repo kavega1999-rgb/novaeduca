@@ -124,8 +124,8 @@ export async function seedSstSociodemografico(userId: string): Promise<string> {
       const { data: question, error: qErr } = await supabase.from("survey_questions").insert({
         survey_id: survey.id,
         section_id: section.id,
-        title: q.title,
-        type: q.type,
+        question_text: q.title,
+        question_type: q.type,
         is_required: q.required ?? false,
         order_index: j,
       }).select().single();
