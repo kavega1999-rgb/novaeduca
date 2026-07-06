@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { ClipboardList, Plus, FileSpreadsheet, Users, Activity, CheckCircle2, Clock, BarChart3, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { seedSstSociodemografico } from "@/lib/seed-sst-survey";
+import ImportSurveyDialog from "@/components/surveys/ImportSurveyDialog";
 
 interface SurveyRow {
   id: string;
@@ -37,6 +38,7 @@ export default function SurveysAdmin() {
   const [surveys, setSurveys] = useState<SurveyRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [kpis, setKpis] = useState({ total: 0, published: 0, draft: 0, responses: 0 });
+  const [importOpen, setImportOpen] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -115,7 +117,7 @@ export default function SurveysAdmin() {
             <Sparkles className="w-4 h-4 mr-2" />
             Sembrar SST Sociodemográfico
           </Button>
-          <Button variant="outline" disabled title="Disponible en Fase 3">
+          <Button variant="outline" onClick={() => setImportOpen(true)}>
             <FileSpreadsheet className="w-4 h-4 mr-2" />
             Importar desde Excel
           </Button>
@@ -176,6 +178,7 @@ export default function SurveysAdmin() {
           )}
         </CardContent>
       </Card>
+      <ImportSurveyDialog open={importOpen} onOpenChange={setImportOpen} />
     </div>
   );
 }
