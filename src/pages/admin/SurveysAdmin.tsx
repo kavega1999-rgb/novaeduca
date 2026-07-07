@@ -4,10 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ClipboardList, Plus, FileSpreadsheet, Users, Activity, CheckCircle2, Clock, BarChart3, Sparkles } from "lucide-react";
+import { ClipboardList, Plus, FileSpreadsheet, Users, Activity, CheckCircle2, Clock, BarChart3, Sparkles, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { seedSstSociodemografico } from "@/lib/seed-sst-survey";
 import ImportSurveyDialog from "@/components/surveys/ImportSurveyDialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface SurveyRow {
   id: string;
@@ -39,6 +43,8 @@ export default function SurveysAdmin() {
   const [loading, setLoading] = useState(true);
   const [kpis, setKpis] = useState({ total: 0, published: 0, draft: 0, responses: 0 });
   const [importOpen, setImportOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<SurveyRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -98,6 +104,20 @@ export default function SurveysAdmin() {
     } catch (e: any) {
       toast({ title: "Error al sembrar encuesta", description: e.message, variant: "destructive" });
     }
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const { error } = await supabase.from("surveys").delete().eq("id", deleteTarget.id);
+    setDeleting(false);
+    if (error) {
+      toast({ title: "No se pudo eliminar", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Encuesta eliminada", description: `"${deleteTarget.title}" se eliminó correctamente.` });
+    setDeleteTarget(null);
+    load();
   };
 
   return (
@@ -171,6 +191,9 @@ export default function SurveysAdmin() {
                     <Link to={`/dashboard/surveys/${s.id}/edit`}>
                       <Button size="sm">Editar</Button>
                     </Link>
+                    <Button size="sm" variant="destructive" onClick={() => setDeleteTarget(s)}>
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -179,6 +202,22 @@ export default function SurveysAdmin() {
         </CardContent>
       </Card>
       <ImportSurveyDialog open={importOpen} onOpenChange={setImportOpen} />
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar encuesta?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción eliminará permanentemente <strong>"{deleteTarget?.title}"</strong>, junto con sus secciones, preguntas y respuestas asociadas. No se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleting ? "Eliminando…" : "Eliminar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
