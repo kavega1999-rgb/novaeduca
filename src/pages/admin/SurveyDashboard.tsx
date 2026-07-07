@@ -93,6 +93,10 @@ export default function SurveyDashboard() {
       toast({ title: "Sin respuestas", description: "No hay respuestas enviadas para exportar." });
       return;
     }
+    const labelFor = (qId: string, value: string) => {
+      const opt = (optionsByQuestion[qId] ?? []).find((o: any) => o.value === value);
+      return opt?.label ?? value;
+    };
     const headers = ["Cédula", "Nombre", "Cargo", "Fecha envío", ...questions.map(q => q.question_text)];
     const rows = submitted.map(r => {
       const p = profiles[r.user_id] ?? {};
@@ -106,12 +110,20 @@ export default function SurveyDashboard() {
       questions.forEach(q => {
         const a = rAns.find(x => x.question_id === q.id);
         if (!a) { row.push(""); return; }
-        if (Array.isArray(a.value_json)) row.push((a.value_json as any[]).join(", "));
-        else if (a.value_text) row.push(a.value_text);
-        else if (a.value_number !== null) row.push(a.value_number);
-        else if (a.value_boolean !== null) row.push(a.value_boolean ? "Sí" : "No");
-        else if (a.value_date) row.push(a.value_date);
-        else row.push("");
+        const hasOptions = (optionsByQuestion[q.id] ?? []).length > 0;
+        if (Array.isArray(a.value_json)) {
+          row.push((a.value_json as any[]).map(v => hasOptions ? labelFor(q.id, v) : v).join(", "));
+        } else if (a.value_text !== null && a.value_text !== undefined && a.value_text !== "") {
+          row.push(hasOptions ? labelFor(q.id, a.value_text) : a.value_text);
+        } else if (a.value_number !== null && a.value_number !== undefined) {
+          row.push(a.value_number);
+        } else if (a.value_boolean !== null && a.value_boolean !== undefined) {
+          row.push(a.value_boolean ? "Sí" : "No");
+        } else if (a.value_date) {
+          row.push(a.value_date);
+        } else {
+          row.push("");
+        }
       });
       return row;
     });
