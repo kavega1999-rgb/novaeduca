@@ -169,6 +169,7 @@ export default function SurveyDashboard() {
         <TabsList>
           <TabsTrigger value="charts">Gráficos</TabsTrigger>
           <TabsTrigger value="table">Tabla consolidada</TabsTrigger>
+          <TabsTrigger value="users">Usuarios</TabsTrigger>
         </TabsList>
         <TabsContent value="charts" className="space-y-4">
           {chartableQuestions.length === 0 ? (
@@ -235,6 +236,54 @@ export default function SurveyDashboard() {
                       </tr>
                     );
                   })}
+                </tbody>
+              </table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="users">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Usuarios que han respondido</CardTitle>
+              <CardDescription>Incluye quienes ya enviaron y quienes están en proceso.</CardDescription>
+            </CardHeader>
+            <CardContent className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-left">
+                    <th className="py-2 pr-3">Cédula</th>
+                    <th className="py-2 pr-3">Nombre</th>
+                    <th className="py-2 pr-3">Cargo</th>
+                    <th className="py-2 pr-3">Inicio</th>
+                    <th className="py-2 pr-3">Última actualización</th>
+                    <th className="py-2 pr-3">Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {responses.length === 0 && (
+                    <tr><td colSpan={6} className="py-6 text-center text-muted-foreground">Aún no hay usuarios respondiendo.</td></tr>
+                  )}
+                  {[...responses]
+                    .sort((a, b) => new Date(b.updated_at ?? b.created_at ?? 0).getTime() - new Date(a.updated_at ?? a.created_at ?? 0).getTime())
+                    .map(r => {
+                      const p = profiles[r.user_id] ?? {};
+                      return (
+                        <tr key={r.id} className="border-b">
+                          <td className="py-2 pr-3">{p.id_number ?? "—"}</td>
+                          <td className="py-2 pr-3">{p.full_name ?? "—"}</td>
+                          <td className="py-2 pr-3">{p.position ?? "—"}</td>
+                          <td className="py-2 pr-3">{r.created_at ? new Date(r.created_at).toLocaleString() : "—"}</td>
+                          <td className="py-2 pr-3">{r.updated_at ? new Date(r.updated_at).toLocaleString() : "—"}</td>
+                          <td className="py-2 pr-3">
+                            {r.status === "submitted"
+                              ? <Badge>Enviada</Badge>
+                              : r.status === "in_progress"
+                                ? <Badge variant="secondary">En Proceso</Badge>
+                                : <Badge variant="outline">{r.status}</Badge>}
+                          </td>
+                        </tr>
+                      );
+                    })}
                 </tbody>
               </table>
             </CardContent>
