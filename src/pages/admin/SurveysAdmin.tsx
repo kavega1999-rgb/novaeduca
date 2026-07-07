@@ -191,6 +191,9 @@ export default function SurveysAdmin() {
                     <Link to={`/dashboard/surveys/${s.id}/edit`}>
                       <Button size="sm">Editar</Button>
                     </Link>
+                    <Button size="sm" variant="destructive" onClick={() => setDeleteTarget(s)}>
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -199,6 +202,22 @@ export default function SurveysAdmin() {
         </CardContent>
       </Card>
       <ImportSurveyDialog open={importOpen} onOpenChange={setImportOpen} />
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar encuesta?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción eliminará permanentemente <strong>"{deleteTarget?.title}"</strong>, junto con sus secciones, preguntas y respuestas asociadas. No se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleting ? "Eliminando…" : "Eliminar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
