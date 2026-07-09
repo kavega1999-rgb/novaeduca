@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { CertificatesList } from "@/components/profile/CertificatesList";
 
 import FloatingDocumentsButton from "@/components/documents/FloatingDocumentsButton";
+import FloatingCSAT from "@/components/FloatingCSAT";
 import OnboardingTutorial from "@/components/OnboardingTutorial";
 import heroImage from "@/assets/team-celebration.jpg";
 import novaeducaLogo from "@/assets/novaeduca-logo.png";
