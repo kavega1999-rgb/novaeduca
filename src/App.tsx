@@ -81,6 +81,9 @@ const App = () => (
           <Route path="/dashboard/surveys/:id/dashboard" element={<Dashboard />}>
             <Route index element={<SurveyDashboard />} />
           </Route>
+          <Route path="/dashboard/satisfaction" element={<Dashboard />}>
+            <Route index element={<SatisfactionDashboard />} />
+          </Route>
           <Route path="/calendar" element={<UserCalendar />} />
           <Route path="/surveys" element={<UserSurveys />} />
           <Route path="/surveys/:id/respond" element={<SurveyRespond />} />
