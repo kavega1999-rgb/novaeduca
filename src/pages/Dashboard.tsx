@@ -432,6 +432,7 @@ const Dashboard = () => {
       )}
 
       <FloatingFAQChat />
+      <FloatingCSAT />
       <OnboardingTutorial
         isOpen={showOnboarding}
         onComplete={() => setShowOnboarding(false)}
