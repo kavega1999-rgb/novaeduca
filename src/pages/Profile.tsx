@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Navigation from "@/components/Navigation";
 import FloatingDocumentsButton from "@/components/documents/FloatingDocumentsButton";
+import FloatingCSAT from "@/components/FloatingCSAT";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -297,6 +298,7 @@ const Profile = () => {
         </div>
       </div>
       <FloatingDocumentsButton isAdmin={userRole === "admin"} />
+      <FloatingCSAT context="profile" contextLabel="Perfil de usuario" />
     </div>
   );
 };

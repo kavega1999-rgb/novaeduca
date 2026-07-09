@@ -689,6 +689,39 @@ export type Database = {
           },
         ]
       }
+      satisfaction_feedback: {
+        Row: {
+          comment: string | null
+          context: string
+          context_id: string | null
+          context_label: string | null
+          created_at: string
+          id: string
+          score: number
+          user_id: string
+        }
+        Insert: {
+          comment?: string | null
+          context?: string
+          context_id?: string | null
+          context_label?: string | null
+          created_at?: string
+          id?: string
+          score: number
+          user_id: string
+        }
+        Update: {
+          comment?: string | null
+          context?: string
+          context_id?: string | null
+          context_label?: string | null
+          created_at?: string
+          id?: string
+          score?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       survey_answers: {
         Row: {
           created_at: string

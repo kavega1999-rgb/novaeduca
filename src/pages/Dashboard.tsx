@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { CertificatesList } from "@/components/profile/CertificatesList";
 
 import FloatingDocumentsButton from "@/components/documents/FloatingDocumentsButton";
+import FloatingCSAT from "@/components/FloatingCSAT";
 import OnboardingTutorial from "@/components/OnboardingTutorial";
 import heroImage from "@/assets/team-celebration.jpg";
 import novaeducaLogo from "@/assets/novaeduca-logo.png";
@@ -54,6 +55,7 @@ const Dashboard = () => {
     "/dashboard/tabulation",
     "/dashboard/calendar",
     "/dashboard/surveys",
+    "/dashboard/satisfaction",
   ];
   const isSubRoute = subRoutePrefixes.some((p) => location.pathname === p || location.pathname.startsWith(p + "/"));
 
@@ -430,6 +432,7 @@ const Dashboard = () => {
       )}
 
       <FloatingFAQChat />
+      <FloatingCSAT />
       <OnboardingTutorial
         isOpen={showOnboarding}
         onComplete={() => setShowOnboarding(false)}
