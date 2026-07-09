@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
-import { LayoutDashboard, BarChart3, BookOpen, Shield, UserCog, ChevronRight, TrendingUp, ClipboardCheck, FileSpreadsheet, Award, Home, Menu, CalendarDays, ClipboardList } from "lucide-react";
+import { LayoutDashboard, BarChart3, BookOpen, Shield, UserCog, ChevronRight, TrendingUp, ClipboardCheck, FileSpreadsheet, Award, Home, Menu, CalendarDays, ClipboardList, Smile } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -40,6 +40,7 @@ const allMenuItems = [
       { title: "Adherencia", url: "/dashboard/adherence" },
       { title: "Tabulación Pre/Post", url: "/dashboard/tabulation" },
       { title: "Asistencia", url: "/dashboard/attendance" },
+      { title: "Satisfacción", url: "/dashboard/satisfaction" },
     ]
   },
   {
