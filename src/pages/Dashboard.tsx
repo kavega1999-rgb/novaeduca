@@ -54,6 +54,7 @@ const Dashboard = () => {
     "/dashboard/tabulation",
     "/dashboard/calendar",
     "/dashboard/surveys",
+    "/dashboard/satisfaction",
   ];
   const isSubRoute = subRoutePrefixes.some((p) => location.pathname === p || location.pathname.startsWith(p + "/"));
 
