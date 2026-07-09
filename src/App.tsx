@@ -27,6 +27,7 @@ import SurveyEditor from "./pages/admin/SurveyEditor";
 import SurveyDashboard from "./pages/admin/SurveyDashboard";
 import UserSurveys from "./pages/UserSurveys";
 import SurveyRespond from "./pages/SurveyRespond";
+import SatisfactionDashboard from "./pages/admin/SatisfactionDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
