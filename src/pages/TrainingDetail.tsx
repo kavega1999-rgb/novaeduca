@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Navigation from "@/components/Navigation";
 import FloatingDocumentsButton from "@/components/documents/FloatingDocumentsButton";
+import FloatingCSAT from "@/components/FloatingCSAT";
 import EvaluationTaker from "@/components/evaluations/EvaluationTaker";
 import EvaluationManager from "@/components/evaluations/EvaluationManager";
 import PretestTaker from "@/components/evaluations/PretestTaker";
@@ -1035,6 +1036,7 @@ const TrainingDetail = () => {
         </div>
       </div>
       {!showEvaluation && <FloatingDocumentsButton isAdmin={isAdminOrLeader} />}
+      {!showEvaluation && <FloatingCSAT context="training" contextLabel="Detalle de capacitación" />}
     </div>
   );
 };
