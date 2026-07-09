@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Navigation from "@/components/Navigation";
 import FloatingDocumentsButton from "@/components/documents/FloatingDocumentsButton";
+import FloatingCSAT from "@/components/FloatingCSAT";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -417,6 +418,7 @@ const Trainings = () => {
         )}
       </div>
       <FloatingDocumentsButton isAdmin={userRole === "admin" || userRole === "leader"} />
+      <FloatingCSAT context="trainings" contextLabel="Listado de capacitaciones" />
     </div>
   );
 };
