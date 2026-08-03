@@ -13,6 +13,45 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pi
 
 const COLORS = ["#1e3a8a", "#f59e0b", "#0ea5e9", "#10b981", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6"];
 
+const PAGE = 1000;
+
+// Trae TODOS los registros paginando (PostgREST limita a 1000 por defecto)
+async function fetchAllAnswers(responseIds: string[]) {
+  const all: any[] = [];
+  for (let i = 0; i < responseIds.length; i += 100) {
+    const chunk = responseIds.slice(i, i + 100);
+    let from = 0;
+    while (true) {
+      const { data, error } = await supabase
+        .from("survey_answers")
+        .select("*")
+        .in("response_id", chunk)
+        .range(from, from + PAGE - 1);
+      if (error) throw error;
+      all.push(...(data ?? []));
+      if (!data || data.length < PAGE) break;
+      from += PAGE;
+    }
+  }
+  return all;
+}
+
+async function fetchAllOptions() {
+  const all: any[] = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await supabase
+      .from("survey_question_options")
+      .select("*")
+      .range(from, from + PAGE - 1);
+    if (error) throw error;
+    all.push(...(data ?? []));
+    if (!data || data.length < PAGE) break;
+    from += PAGE;
+  }
+  return all;
+}
+
 export default function SurveyDashboard() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -30,12 +69,12 @@ export default function SurveyDashboard() {
     if (!id) return;
     (async () => {
       setLoading(true);
-      const [{ data: s }, { data: secs }, { data: qs }, { data: opts }, { data: resps }] = await Promise.all([
+      const [{ data: s }, { data: secs }, { data: qs }, opts, { data: resps }] = await Promise.all([
         supabase.from("surveys").select("*").eq("id", id).single(),
         supabase.from("survey_sections").select("*").eq("survey_id", id).order("order_index"),
         supabase.from("survey_questions").select("*").eq("survey_id", id).order("order_index"),
-        supabase.from("survey_question_options").select("*"),
-        supabase.from("survey_responses").select("*").eq("survey_id", id),
+        fetchAllOptions(),
+        supabase.from("survey_responses").select("*").eq("survey_id", id).range(0, 9999),
       ]);
       setSurvey(s);
       setSections(secs ?? []);
@@ -45,8 +84,8 @@ export default function SurveyDashboard() {
 
       const respIds = (resps ?? []).map((r: any) => r.id);
       if (respIds.length) {
-        const { data: ans } = await supabase.from("survey_answers").select("*").in("response_id", respIds);
-        setAnswers(ans ?? []);
+        const ans = await fetchAllAnswers(respIds);
+        setAnswers(ans);
         const userIds = Array.from(new Set((resps ?? []).map((r: any) => r.user_id).filter(Boolean)));
         if (userIds.length) {
           const { data: profs } = await supabase.from("profiles").select("id,full_name,id_number,position,leader_area_id").in("id", userIds);
