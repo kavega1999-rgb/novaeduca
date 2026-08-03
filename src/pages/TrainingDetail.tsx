@@ -17,6 +17,7 @@ import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowLeft, Clock, Award, CheckCircle, PlayCircle, Download, AlertCircle, ClipboardCheck, Lock, Eye, FileText, Users } from "lucide-react";
 import { toast } from "sonner";
+import { getCertificateSignedUrl } from "@/lib/storage-utils";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { format } from "date-fns";
 import * as XLSX from "xlsx";
@@ -1026,11 +1027,7 @@ const TrainingDetail = () => {
                               window.open(signedUrl, '_blank');
                             } catch (error) {
                               console.error('Certificate link error:', error);
-                              toast({
-                                title: 'Error al descargar',
-                                description: 'No se pudo generar el enlace del certificado',
-                                variant: 'destructive',
-                              });
+                              toast.error('No se pudo generar el enlace del certificado');
                             }
                           }}
                         >
