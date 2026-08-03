@@ -138,16 +138,15 @@ const Auth = () => {
     setIsLoading(true);
     
     try {
-      // Verificar si el empleado está en la base autorizada
-      const { data: employee, error: empError } = await supabase
-        .from('authorized_employees')
-        .select('document_number, full_name')
-        .eq('document_number', idNumber.trim())
-        .maybeSingle();
+      // Verificar si el empleado está en la base autorizada (validación en servidor)
+      const { data: verification, error: empError } = await supabase.functions.invoke(
+        'verify-authorized-employee',
+        { body: { documentNumber: idNumber.trim() } }
+      );
 
       if (empError) throw empError;
 
-      if (!employee) {
+      if (!verification?.authorized) {
         await logAccess({
           userEmail: email,
           userName: fullName,

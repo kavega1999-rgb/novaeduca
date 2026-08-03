@@ -17,6 +17,7 @@ import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowLeft, Clock, Award, CheckCircle, PlayCircle, Download, AlertCircle, ClipboardCheck, Lock, Eye, FileText, Users } from "lucide-react";
 import { toast } from "sonner";
+import { getCertificateSignedUrl } from "@/lib/storage-utils";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { format } from "date-fns";
 import * as XLSX from "xlsx";
@@ -1020,7 +1021,15 @@ const TrainingDetail = () => {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => window.open(cert.file_url, '_blank')}
+                          onClick={async () => {
+                            try {
+                              const signedUrl = await getCertificateSignedUrl(cert.file_url);
+                              window.open(signedUrl, '_blank');
+                            } catch (error) {
+                              console.error('Certificate link error:', error);
+                              toast.error('No se pudo generar el enlace del certificado');
+                            }
+                          }}
                         >
                           <Download className="w-4 h-4 mr-1" />
                           Descargar
