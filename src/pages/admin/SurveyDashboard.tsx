@@ -9,6 +9,7 @@ import { ArrowLeft, Download, Users, CheckCircle2, Clock, BarChart3 } from "luci
 import { useToast } from "@/hooks/use-toast";
 import * as XLSX from "xlsx";
 import { downloadXlsx } from "@/lib/xlsx-utils";
+import { toTitleCase } from "@/lib/text-utils";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 
 const COLORS = ["#1e3a8a", "#f59e0b", "#0ea5e9", "#10b981", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6"];
@@ -143,6 +144,14 @@ export default function SurveyDashboard() {
       const opt = (optionsByQuestion[qId] ?? []).find((o: any) => o.value === value);
       return opt?.label ?? value;
     };
+    // Formato uniforme: cada palabra con mayúscula inicial (respeta correos y URLs)
+    const fmt = (v: any) => {
+      if (v === null || v === undefined) return "";
+      const s = String(v).trim().replace(/\s+/g, " ");
+      if (!s) return "";
+      if (/^[\w.+-]+@[\w.-]+$/.test(s) || /^https?:\/\//i.test(s)) return s;
+      return toTitleCase(s);
+    };
     const answersByResponse: Record<string, any[]> = {};
     answers.forEach(a => { (answersByResponse[a.response_id] ||= []).push(a); });
     const headers = ["Cédula", "Nombre", "Cargo", "Estado", "Fecha envío", ...questions.map(q => q.question_text)];
@@ -151,8 +160,8 @@ export default function SurveyDashboard() {
       const rAns = answersByResponse[r.id] ?? [];
       const row: any[] = [
         p.id_number ?? "",
-        p.full_name ?? "",
-        p.position ?? "",
+        fmt(p.full_name),
+        fmt(p.position),
         r.status === "submitted" ? "Enviada" : r.status === "in_progress" ? "En Proceso" : r.status,
         r.submitted_at ? new Date(r.submitted_at).toLocaleString() : "",
       ];
@@ -161,9 +170,9 @@ export default function SurveyDashboard() {
         if (!a) { row.push(""); return; }
         const hasOptions = (optionsByQuestion[q.id] ?? []).length > 0;
         if (Array.isArray(a.value_json)) {
-          row.push((a.value_json as any[]).map(v => hasOptions ? labelFor(q.id, v) : v).join(", "));
+          row.push((a.value_json as any[]).map(v => fmt(hasOptions ? labelFor(q.id, v) : v)).join(", "));
         } else if (a.value_text !== null && a.value_text !== undefined && a.value_text !== "") {
-          row.push(hasOptions ? labelFor(q.id, a.value_text) : a.value_text);
+          row.push(fmt(hasOptions ? labelFor(q.id, a.value_text) : a.value_text));
         } else if (a.value_number !== null && a.value_number !== undefined) {
           row.push(a.value_number);
         } else if (a.value_boolean !== null && a.value_boolean !== undefined) {
@@ -177,6 +186,7 @@ export default function SurveyDashboard() {
       return row;
     });
     const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    ws["!cols"] = headers.map(() => ({ wch: 24 }));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Respuestas");
     downloadXlsx(wb, `${(survey?.title ?? "encuesta").replace(/\s+/g, "_")}_respuestas.xlsx`);
