@@ -1020,7 +1020,19 @@ const TrainingDetail = () => {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => window.open(cert.file_url, '_blank')}
+                          onClick={async () => {
+                            try {
+                              const signedUrl = await getCertificateSignedUrl(cert.file_url);
+                              window.open(signedUrl, '_blank');
+                            } catch (error) {
+                              console.error('Certificate link error:', error);
+                              toast({
+                                title: 'Error al descargar',
+                                description: 'No se pudo generar el enlace del certificado',
+                                variant: 'destructive',
+                              });
+                            }
+                          }}
                         >
                           <Download className="w-4 h-4 mr-1" />
                           Descargar

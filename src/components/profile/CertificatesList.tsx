@@ -7,6 +7,7 @@ import { Award, Download, FileText, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { getCertificateSignedUrl } from "@/lib/storage-utils";
 
 interface Certificate {
   id: string;
@@ -63,7 +64,8 @@ export const CertificatesList = () => {
   const handleDownload = async (certificate: Certificate) => {
     try {
       // Fetch the PDF and download it directly to avoid CORS issues
-      const response = await fetch(certificate.file_url);
+      const signedUrl = await getCertificateSignedUrl(certificate.file_url);
+      const response = await fetch(signedUrl);
       
       if (!response.ok) {
         throw new Error('No se pudo obtener el archivo');
