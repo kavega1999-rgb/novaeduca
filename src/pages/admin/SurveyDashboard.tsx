@@ -88,9 +88,14 @@ export default function SurveyDashboard() {
         setAnswers(ans);
         const userIds = Array.from(new Set((resps ?? []).map((r: any) => r.user_id).filter(Boolean)));
         if (userIds.length) {
-          const { data: profs } = await supabase.from("profiles").select("id,full_name,id_number,position,leader_area_id").in("id", userIds);
           const map: Record<string, any> = {};
-          (profs ?? []).forEach((p: any) => { map[p.id] = p; });
+          for (let i = 0; i < userIds.length; i += 200) {
+            const { data: profs } = await supabase
+              .from("profiles")
+              .select("id,full_name,id_number,position,leader_area_id")
+              .in("id", userIds.slice(i, i + 200) as string[]);
+            (profs ?? []).forEach((p: any) => { map[p.id] = p; });
+          }
           setProfiles(map);
         }
       }
