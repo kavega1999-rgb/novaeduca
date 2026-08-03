@@ -160,12 +160,22 @@ const CertificatesAdmin = () => {
     return area ? labels[area] || area : "N/A";
   };
 
-  const downloadCertificate = (fileUrl: string, userName: string, certType: string) => {
-    window.open(fileUrl, "_blank");
-    toast({
-      title: "Descargando",
-      description: `Descargando ${certType === "certificate" ? "certificado" : "constancia"} de ${userName}`,
-    });
+  const downloadCertificate = async (fileUrl: string, userName: string, certType: string) => {
+    try {
+      const signedUrl = await getCertificateSignedUrl(fileUrl);
+      window.open(signedUrl, "_blank");
+      toast({
+        title: "Descargando",
+        description: `Descargando ${certType === "certificate" ? "certificado" : "constancia"} de ${userName}`,
+      });
+    } catch (error) {
+      console.error("Certificate download error:", error);
+      toast({
+        title: "Error al descargar",
+        description: "No se pudo generar el enlace del certificado",
+        variant: "destructive",
+      });
+    }
   };
 
   if (isLoading) {
