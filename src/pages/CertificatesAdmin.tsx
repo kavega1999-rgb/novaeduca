@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Download, Award, FileText, Search, Filter, RefreshCw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
+import { getCertificateSignedUrl } from "@/lib/storage-utils";
 
 interface Training {
   id: string;
