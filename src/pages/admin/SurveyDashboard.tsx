@@ -133,7 +133,9 @@ export default function SurveyDashboard() {
   };
 
   const exportXlsx = () => {
-    if (!submitted.length) {
+    const answeredIds = new Set(answers.map(a => a.response_id));
+    const exportable = responses.filter(r => r.status === "submitted" || answeredIds.has(r.id));
+    if (!exportable.length) {
       toast({ title: "Sin respuestas", description: "No hay respuestas enviadas para exportar." });
       return;
     }
@@ -141,14 +143,17 @@ export default function SurveyDashboard() {
       const opt = (optionsByQuestion[qId] ?? []).find((o: any) => o.value === value);
       return opt?.label ?? value;
     };
-    const headers = ["Cédula", "Nombre", "Cargo", "Fecha envío", ...questions.map(q => q.question_text)];
-    const rows = submitted.map(r => {
+    const answersByResponse: Record<string, any[]> = {};
+    answers.forEach(a => { (answersByResponse[a.response_id] ||= []).push(a); });
+    const headers = ["Cédula", "Nombre", "Cargo", "Estado", "Fecha envío", ...questions.map(q => q.question_text)];
+    const rows = exportable.map(r => {
       const p = profiles[r.user_id] ?? {};
-      const rAns = answers.filter(a => a.response_id === r.id);
+      const rAns = answersByResponse[r.id] ?? [];
       const row: any[] = [
         p.id_number ?? "",
         p.full_name ?? "",
         p.position ?? "",
+        r.status === "submitted" ? "Enviada" : r.status === "in_progress" ? "En Proceso" : r.status,
         r.submitted_at ? new Date(r.submitted_at).toLocaleString() : "",
       ];
       questions.forEach(q => {
