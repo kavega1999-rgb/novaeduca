@@ -23,3 +23,6 @@ verify_jwt = true
 
 [functions.generate-distractors]
 verify_jwt = true
+
+[functions.verify-authorized-employee]
+verify_jwt = false
