@@ -140,28 +140,18 @@ const EvaluationTaker = ({ evaluationId, trainingId, onComplete }: EvaluationTak
 
       setEvaluatingAI(true);
       try {
-        // Call AI to evaluate open response
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/evaluate-open-response`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-            },
-            body: JSON.stringify({
-              attemptId,
-              questionId: currentQuestion.id,
-              textResponse: textResponse.trim(),
-              trainingId,
-            }),
-          }
-        );
+        const { data, error } = await supabase.functions.invoke('evaluate-open-response', {
+          body: {
+            attemptId,
+            questionId: currentQuestion.id,
+            textResponse: textResponse.trim(),
+            trainingId,
+          },
+        });
 
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.error || 'Error al evaluar la respuesta');
+        if (error) {
+          const errorBody = await error.context?.json().catch(() => null);
+          throw new Error(errorBody?.error || error.message || 'Error al evaluar la respuesta');
         }
 
         // Show feedback to user
