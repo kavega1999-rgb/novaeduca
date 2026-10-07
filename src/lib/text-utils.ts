@@ -24,10 +24,10 @@ export function toTitleCase(text: string): string {
 }
 
 /**
- * Formats a training title to sentence case
+ * Formats a training title to uppercase
  */
 export function formatTrainingTitle(title: string): string {
-  return toSentenceCase(title);
+  return title.trim().toLocaleUpperCase("es");
 }
 
 /**
