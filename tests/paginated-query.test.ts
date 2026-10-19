@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { fetchAllRows } from "./paginated-query";
+import { fetchAllRows } from "../src/lib/paginated-query";
 
 describe("complete tabulation reads", () => {
   test("retains assignments beyond the first 1000 when membership changes", async () => {
