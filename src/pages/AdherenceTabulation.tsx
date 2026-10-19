@@ -19,6 +19,7 @@ import * as XLSX from "xlsx";
 import { downloadXlsx } from "@/lib/xlsx-utils";
 import AdherenceReportCard from "@/components/adherence/AdherenceReportCard";
 import { getScoreCategory, getCategoryColor } from "@/lib/adherence-utils";
+import { fetchAllRows } from "@/lib/paginated-query";
 import {
   PieChart,
   Pie,
@@ -131,26 +132,26 @@ const AdherenceTabulation = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [reportsRes, trainingsRes, areasRes, profilesRes, assignmentsRes, targetAreasRes] = await Promise.all([
-        supabase
+      const [reportRows, trainingRows, areaRows, profileRows, assignmentRows, targetAreaRows] = await Promise.all([
+        fetchAllRows((from, to) => supabase
           .from("adherence_reports")
           .select("*")
-          .order("created_at", { ascending: false }),
-        supabase.from("trainings").select("id, title, area_id, target_user_count, is_finished, active_from, active_until, visible_to_all"),
-        supabase.from("areas").select("*"),
-        supabase.from("profiles").select("id, full_name, area"),
-        supabase.from("training_assignments").select("training_id, user_id"),
-        supabase.from("training_target_areas").select("training_id, target_area"),
+          .order("created_at", { ascending: false }).order("id").range(from, to)),
+        fetchAllRows((from, to) => supabase.from("trainings").select("id, title, area_id, target_user_count, is_finished, active_from, active_until, visible_to_all").order("id").range(from, to)),
+        fetchAllRows((from, to) => supabase.from("areas").select("*").order("id").range(from, to)),
+        fetchAllRows((from, to) => supabase.from("profiles").select("id, full_name, area").order("id").range(from, to)),
+        fetchAllRows((from, to) => supabase.from("training_assignments").select("training_id, user_id").order("id").range(from, to)),
+        fetchAllRows((from, to) => supabase.from("training_target_areas").select("training_id, target_area").order("id").range(from, to)),
       ]);
 
-      setAssignments(assignmentsRes.data || []);
-      setTargetAreasData(targetAreasRes.data || []);
+      setAssignments(assignmentRows);
+      setTargetAreasData(targetAreaRows);
 
-      if (reportsRes.data) {
-        const enrichedReports = reportsRes.data.map((report: any) => {
-          const training = trainingsRes.data?.find((t: Training) => t.id === report.training_id);
-          const profile = profilesRes.data?.find((p: any) => p.id === report.user_id);
-          const area = training ? areasRes.data?.find((a: Area) => a.id === training.area_id) : null;
+      {
+        const enrichedReports = reportRows.map((report) => {
+          const training = trainingRows.find(t => t.id === report.training_id);
+          const profile = profileRows.find(p => p.id === report.user_id);
+          const area = training ? areaRows.find(a => a.id === training.area_id) : null;
           
           return {
             ...report,
@@ -162,9 +163,9 @@ const AdherenceTabulation = () => {
         setReports(enrichedReports);
       }
 
-      if (trainingsRes.data) setTrainings(trainingsRes.data);
-      if (areasRes.data) setAreas(areasRes.data);
-      if (profilesRes.data) setProfiles(profilesRes.data);
+      setTrainings(trainingRows);
+      setAreas(areaRows);
+      setProfiles(profileRows);
     } catch (error) {
       console.error("Error loading data:", error);
       toast.error("Error al cargar los datos");
