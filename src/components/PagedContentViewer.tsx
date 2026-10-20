@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { ChevronLeft, ChevronRight, CheckCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, CheckCircle, RefreshCw, Maximize2 } from "lucide-react";
 import { toast } from "sonner";
 import VideoContentViewer from "./VideoContentViewer";
 
@@ -43,6 +43,7 @@ const PagedContentViewer = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [viewedPages, setViewedPages] = useState<Set<number>>(new Set([1]));
   const [allPagesViewed, setAllPagesViewed] = useState(contentViewedCompletely);
+  const [officeViewer, setOfficeViewer] = useState<"microsoft" | "google">("microsoft");
 
   useEffect(() => {
     setViewedPages(new Set([1]));
@@ -103,9 +104,14 @@ const PagedContentViewer = ({
     );
   }
 
-  // If it's an Office file (PowerPoint, Word, Excel), use Google Docs Viewer
+  // If it's an Office file (PowerPoint, Word, Excel), use Microsoft Office viewer
+  // (renders full slides faithfully); Google viewer stays available as fallback.
   if (isOffice) {
-    const googleViewerUrl = `https://docs.google.com/gview?url=${encodeURIComponent(contentUrl)}&embedded=true`;
+    const encoded = encodeURIComponent(contentUrl);
+    const viewerUrl =
+      officeViewer === "microsoft"
+        ? `https://view.officeapps.live.com/op/embed.aspx?src=${encoded}`
+        : `https://docs.google.com/gview?url=${encoded}&embedded=true`;
 
     return (
       <div className="space-y-4">
@@ -115,24 +121,47 @@ const PagedContentViewer = ({
             <span className="text-sm font-medium">
               Progreso de visualización
             </span>
-            <span className="text-sm font-bold">{allPagesViewed ? "100%" : "En progreso..."}</span>
+            <span className="text-sm font-bold">{allPagesViewed ? "100%" : "En Proceso..."}</span>
           </div>
           <Progress value={allPagesViewed ? 100 : 50} className="h-3" />
           {allPagesViewed && (
-            <div className="flex items-center gap-2 mt-2 text-green-600">
+            <div className="flex items-center gap-2 mt-2 text-success">
               <CheckCircle className="w-4 h-4" />
               <span className="text-sm font-medium">¡Contenido completado!</span>
             </div>
           )}
         </div>
 
-        {/* Office File Viewer via Google Docs */}
+        {/* Office File Viewer */}
         <div className="bg-card border rounded-lg overflow-hidden" style={{ boxShadow: "var(--shadow-card)" }}>
-          <div className="w-full h-[750px] bg-muted relative">
+          <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2 border-b bg-muted/30">
+            <span className="text-xs text-muted-foreground">
+              Usa las flechas del visor para pasar las diapositivas. ¿No se ve completo? Cambia de visor o ábrelo en pantalla completa.
+            </span>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setOfficeViewer(officeViewer === "microsoft" ? "google" : "microsoft")}
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Cambiar visor
+              </Button>
+              <Button variant="outline" size="sm" asChild>
+                <a href={viewerUrl.replace("/op/embed.aspx", "/op/view.aspx")} target="_blank" rel="noopener noreferrer">
+                  <Maximize2 className="w-4 h-4 mr-2" />
+                  Pantalla completa
+                </a>
+              </Button>
+            </div>
+          </div>
+          <div className="w-full bg-muted relative" style={{ aspectRatio: "16 / 9.6", minHeight: 420 }}>
             <iframe
-              src={googleViewerUrl}
+              key={viewerUrl}
+              src={viewerUrl}
               className="w-full h-full border-0"
               title="Contenido de capacitación"
+              allowFullScreen
               style={{ display: 'block' }}
             />
           </div>
