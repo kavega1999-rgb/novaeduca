@@ -15,7 +15,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Clock, Award, CheckCircle, PlayCircle, Download, AlertCircle, ClipboardCheck, Lock, Eye, FileText, Users } from "lucide-react";
+import { ArrowLeft, Clock, Award, CheckCircle, PlayCircle, Download, AlertCircle, ClipboardCheck, Lock, Unlock, Eye, FileText, Users } from "lucide-react";
 import { toast } from "sonner";
 import { getCertificateSignedUrl } from "@/lib/storage-utils";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -271,6 +271,23 @@ const TrainingDetail = () => {
       finished_at: new Date().toISOString(),
     });
     toast.success("Capacitación marcada como finalizada. Las evaluaciones están bloqueadas.");
+  };
+
+  const reopenTraining = async () => {
+    if (!training || !isAdminOrLeader) return;
+
+    const { error } = await supabase
+      .from("trainings")
+      .update({ is_finished: false, finished_at: null, finished_by: null })
+      .eq("id", training.id);
+
+    if (error) {
+      toast.error("Error al reactivar la capacitación");
+      return;
+    }
+
+    setTraining({ ...training, is_finished: false, finished_at: null });
+    toast.success("Capacitación reactivada. Las evaluaciones están disponibles nuevamente.");
   };
 
   // Load evaluation answers for admin/leader view
@@ -990,10 +1007,18 @@ const TrainingDetail = () => {
                     Capacitación Finalizada
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
                   <p className="text-sm text-muted-foreground">
                     Esta capacitación fue finalizada el {training.finished_at ? new Date(training.finished_at).toLocaleDateString() : 'N/A'}. Las evaluaciones están bloqueadas.
                   </p>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={reopenTraining}
+                  >
+                    <Unlock className="w-4 h-4 mr-2" />
+                    Reactivar Evaluaciones
+                  </Button>
                 </CardContent>
               </Card>
             )}

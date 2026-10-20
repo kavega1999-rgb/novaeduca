@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Edit, Trash2, Search, Filter, ChevronLeft, ChevronRight, BookOpen, GraduationCap, Users2, Clock } from "lucide-react";
+import { Edit, Trash2, Search, Filter, ChevronLeft, ChevronRight, BookOpen, GraduationCap, Users2, Clock, Lock, Unlock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import TrainingForm from "./TrainingForm";
@@ -20,6 +20,7 @@ interface Training {
   duration_minutes: number;
   created_at: string;
   active_until: string | null;
+  is_finished: boolean | null;
   areas: { id: string; name: string; color: string } | null;
 }
 
@@ -106,6 +107,7 @@ const TrainingsTable = ({ onRefresh, onEdit }: TrainingsTableProps) => {
         duration_minutes,
         created_at,
         active_until,
+        is_finished,
         areas:area_id (id, name, color)
       `)
       .order("created_at", { ascending: false });
@@ -190,6 +192,29 @@ const TrainingsTable = ({ onRefresh, onEdit }: TrainingsTableProps) => {
       onRefresh?.();
     }
     setDeletingId(null);
+  };
+
+  const toggleFinished = async (training: Training) => {
+    const finishing = !training.is_finished;
+    const { data: { user } } = await supabase.auth.getUser();
+    const { error } = await supabase
+      .from("trainings")
+      .update(
+        finishing
+          ? { is_finished: true, finished_at: new Date().toISOString(), finished_by: user?.id ?? null }
+          : { is_finished: false, finished_at: null, finished_by: null }
+      )
+      .eq("id", training.id);
+
+    if (error) {
+      toast({ title: "Error", description: "No se pudo cambiar el estado de la capacitación", variant: "destructive" });
+      return;
+    }
+    toast({
+      title: finishing ? "Capacitación finalizada" : "Capacitación reactivada",
+      description: finishing ? "Las evaluaciones quedaron bloqueadas." : "Las evaluaciones están disponibles nuevamente.",
+    });
+    fetchData();
   };
 
   const clearFilters = () => {
@@ -369,7 +394,14 @@ const TrainingsTable = ({ onRefresh, onEdit }: TrainingsTableProps) => {
                   <TableCell>
                     <span className="text-sm font-medium">{training.duration_minutes || 0} min</span>
                   </TableCell>
-                  <TableCell>{getStatusBadge(training.status)}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap items-center gap-1">
+                      {getStatusBadge(training.status)}
+                      {training.is_finished && (
+                        <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-500/30">Finalizada</Badge>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
                       <TrainingReminderButton
@@ -377,6 +409,15 @@ const TrainingsTable = ({ onRefresh, onEdit }: TrainingsTableProps) => {
                         trainingTitle={training.title}
                         activeUntil={training.active_until}
                       />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 hover:bg-primary/10 hover:text-primary"
+                        title={training.is_finished ? "Reactivar evaluaciones" : "Finalizar (bloquear evaluaciones)"}
+                        onClick={() => toggleFinished(training)}
+                      >
+                        {training.is_finished ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"
