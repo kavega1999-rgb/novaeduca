@@ -1482,6 +1482,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      adherence_score_category: { Args: { _score: number }; Returns: string }
       can_manage_survey: {
         Args: { _survey_id: string; _user_id: string }
         Returns: boolean
@@ -1508,6 +1509,10 @@ export type Database = {
       is_survey_assigned_to: {
         Args: { _survey_id: string; _user_id: string }
         Returns: boolean
+      }
+      refresh_adherence_report: {
+        Args: { _postest_attempt_id: string }
+        Returns: undefined
       }
     }
     Enums: {

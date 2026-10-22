@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1792699130734,
+      "tag": "0000_auto_generate_adherence_reports",
+      "breakpoints": true
+    }
+  ]
+}
