@@ -115,6 +115,13 @@ const Trainings = () => {
       if (userRole === 'admin' || userRole === 'leader') {
         setTrainings(allTrainings);
       } else {
+        // Fetch trainings individually assigned to this user
+        const { data: assignments } = await supabase
+          .from("training_assignments")
+          .select("training_id")
+          .eq("user_id", session.user.id);
+        const assignedIds = new Set((assignments || []).map(a => a.training_id));
+
         // Filter trainings based on user area
         const visibleTrainings = await Promise.all(
           allTrainings.map(async (training) => {
@@ -122,17 +129,22 @@ const Trainings = () => {
             if (training.visible_to_all) {
               return training;
             }
-            
+
+            // If training is individually assigned to the user, include it
+            if (assignedIds.has(training.id)) {
+              return training;
+            }
+
             // Check if user's area is in the target areas
             const { data: targetAreas } = await supabase
               .from("training_target_areas")
               .select("target_area")
               .eq("training_id", training.id);
-            
+
             if (targetAreas && targetAreas.some(ta => ta.target_area === userArea)) {
               return training;
             }
-            
+
             return null;
           })
         );
