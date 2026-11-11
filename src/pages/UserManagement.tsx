@@ -14,6 +14,8 @@ import { Search, Users, Shield, UserCog, MapPin, FolderOpen, KeyRound, Pencil, E
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Database } from "@/integrations/supabase/types";
+import AddEmployeeDialog from "@/components/admin/AddEmployeeDialog";
+import { canAddEmployees } from "@/lib/authorized-employee";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 type UserArea = Database["public"]["Enums"]["user_area"];
@@ -102,7 +104,8 @@ const UserManagement = () => {
       .select("role")
       .eq("user_id", user.id);
 
-    const isAdmin = roles?.some((r) => r.role === "admin");
+    const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
+    const isAdmin = canAddEmployees(profile?.role, roles?.map(r => r.role) ?? []);
 
     if (!isAdmin) {
       toast({
@@ -393,7 +396,8 @@ const UserManagement = () => {
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
         <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
           <UserCog className="h-8 w-8 text-primary" />
           Gestión de Usuarios
@@ -401,6 +405,8 @@ const UserManagement = () => {
         <p className="text-muted-foreground mt-2">
           Administra los roles, áreas, cargos y contraseñas de los usuarios
         </p>
+        </div>
+        <AddEmployeeDialog />
       </div>
 
       {/* Stats Cards */}
