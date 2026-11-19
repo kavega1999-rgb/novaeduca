@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { PDFDocument, rgb, StandardFonts } from "https://esm.sh/pdf-lib@1.17.1";
+import { loadCertificateLogo } from "../_shared/certificate-logo.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -45,10 +46,15 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Admin access required' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 });
     }
 
-    // Fetch all existing certificates
-    const { data: certificates, error: certsError } = await supabase
+    // Small batches keep logo embedding within the function's compute budget.
+    const body = await req.json().catch(() => ({}));
+    const offset = Number.isSafeInteger(body.offset) && body.offset >= 0 ? body.offset : 0;
+    const batchSize = 10;
+    const { data: certificates, error: certsError, count } = await supabase
       .from('certificates')
-      .select('*');
+      .select('*', { count: 'exact' })
+      .order('id')
+      .range(offset, offset + batchSize - 1);
 
     if (certsError || !certificates) {
       return new Response(JSON.stringify({ error: 'Failed to fetch certificates' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 });
@@ -71,21 +77,7 @@ serve(async (req) => {
     const trainingsMap = new Map((trainingsRes.data || []).map(t => [t.id, t]));
     const attemptsMap = new Map((attemptsRes.data || []).map(a => [a.id, a]));
 
-    // Try to load logo once
-    let logoBytes: Uint8Array | null = null;
-    let logoIsPng = true;
-    const logoFormats = ['novasalud-logo-color.png', 'NOVA.png', 'novasalud-logo.png', 'novasalud-logo.jpg'];
-    for (const logoFileName of logoFormats) {
-      try {
-        const logoUrl = `${supabaseUrl}/storage/v1/object/public/certificates/${encodeURIComponent(logoFileName)}`;
-        const logoResponse = await fetch(logoUrl);
-        if (logoResponse.ok) {
-          logoBytes = new Uint8Array(await logoResponse.arrayBuffer());
-          logoIsPng = logoFileName.endsWith('.png');
-          break;
-        }
-      } catch { /* skip */ }
-    }
+    const logoBytes = await loadCertificateLogo(supabase.storage);
 
     let regenerated = 0;
     let failed = 0;
@@ -115,18 +107,11 @@ serve(async (req) => {
         page.drawRectangle({ x: 28, y: 28, width: width - 56, height: height - 56, borderColor: ORANGE, borderWidth: 2 });
 
         // Logo
-        if (logoBytes) {
-          try {
-            const logoImage = logoIsPng ? await pdfDoc.embedPng(logoBytes) : await pdfDoc.embedJpg(logoBytes);
-            const logoWidth = 200;
-            const logoHeight = (logoImage.height / logoImage.width) * logoWidth;
-            page.drawImage(logoImage, { x: (width - logoWidth) / 2, y: height - 55 - logoHeight, width: logoWidth, height: logoHeight });
-          } catch {
-            drawCenteredText(page, 'NOVASALUD', height - 90, 28, timesRomanBold, DARK_BLUE);
-          }
-        } else {
-          drawCenteredText(page, 'NOVASALUD', height - 90, 28, timesRomanBold, DARK_BLUE);
-        }
+        const logoImage = await pdfDoc.embedPng(logoBytes);
+        const logoScale = Math.min(200 / logoImage.width, 90 / logoImage.height);
+        const logoWidth = logoImage.width * logoScale;
+        const logoHeight = logoImage.height * logoScale;
+        page.drawImage(logoImage, { x: (width - logoWidth) / 2, y: height - 55 - logoHeight, width: logoWidth, height: logoHeight });
 
         // Title
         const mainTitle = isCertificate ? 'CERTIFICADO' : 'CONSTANCIA';
@@ -206,12 +191,14 @@ serve(async (req) => {
         const oldFileName = oldUrl.split('/').pop() || '';
         const newFileName = oldFileName || `regenerated-${cert.id}-${Date.now()}.pdf`;
 
-        await supabase.storage.from('certificates').upload(newFileName, pdfBuffer, { contentType: 'application/pdf', upsert: true });
+        const { error: uploadError } = await supabase.storage.from('certificates').upload(newFileName, pdfBuffer, { contentType: 'application/pdf', upsert: true });
+        if (uploadError) throw uploadError;
 
         const { data: publicUrlData } = supabase.storage.from('certificates').getPublicUrl(newFileName);
 
         // Update certificate record with new URL
-        await supabase.from('certificates').update({ file_url: publicUrlData.publicUrl }).eq('id', cert.id);
+        const { error: updateError } = await supabase.from('certificates').update({ file_url: publicUrlData.publicUrl }).eq('id', cert.id);
+        if (updateError) throw updateError;
 
         regenerated++;
       } catch (err) {
@@ -221,7 +208,8 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, regenerated, failed, total: certificates.length }),
+      JSON.stringify({ success: true, regenerated, failed, total: count ?? certificates.length,
+        nextOffset: offset + certificates.length < (count ?? 0) ? offset + certificates.length : null }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
   } catch (error) {

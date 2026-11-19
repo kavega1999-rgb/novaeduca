@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { PDFDocument, rgb, StandardFonts } from "https://esm.sh/pdf-lib@1.17.1";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
+import { loadCertificateLogo } from "../_shared/certificate-logo.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -240,46 +241,16 @@ serve(async (req) => {
       borderWidth: 2,
     });
     
-    // Embed Novasalud logo - try colored logo first, then other variations
-    let logoEmbedded = false;
-    const logoFormats = ['novasalud-logo-color.png', 'NOVA.png', 'NOVA .png', 'novasalud-logo.png', 'novasalud-logo.jpg', 'logo.png', 'logo.jpg'];
-    
-    for (const logoFileName of logoFormats) {
-      if (logoEmbedded) break;
-      try {
-        const encodedFileName = encodeURIComponent(logoFileName);
-        const logoUrl = `${supabaseUrl}/storage/v1/object/public/certificates/${encodedFileName}`;
-        
-        const logoResponse = await fetch(logoUrl);
-        if (logoResponse.ok) {
-          const logoBytes = await logoResponse.arrayBuffer();
-          const logoImage = logoFileName.endsWith('.png') 
-            ? await pdfDoc.embedPng(new Uint8Array(logoBytes))
-            : await pdfDoc.embedJpg(new Uint8Array(logoBytes));
-          const logoWidth = 200;
-          const logoHeight = (logoImage.height / logoImage.width) * logoWidth;
-          const logoX = (width - logoWidth) / 2;
-          page.drawImage(logoImage, {
-            x: logoX,
-            y: height - 55 - logoHeight,
-            width: logoWidth,
-            height: logoHeight,
-          });
-          logoEmbedded = true;
-        }
-      } catch (logoError) {
-        // Logo load failed, will try next format or use text fallback
-      }
-    }
-    
-    // Fallback to text if no logo loaded
-    if (!logoEmbedded) {
-      const logoY = height - 90;
-      page.drawText('N', { x: 335, y: logoY, size: 28, font: timesRomanBold, color: DARK_BLUE });
-      page.drawText('O', { x: 355, y: logoY, size: 28, font: timesRomanBold, color: ORANGE });
-      page.drawText('VASALUD', { x: 375, y: logoY, size: 28, font: timesRomanBold, color: DARK_BLUE });
-      drawCenteredText(page, 'CARIBE I.P.S.', height - 115, 14, timesRomanBold, ORANGE);
-    }
+    const logoImage = await pdfDoc.embedPng(await loadCertificateLogo(supabase.storage));
+    const logoScale = Math.min(200 / logoImage.width, 90 / logoImage.height);
+    const logoWidth = logoImage.width * logoScale;
+    const logoHeight = logoImage.height * logoScale;
+    page.drawImage(logoImage, {
+      x: (width - logoWidth) / 2,
+      y: height - 55 - logoHeight,
+      width: logoWidth,
+      height: logoHeight,
+    });
     
     // Main title - CERTIFICADO or CONSTANCIA
     const mainTitle = isCertificate ? 'CERTIFICADO' : 'CONSTANCIA';

@@ -192,11 +192,21 @@ const CertificatesAdmin = () => {
   const handleRegenerateCertificates = async () => {
     setIsRegenerating(true);
     try {
-      const { data, error } = await supabase.functions.invoke('regenerate-certificates');
-      if (error) throw error;
+      let offset: number | null = 0;
+      let regenerated = 0;
+      let failed = 0;
+      let total = 0;
+      while (offset !== null) {
+        const { data, error } = await supabase.functions.invoke('regenerate-certificates', { body: { offset } });
+        if (error) throw error;
+        regenerated += data.regenerated;
+        failed += data.failed;
+        total = data.total;
+        offset = data.nextOffset ?? null;
+      }
       toast({
         title: "Certificados regenerados",
-        description: `Se regeneraron ${data.regenerated} de ${data.total} certificados${data.failed > 0 ? ` (${data.failed} fallidos)` : ''}`,
+        description: `Se regeneraron ${regenerated} de ${total} certificados${failed > 0 ? ` (${failed} fallidos)` : ''}`,
       });
       fetchData();
     } catch (error) {
