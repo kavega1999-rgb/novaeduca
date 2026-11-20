@@ -14,7 +14,7 @@ import heroImage from "@/assets/team-celebration.jpg";
 import { formatUserName } from "@/lib/text-utils";
 import { isPasswordRecoveryLink, passwordRecoveryRedirect } from "@/lib/password-recovery";
 
-type AuthView = "main" | "otp-verify" | "forgot-password" | "reset-password";
+type AuthView = "main" | "otp-verify" | "forgot-password" | "recovery-sent" | "reset-password";
 type IdType = "CC" | "CE" | "PA" | "TI" | "";
 
 const Auth = ({ resetMode = false }: { resetMode?: boolean }) => {
@@ -367,10 +367,9 @@ const Auth = ({ resetMode = false }: { resetMode?: boolean }) => {
 
       toast({
         title: "Correo enviado",
-        description: "Revisa tu bandeja de entrada para restablecer tu contraseña."
+        description: "Se envió un correo con el enlace para crear una nueva contraseña."
       });
-      setOtpPurpose("reset");
-      setView("otp-verify");
+      setView("recovery-sent");
     } catch (error: any) {
       toast({
         title: "Error",
@@ -513,6 +512,22 @@ const Auth = ({ resetMode = false }: { resetMode?: boolean }) => {
             ) : "Enviar enlace de recuperación"}
           </Button>
         </form>
+      </CardContent>
+    </Card>
+  );
+
+  const renderRecoverySent = () => (
+    <Card>
+      <CardHeader>
+        {renderBackButton()}
+        <Mail className="h-8 w-8 text-primary" aria-hidden="true" />
+        <CardTitle>Correo enviado</CardTitle>
+        <CardDescription className="break-words">
+          Se envió un correo a {email} con el enlace para crear una nueva contraseña.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm text-muted-foreground">Revisa tu bandeja de entrada y la carpeta de correo no deseado.</p>
       </CardContent>
     </Card>
   );
@@ -798,6 +813,7 @@ const Auth = ({ resetMode = false }: { resetMode?: boolean }) => {
         )}
         {view === "otp-verify" && renderOTPVerify()}
         {view === "forgot-password" && renderForgotPassword()}
+        {view === "recovery-sent" && renderRecoverySent()}
         {view === "reset-password" && renderResetPassword()}
       </div>
     </div>
