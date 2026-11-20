@@ -1,0 +1,2 @@
+- [x] Add administrator-only user deletion with confirmation and safe account cleanup.
+- [x] Verify permission tests and the signed-in management flow.

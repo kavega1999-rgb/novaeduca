@@ -15,6 +15,13 @@
       "when": 1794428093158,
       "tag": "0001_admin_authorized_employee_access",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795184120562,
+      "tag": "0002_cleanup_deleted_user_application_data",
+      "breakpoints": true
     }
   ]
 }

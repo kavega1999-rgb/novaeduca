@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Search, Users, Shield, UserCog, MapPin, FolderOpen, KeyRound, Pencil, Eye, EyeOff, Check } from "lucide-react";
+import { Search, Users, Shield, UserCog, MapPin, FolderOpen, KeyRound, Pencil, Eye, EyeOff, Check, Trash2 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Database } from "@/integrations/supabase/types";
@@ -77,6 +77,9 @@ const UserManagement = () => {
   const [positionDialogOpen, setPositionDialogOpen] = useState(false);
   const [editingPosition, setEditingPosition] = useState("");
   const [savingPosition, setSavingPosition] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [deletingUser, setDeletingUser] = useState<UserWithRole | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     checkAccessAndFetchUsers();
@@ -117,6 +120,7 @@ const UserManagement = () => {
       return;
     }
 
+    setCurrentUserId(user.id);
     await fetchUsers();
   };
 
@@ -366,6 +370,32 @@ const UserManagement = () => {
       toast({ title: "Error", description: "No se pudo actualizar el cargo", variant: "destructive" });
     } finally {
       setSavingPosition(false);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!deletingUser || isDeleting || deletingUser.id === currentUserId) return;
+    setIsDeleting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-delete-user", {
+        body: { userId: deletingUser.id },
+      });
+      if (error) {
+        let message = "No se pudo eliminar el usuario. Intenta nuevamente.";
+        if (error.context instanceof Response) {
+          const body = await error.context.json().catch(() => null);
+          if (body?.error) message = body.error;
+        }
+        throw new Error(message);
+      }
+      if (!data?.success) throw new Error(data?.error || "No se pudo eliminar el usuario");
+      setUsers(previous => previous.filter(user => user.id !== deletingUser.id));
+      toast({ title: "Usuario eliminado", description: `Se eliminó la cuenta de ${deletingUser.full_name}.` });
+      setDeletingUser(null);
+    } catch (error) {
+      toast({ title: "Error", description: error instanceof Error ? error.message : "No se pudo eliminar el usuario", variant: "destructive" });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -636,6 +666,7 @@ const UserManagement = () => {
                         </Select>
                       </TableCell>
                       <TableCell>
+                        <div className="flex items-center gap-2">
                         <Button
                           variant="outline"
                           size="sm"
@@ -645,6 +676,18 @@ const UserManagement = () => {
                           <KeyRound className="h-3 w-3" />
                           Contraseña
                         </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="shrink-0 text-destructive hover:text-destructive"
+                          aria-label={`Eliminar usuario ${user.full_name}`}
+                          title={user.id === currentUserId ? "No puedes eliminar tu propia cuenta" : "Eliminar usuario"}
+                          disabled={user.id === currentUserId || isDeleting}
+                          onClick={() => setDeletingUser(user)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -656,6 +699,26 @@ const UserManagement = () => {
       </Card>
 
       {/* Password Reset Dialog */}
+      <Dialog open={deletingUser !== null} onOpenChange={open => { if (!open && !isDeleting) setDeletingUser(null); }}>
+        <DialogContent onEscapeKeyDown={event => { if (isDeleting) event.preventDefault(); }} onPointerDownOutside={event => { if (isDeleting) event.preventDefault(); }}>
+          <DialogHeader>
+            <DialogTitle>Eliminar usuario</DialogTitle>
+            <DialogDescription>
+              ¿Eliminar definitivamente la cuenta de <strong>{deletingUser?.full_name}</strong>?
+              Se borrarán sus avances, evaluaciones, certificados, constancias y respuestas a encuestas.
+              Esta acción no se puede deshacer. Las capacitaciones y encuestas creadas se conservarán,
+              al igual que los registros de auditoría y la autorización de registro del empleado.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" disabled={isDeleting} onClick={() => setDeletingUser(null)}>Cancelar</Button>
+            <Button variant="destructive" disabled={isDeleting} onClick={handleDeleteUser}>
+              <Trash2 className="mr-2 h-4 w-4" />
+              {isDeleting ? "Eliminando..." : "Eliminar definitivamente"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
         <DialogContent>
           <DialogHeader>
