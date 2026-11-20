@@ -12,11 +12,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { logAccess } from "@/hooks/useAccessLog";
 import heroImage from "@/assets/team-celebration.jpg";
 import { formatUserName } from "@/lib/text-utils";
+import { isPasswordRecoveryLink, passwordRecoveryRedirect } from "@/lib/password-recovery";
 
 type AuthView = "main" | "otp-verify" | "forgot-password" | "reset-password";
 type IdType = "CC" | "CE" | "PA" | "TI" | "";
 
-const Auth = () => {
+const Auth = ({ resetMode = false }: { resetMode?: boolean }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -27,31 +28,36 @@ const Auth = () => {
   const [idType, setIdType] = useState<IdType>("");
   const [idNumber, setIdNumber] = useState("");
   const [otpCode, setOtpCode] = useState("");
-  const [view, setView] = useState<AuthView>("main");
+  const [view, setView] = useState<AuthView>(resetMode ? "reset-password" : "main");
+  const [recoveryReady, setRecoveryReady] = useState(false);
+  const [checkingRecovery, setCheckingRecovery] = useState(resetMode);
   const [otpPurpose, setOtpPurpose] = useState<"login" | "signup" | "reset">("login");
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Check if user is already logged in
+  // Recovery must take precedence over the normal signed-in redirect.
   useEffect(() => {
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        navigate("/dashboard");
+    let active = true;
+    const recovery = resetMode || isPasswordRecoveryLink(window.location.hash);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setView("reset-password");
+        setRecoveryReady(true);
+        setCheckingRecovery(false);
       }
+    });
+    const checkSession = async () => {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (!active) return;
+      if (recovery) {
+        setView("reset-password");
+        setRecoveryReady(Boolean(user) && !error);
+        setCheckingRecovery(false);
+      } else if (user && !error) navigate("/dashboard");
     };
     checkSession();
-  }, [navigate]);
-
-  useEffect(() => {
-    const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    const accessToken = hashParams.get('access_token');
-    const type = hashParams.get('type');
-    
-    if (accessToken && type === 'recovery') {
-      setView("reset-password");
-    }
-  }, []);
+    return () => { active = false; subscription.unsubscribe(); };
+  }, [navigate, resetMode]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -287,6 +293,7 @@ const Auth = () => {
 
       if (otpPurpose === "reset") {
         setView("reset-password");
+        setRecoveryReady(true);
         toast({
           title: "Código verificado",
           description: "Ahora puedes crear tu nueva contraseña."
@@ -353,7 +360,7 @@ const Auth = () => {
     
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth`
+        redirectTo: passwordRecoveryRedirect(window.location.origin)
       });
 
       if (error) throw error;
@@ -377,6 +384,7 @@ const Auth = () => {
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!recoveryReady) return;
     
     if (newPassword !== confirmPassword) {
       toast({
@@ -405,13 +413,16 @@ const Auth = () => {
 
       if (error) throw error;
 
+      await supabase.auth.signOut({ scope: "local" });
       toast({
         title: "¡Contraseña actualizada!",
-        description: "Tu contraseña ha sido cambiada exitosamente."
+        description: "Ya puedes iniciar sesión con tu nueva contraseña."
       });
       setView("main");
       setNewPassword("");
       setConfirmPassword("");
+      setRecoveryReady(false);
+      navigate("/auth", { replace: true });
     } catch (error: any) {
       toast({
         title: "Error",
@@ -515,6 +526,14 @@ const Auth = () => {
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {checkingRecovery ? (
+          <Loader2 className="mx-auto h-6 w-6 animate-spin" aria-label="Verificando enlace" />
+        ) : !recoveryReady ? (
+          <div className="space-y-4">
+            <p role="alert" className="text-sm text-destructive">El enlace de recuperación venció o no es válido. Solicita uno nuevo.</p>
+            <Button className="w-full" onClick={() => setView("forgot-password")}>Solicitar nuevo enlace</Button>
+          </div>
+        ) : (
         <form onSubmit={handleResetPassword} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="new-password">Nueva contraseña</Label>
@@ -547,6 +566,7 @@ const Auth = () => {
             ) : "Actualizar contraseña"}
           </Button>
         </form>
+        )}
       </CardContent>
     </Card>
   );

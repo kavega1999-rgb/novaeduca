@@ -29,6 +29,7 @@ import UserSurveys from "./pages/UserSurveys";
 import SurveyRespond from "./pages/SurveyRespond";
 import SatisfactionDashboard from "./pages/admin/SatisfactionDashboard";
 import NotFound from "./pages/NotFound";
+import { PasswordRecoveryGuard } from "./components/PasswordRecoveryGuard";
 
 const queryClient = new QueryClient();
 
@@ -38,9 +39,11 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <PasswordRecoveryGuard>
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/reset-password" element={<Auth resetMode />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/dashboard/overview" element={<Dashboard />}>
             <Route index element={<AdminOverview />} />
@@ -97,6 +100,7 @@ const App = () => (
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
+        </PasswordRecoveryGuard>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

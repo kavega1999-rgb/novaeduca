@@ -6,3 +6,4 @@
 - Add employee registration authorizations through the existing whitelist with dual-admin checks in the UI and database policy; this preserves the signup flow without creating accounts or exposing the employee list publicly.
 - Load the original certificate logo through the shared authenticated private-storage helper for generation and regeneration; public logo requests fail in the private certificates bucket and must never produce a generic substitute.
 - Delete accounts through a manually authenticated, dual-admin Edge Function; a profile deletion trigger cleans dependent application records atomically with Auth deletion while retaining shared content and audit history.
+- Route password recovery to a public reset page and capture recovery intent before the auth client clears the URL; normal signed-in redirects must not intercept recovery links.
